@@ -1,0 +1,38 @@
+import { getSupabaseBrowser } from "@/lib/supabase-browser"
+
+export async function apiFetch<T>(input: string, init?: RequestInit): Promise<T> {
+  const headers = new Headers(init?.headers)
+
+  if (typeof window !== "undefined" && !headers.has("Authorization")) {
+    const supabase = getSupabaseBrowser()
+    const {
+      data: { session }
+    } = await supabase.auth.getSession()
+
+    if (session?.access_token) {
+      headers.set("Authorization", `Bearer ${session.access_token}`)
+    }
+  }
+
+  const devUserId = process.env.NEXT_PUBLIC_DEV_USER_ID
+  if (devUserId && !headers.has("x-user-id") && !headers.has("Authorization")) {
+    headers.set("x-user-id", devUserId)
+  }
+
+  const response = await fetch(input, {
+    ...init,
+    headers
+  })
+
+  const data = await response.json().catch(() => null)
+  if (!response.ok) {
+    const message =
+      data && typeof data === "object" && "error" in data && typeof data.error === "string"
+        ? data.error
+        : "Request failed"
+
+    throw new Error(message)
+  }
+
+  return data as T
+}

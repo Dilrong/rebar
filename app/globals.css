@@ -1,0 +1,80 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 95%;
+    /* Light concrete */
+    --foreground: 0 0% 5%;
+    /* Near black */
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 5%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 5%;
+    --primary: 0 0% 5%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 0 0% 88%;
+    --secondary-foreground: 0 0% 5%;
+    --muted: 0 0% 88%;
+    --muted-foreground: 0 0% 40%;
+    --accent: 21 100% 50%;
+    /* Construction Orange #FF5A00 */
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 5%;
+    /* Pure black borders */
+    --input: 0 0% 5%;
+    --ring: 21 100% 50%;
+    --radius: 0rem;
+    /* Sharp corners */
+  }
+
+  .dark {
+    --background: 0 0% 0%;
+    /* Pure black */
+    --foreground: 0 0% 95%;
+    /* Light concrete */
+    --card: 0 0% 5%;
+    /* Dark gray */
+    --card-foreground: 0 0% 95%;
+    --popover: 0 0% 5%;
+    --popover-foreground: 0 0% 95%;
+    --primary: 0 0% 95%;
+    --primary-foreground: 0 0% 0%;
+    --secondary: 0 0% 15%;
+    --secondary-foreground: 0 0% 95%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 60%;
+    --accent: 21 100% 50%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 25%;
+    /* Darker gray borders in dark mode to not be blinding */
+    --input: 0 0% 25%;
+    --ring: 21 100% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased selection:bg-accent/30 selection:text-foreground font-sans;
+  }
+}
+
+@layer utilities {
+  .glass {
+    /* Brutalist solid card instead of glass */
+    @apply bg-background border-2 border-border shadow-[4px_4px_0px_0px_rgba(0, 0, 0, 1)] dark:shadow-[4px_4px_0px_0px_rgba(255, 255, 255, 0.1)];
+  }
+
+  .focus-ring {
+    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-none;
+  }
+}
