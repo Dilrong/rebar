@@ -8,7 +8,7 @@ import AppNav from "@/components/layout/app-nav"
 import { apiFetch } from "@/lib/client-http"
 import { CreateRecordSchema, type CreateRecordInput } from "@/lib/schemas"
 import type { TagRow } from "@/lib/types"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import type { ChangeEvent } from "react"
 import { useForm } from "react-hook-form"
 import { AlertTriangle, CheckSquare } from "lucide-react"
@@ -43,6 +43,8 @@ type IngestResponse = {
 }
 
 type ImportMode = "manual" | "url" | "batch" | "csv" | "ocr"
+
+const INGEST_RETRY_KEY = "rebar.ingest.retry.queue"
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null
@@ -255,6 +257,8 @@ export default function CapturePage() {
   const [ingestResult, setIngestResult] = useState<IngestResponse | null>(null)
   const [ingestError, setIngestError] = useState<string | null>(null)
   const [importMode, setImportMode] = useState<ImportMode>("manual")
+  const [duplicateRecordId, setDuplicateRecordId] = useState<string | null>(null)
+  const [retryQueue, setRetryQueue] = useState<Array<{ items: IngestItemInput[] }>>([])
 
   const mutation = useMutation({
     mutationFn: async (payload: CreateRecordInput) =>
@@ -269,9 +273,16 @@ export default function CapturePage() {
         })
       }),
     onSuccess: () => {
+      setDuplicateRecordId(null)
       form.reset({ kind: "note", content: "", url: "", source_title: "", tag_ids: [] })
       setShowSavedToast(true)
       window.setTimeout(() => setShowSavedToast(false), 2500)
+    },
+    onError: (error: Error & { status?: number; payload?: unknown }) => {
+      if (error.status === 409 && error.payload && typeof error.payload === "object" && "record_id" in error.payload) {
+        const recordId = (error.payload as { record_id?: string | null }).record_id
+        setDuplicateRecordId(recordId ?? null)
+      }
     }
   })
 
@@ -308,6 +319,65 @@ export default function CapturePage() {
     }
   })
 
+  useEffect(() => {
+    const raw = window.localStorage.getItem(INGEST_RETRY_KEY)
+    if (!raw) {
+      return
+    }
+
+    try {
+      const parsed = JSON.parse(raw) as Array<{ items: IngestItemInput[] }>
+      setRetryQueue(parsed)
+    } catch {
+      window.localStorage.removeItem(INGEST_RETRY_KEY)
+    }
+  }, [])
+
+  const enqueueRetry = (payload: { items: IngestItemInput[] }) => {
+    setRetryQueue((previous) => {
+      const next = [...previous, payload].slice(-20)
+      window.localStorage.setItem(INGEST_RETRY_KEY, JSON.stringify(next))
+      return next
+    })
+  }
+
+  const clearRetryQueue = () => {
+    setRetryQueue([])
+    window.localStorage.removeItem(INGEST_RETRY_KEY)
+  }
+
+  const retryAllQueued = async () => {
+    const snapshot = [...retryQueue]
+    if (snapshot.length === 0) {
+      return
+    }
+
+    let successCount = 0
+    const failed: Array<{ items: IngestItemInput[] }> = []
+
+    for (const payload of snapshot) {
+      try {
+        await ingestMutation.mutateAsync(payload)
+        successCount += 1
+      } catch {
+        failed.push(payload)
+      }
+    }
+
+    setRetryQueue(failed)
+    window.localStorage.setItem(INGEST_RETRY_KEY, JSON.stringify(failed))
+    setIngestError(
+      failed.length > 0
+        ? t("capture.retryPartial", "일부 재시도만 성공했습니다.")
+        : t("capture.retryDone", "대기 중이던 인입이 모두 처리되었습니다.")
+    )
+
+    if (successCount > 0) {
+      setShowSavedToast(true)
+      window.setTimeout(() => setShowSavedToast(false), 2500)
+    }
+  }
+
   const ocrMutation = useMutation({
     mutationFn: async (file: File) => {
       const { recognize } = await import("tesseract.js")
@@ -330,6 +400,11 @@ export default function CapturePage() {
 
   const onSubmit = form.handleSubmit((values) => mutation.mutate(values))
 
+  const handleMergeDuplicate = () => {
+    const values = form.getValues()
+    mutation.mutate({ ...values, on_duplicate: "merge" })
+  }
+
   const handleIngestSubmit = () => {
     setIngestResult(null)
     setIngestError(null)
@@ -340,7 +415,12 @@ export default function CapturePage() {
         throw new Error(t("capture.ingestEmpty", "No importable items found."))
       }
 
-      ingestMutation.mutate({ items })
+      ingestMutation.mutate(
+        { items },
+        {
+          onError: () => enqueueRetry({ items })
+        }
+      )
     } catch (error) {
       const message = error instanceof Error ? error.message : t("capture.ingestParseError", "Invalid JSON")
       setIngestError(message)
@@ -357,7 +437,12 @@ export default function CapturePage() {
         throw new Error(t("capture.csvEmpty", "No importable rows found."))
       }
 
-      ingestMutation.mutate({ items })
+      ingestMutation.mutate(
+        { items },
+        {
+          onError: () => enqueueRetry({ items })
+        }
+      )
     } catch (error) {
       const message = error instanceof Error ? error.message : t("capture.csvParseError", "Invalid CSV")
       setIngestError(message)
@@ -558,6 +643,12 @@ content-type: application/json
               </div>
               <div className="mt-3 border-2 border-foreground bg-background p-3">
                 <p className="mb-2 font-mono text-[10px] font-bold uppercase">{t("capture.shareTitle", "SHARE WEBHOOK (KAKAO/TELEGRAM)")}</p>
+                <Link
+                  href="/share"
+                  className="mb-2 inline-block border border-foreground px-2 py-1 font-mono text-[10px] font-bold uppercase"
+                >
+                  {t("capture.sharePage", "OPEN MOBILE SHARE PAGE")}
+                </Link>
                 <pre className="overflow-x-auto border border-foreground p-2 font-mono text-[10px]">
 {`POST /api/capture/share
 x-rebar-ingest-key: <REBAR_INGEST_API_KEY>
@@ -566,6 +657,29 @@ content-type: application/json
 
 {"content":"공유 텍스트","title":"공유 제목","url":"https://..."}`}
                 </pre>
+              </div>
+              <div className="mt-3 border-2 border-foreground bg-background p-3">
+                <p className="mb-2 font-mono text-[10px] font-bold uppercase">
+                  {t("capture.retryTitle", "INGEST RETRY QUEUE")}: {retryQueue.length}
+                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={retryAllQueued}
+                    disabled={retryQueue.length === 0 || ingestMutation.isPending}
+                    className="border-2 border-foreground bg-foreground px-2 py-1 font-mono text-[10px] font-bold uppercase text-background disabled:opacity-60"
+                  >
+                    {t("capture.retryRun", "RETRY ALL")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={clearRetryQueue}
+                    disabled={retryQueue.length === 0}
+                    className="border-2 border-foreground bg-background px-2 py-1 font-mono text-[10px] font-bold uppercase disabled:opacity-60"
+                  >
+                    {t("capture.retryClear", "CLEAR")}
+                  </button>
+                </div>
               </div>
               {ingestError ? <p className="mt-2 font-mono text-xs text-destructive">{ingestError}</p> : null}
               {ingestMutation.error ? (
@@ -762,6 +876,30 @@ content-type: application/json
                     SYS.ERR: {mutation.error.message}
                   </div>
                 )}
+
+                {duplicateRecordId ? (
+                  <div className="w-full border-2 border-foreground bg-background p-3">
+                    <p className="font-mono text-xs font-bold uppercase text-foreground">
+                      {t("capture.duplicateFound", "중복 항목이 있어 병합 저장을 권장합니다.")}
+                    </p>
+                    <div className="mt-2 flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleMergeDuplicate}
+                        disabled={mutation.isPending}
+                        className="border-2 border-foreground bg-foreground px-3 py-2 font-mono text-xs font-bold uppercase text-background"
+                      >
+                        {t("capture.mergeDuplicate", "중복 병합 저장")}
+                      </button>
+                      <Link
+                        href={`/records/${duplicateRecordId}`}
+                        className="border-2 border-foreground bg-background px-3 py-2 font-mono text-xs font-bold uppercase text-foreground"
+                      >
+                        {t("capture.openExisting", "기존 항목 보기")}
+                      </Link>
+                    </div>
+                  </div>
+                ) : null}
 
                 {mutation.isSuccess && !showSavedToast ? (
                   <div className="flex items-center text-white bg-accent font-mono text-xs font-bold px-3 py-2 uppercase animate-pulse">

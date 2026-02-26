@@ -31,7 +31,10 @@ export async function apiFetch<T>(input: string, init?: RequestInit): Promise<T>
         ? data.error
         : "Request failed"
 
-    throw new Error(message)
+    const error = new Error(message) as Error & { status?: number; payload?: unknown }
+    error.status = response.status
+    error.payload = data
+    throw error
   }
 
   return data as T

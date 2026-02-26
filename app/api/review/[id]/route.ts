@@ -46,7 +46,10 @@ export async function POST(
   }
 
   const now = new Date()
-  const nextInterval = calcNextInterval(current.data.interval_days, parsedBody.data.action)
+  const nextInterval =
+    parsedBody.data.action === "resurface" && parsedBody.data.snooze_days
+      ? parsedBody.data.snooze_days
+      : calcNextInterval(current.data.interval_days, parsedBody.data.action)
   const nextDue = new Date(now)
   nextDue.setDate(nextDue.getDate() + nextInterval)
 

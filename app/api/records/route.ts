@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server"
+import { NextResponse } from "next/server"
 import { z } from "zod"
 import { getUserId } from "@/lib/auth"
 import { sha256 } from "@/lib/hash"
@@ -134,7 +135,60 @@ export async function POST(request: NextRequest) {
 
   if (created.error) {
     if (created.error.code === "23505") {
-      return fail("Duplicated content", 409)
+      if (parsed.data.on_duplicate === "merge") {
+        const existing = await supabase
+          .from("records")
+          .select("*")
+          .eq("user_id", userId)
+          .eq("content_hash", contentHash)
+          .single()
+
+        if (existing.error) {
+          return fail(existing.error.message, 500)
+        }
+
+        const mergedUrl = parsed.data.url ?? existing.data.url
+        const mergedSourceTitle = parsed.data.source_title ?? existing.data.source_title
+
+        const updated = await supabase
+          .from("records")
+          .update({
+            url: mergedUrl,
+            source_title: mergedSourceTitle,
+            updated_at: new Date().toISOString()
+          })
+          .eq("id", existing.data.id)
+          .eq("user_id", userId)
+          .select("*")
+          .single()
+
+        if (updated.error) {
+          return fail(updated.error.message, 500)
+        }
+
+        if (parsed.data.tag_ids && parsed.data.tag_ids.length > 0) {
+          const links = parsed.data.tag_ids.map((tagId) => ({
+            record_id: existing.data.id,
+            tag_id: tagId
+          }))
+
+          const tagged = await supabase.from("record_tags").upsert(links, { onConflict: "record_id,tag_id" })
+          if (tagged.error) {
+            return fail(tagged.error.message, 500)
+          }
+        }
+
+        return ok({ ...updated.data, merged: true })
+      }
+
+      const existing = await supabase
+        .from("records")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("content_hash", contentHash)
+        .single()
+
+      return NextResponse.json({ error: "Duplicated content", record_id: existing.data?.id ?? null }, { status: 409 })
     }
 
     return fail(created.error.message, 500)

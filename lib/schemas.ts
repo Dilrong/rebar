@@ -18,7 +18,8 @@ export const CreateRecordSchema = z
     content: z.string().min(1),
     url: z.string().url().optional(),
     source_title: z.string().min(1).optional(),
-    tag_ids: z.array(z.string().uuid()).optional()
+    tag_ids: z.array(z.string().uuid()).optional(),
+    on_duplicate: z.enum(["error", "merge"]).optional()
   })
   .superRefine((value, ctx) => {
     if (value.kind === "link" && !value.url) {
@@ -42,7 +43,8 @@ export const UpdateRecordSchema = z
   })
 
 export const ReviewRecordSchema = z.object({
-  action: ReviewActionSchema
+  action: ReviewActionSchema,
+  snooze_days: z.number().int().min(1).max(30).optional()
 })
 
 export type RecordKind = z.infer<typeof RecordKindSchema>

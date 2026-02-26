@@ -25,11 +25,11 @@ export default function ReviewPage() {
   })
 
   const mutation = useMutation({
-    mutationFn: async ({ id, action }: { id: string; action: "reviewed" | "resurface" }) =>
+    mutationFn: async ({ id, action, snooze_days }: { id: string; action: "reviewed" | "resurface"; snooze_days?: number }) =>
       apiFetch<{ record: RecordRow }>(`/api/review/${id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action })
+        body: JSON.stringify({ action, snooze_days })
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["review-today"] })
   })
@@ -126,23 +126,51 @@ export default function ReviewPage() {
                   </span>
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => mutation.mutate({ id: first.id, action: "resurface" })}
-                  disabled={mutation.isPending}
-                  className="group flex flex-col items-center justify-center p-4 md:p-6 bg-background text-foreground border-4 border-foreground hover:bg-muted transition-colors disabled:opacity-50 space-y-3 cursor-pointer rounded-none active:translate-y-1 min-h-[120px]"
-                >
-                  {mutation.isPending && mutation.variables?.action === "resurface" ? (
-                    <LoadingDots />
-                  ) : (
-                    <RefreshCcw className="w-6 h-6" strokeWidth={3} />
-                  )}
-                  <span className="font-black text-lg md:text-xl uppercase tracking-wider text-center">
-                    {mutation.isPending && mutation.variables?.action === "resurface"
-                      ? t("review.relocating", "Relocating...")
-                      : t("review.resurface", "RESURFACE")}
-                  </span>
-                </button>
+                <div className="border-4 border-foreground p-3">
+                  <button
+                    type="button"
+                    onClick={() => mutation.mutate({ id: first.id, action: "resurface" })}
+                    disabled={mutation.isPending}
+                    className="group flex w-full flex-col items-center justify-center p-4 bg-background text-foreground border-2 border-foreground hover:bg-muted transition-colors disabled:opacity-50 space-y-3 cursor-pointer rounded-none active:translate-y-1"
+                  >
+                    {mutation.isPending && mutation.variables?.action === "resurface" ? (
+                      <LoadingDots />
+                    ) : (
+                      <RefreshCcw className="w-6 h-6" strokeWidth={3} />
+                    )}
+                    <span className="font-black text-base uppercase tracking-wider text-center">
+                      {mutation.isPending && mutation.variables?.action === "resurface"
+                        ? t("review.relocating", "Relocating...")
+                        : t("review.resurface", "RESURFACE")}
+                    </span>
+                  </button>
+                  <div className="mt-2 grid grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => mutation.mutate({ id: first.id, action: "resurface", snooze_days: 1 })}
+                      className="border-2 border-foreground px-2 py-2 font-mono text-[10px] font-bold uppercase"
+                      disabled={mutation.isPending}
+                    >
+                      {t("review.snooze1", "내일")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => mutation.mutate({ id: first.id, action: "resurface", snooze_days: 3 })}
+                      className="border-2 border-foreground px-2 py-2 font-mono text-[10px] font-bold uppercase"
+                      disabled={mutation.isPending}
+                    >
+                      {t("review.snooze3", "3일")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => mutation.mutate({ id: first.id, action: "resurface", snooze_days: 7 })}
+                      className="border-2 border-foreground px-2 py-2 font-mono text-[10px] font-bold uppercase"
+                      disabled={mutation.isPending}
+                    >
+                      {t("review.snooze7", "1주")}
+                    </button>
+                  </div>
+                </div>
               </div>
 
               {mutation.error ? (
