@@ -8,6 +8,7 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
 const mono = Roboto_Mono({ subsets: ["latin"], variable: "--font-mono" })
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://rebar.vercel.app"),
   title: "REBAR_ | Data Infrastructure",
   description: "Personal Single Source of Truth data pipeline.",
   icons: {
