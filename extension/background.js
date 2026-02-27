@@ -8,8 +8,7 @@ async function getSettings() {
   const stored = await chrome.storage.sync.get(DEFAULT_SETTINGS)
   return {
     rebarUrl: stored.rebarUrl || DEFAULT_SETTINGS.rebarUrl,
-    defaultTags: stored.defaultTags || DEFAULT_SETTINGS.defaultTags,
-    enableDomainTags: stored.enableDomainTags ?? DEFAULT_SETTINGS.enableDomainTags
+    defaultTags: stored.defaultTags || DEFAULT_SETTINGS.defaultTags
   }
 }
 

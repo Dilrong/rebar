@@ -3,8 +3,7 @@ import { initI18n, t } from "./i18n.js"
 
 const form = {
   rebarUrl: document.getElementById("rebarUrl"),
-  defaultTags: document.getElementById("defaultTags"),
-  enableDomainTags: document.getElementById("enableDomainTags")
+  defaultTags: document.getElementById("defaultTags")
 }
 
 const saveButton = document.getElementById("save")
@@ -29,7 +28,6 @@ async function load() {
   const data = await chrome.storage.sync.get(DEFAULT_SETTINGS)
   form.rebarUrl.value = data.rebarUrl || DEFAULT_SETTINGS.rebarUrl
   form.defaultTags.value = data.defaultTags || DEFAULT_SETTINGS.defaultTags
-  form.enableDomainTags.checked = data.enableDomainTags ?? DEFAULT_SETTINGS.enableDomainTags
 }
 
 async function save() {
@@ -44,8 +42,7 @@ async function save() {
 
   const payload = {
     rebarUrl: urlStr,
-    defaultTags: form.defaultTags.value.trim() || DEFAULT_SETTINGS.defaultTags,
-    enableDomainTags: form.enableDomainTags.checked
+    defaultTags: form.defaultTags.value.trim() || DEFAULT_SETTINGS.defaultTags
   }
 
   await chrome.storage.sync.set(payload)
