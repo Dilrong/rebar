@@ -9,15 +9,44 @@
   <body>
     <main class="popup">
       <h1>REBAR Clipper</h1>
-      <p class="hint">Collect selected highlight or article text, then open REBAR Share.</p>
+      <p class="hint">Collect selected highlight or article text, then save directly to REBAR.</p>
 
       <div class="actions">
         <button id="saveHighlight" type="button">Clip Highlight</button>
         <button id="saveArticle" type="button">Clip Article</button>
       </div>
 
-      <p id="status" class="status">Ready</p>
-      <a href="options.html" target="_blank" rel="noreferrer" class="settings-link">Open Settings</a>
+      <button id="domainTagBadge" type="button" class="badge">Domain tags: ...</button>
+
+      <section id="preview" class="preview hidden">
+        <p class="preview-title">Clip Preview</p>
+        <label>
+          Title
+          <input id="previewTitle" type="text" />
+        </label>
+        <label>
+          URL
+          <input id="previewUrl" type="text" />
+        </label>
+        <label>
+          Tags (comma separated)
+          <input id="previewTags" type="text" placeholder="highlight,web" />
+        </label>
+        <label>
+          Content
+          <textarea id="previewContent" rows="7"></textarea>
+          <span id="charCount" class="char-count">0 / 2500</span>
+        </label>
+        <div class="preview-actions">
+          <button id="openShare" type="button">Save to REBAR</button>
+          <button id="cancelPreview" type="button" class="secondary">Cancel</button>
+        </div>
+      </section>
+
+      <div class="status-bar">
+        <p id="status" class="status" role="status" aria-live="polite">Ready</p>
+        <a href="options.html" target="_blank" rel="noreferrer" class="settings-link">Open Settings</a>
+      </div>
     </main>
 
     <script src="popup.js" type="module"></script>

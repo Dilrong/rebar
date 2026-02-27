@@ -5,53 +5,105 @@
 body {
   margin: 0;
   font-family: "Inter", "Noto Sans KR", system-ui, sans-serif;
-  background: #fafafa;
+  background: #f5f5f5;
   color: #111;
 }
 
 .settings {
   max-width: 560px;
-  margin: 32px auto;
-  padding: 24px;
-  border: 2px solid #111;
+  margin: 40px auto;
+  padding: 32px;
+  border: 4px solid #111;
   background: #fff;
+  box-shadow: 8px 8px 0 #111;
 }
 
 h1 {
-  margin: 0 0 16px;
-  font-size: 24px;
-  font-weight: 800;
+  margin: 0 0 24px;
+  font-size: 32px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+  border-bottom: 4px solid #111;
+  padding-bottom: 16px;
 }
 
 label {
   display: block;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 900;
   text-transform: uppercase;
 }
 
-input {
+input[type="text"],
+input[type="password"] {
   width: 100%;
-  margin-top: 6px;
-  border: 2px solid #111;
-  padding: 10px 12px;
-  font-size: 13px;
+  margin-top: 8px;
+  border: 4px solid #111;
+  padding: 12px 14px;
+  font-size: 14px;
+  font-family: "Inter", "Noto Sans KR", system-ui, sans-serif;
+  font-weight: 500;
+  background: #fff;
+  transition: background 0.2s, box-shadow 0.2s;
 }
 
-button {
-  border: 2px solid #111;
-  background: #111;
-  color: #fff;
-  padding: 10px 14px;
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
+input[type="text"]:focus,
+input[type="password"]:focus {
+  outline: none;
+  background: #fdfdfd;
+  box-shadow: 4px 4px 0 #111;
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0 24px;
   cursor: pointer;
 }
 
+.checkbox-row input {
+  width: 24px;
+  height: 24px;
+  margin-top: 0;
+  cursor: pointer;
+  accent-color: #111;
+}
+
+button {
+  border: 4px solid #111;
+  background: #111;
+  color: #fff;
+  padding: 14px 24px;
+  font-size: 14px;
+  font-weight: 900;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 4px 4px 0 #111;
+  transition: transform 0.1s, box-shadow 0.1s, background 0.2s;
+}
+
+button:hover {
+  background: #333;
+}
+
+button:active {
+  transform: translate(4px, 4px);
+  box-shadow: 0 0 0 #111;
+}
+
 .status {
-  margin-top: 10px;
-  font-size: 12px;
+  margin-top: 16px;
+  font-size: 13px;
   font-weight: 700;
+  color: #555;
+}
+
+#status {
+  margin-top: 24px;
+  font-weight: 900;
+  color: #111;
+  text-transform: uppercase;
 }

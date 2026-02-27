@@ -1,15 +1,14 @@
+import { DEFAULT_SETTINGS, normalizeBaseUrl } from "./shared.js"
+
 const form = {
   apiBaseUrl: document.getElementById("apiBaseUrl"),
-  defaultTags: document.getElementById("defaultTags")
+  apiKey: document.getElementById("apiKey"),
+  defaultTags: document.getElementById("defaultTags"),
+  enableDomainTags: document.getElementById("enableDomainTags")
 }
 
 const saveButton = document.getElementById("save")
 const statusEl = document.getElementById("status")
-
-const DEFAULTS = {
-  apiBaseUrl: "http://localhost:3000",
-  defaultTags: "web,clipper"
-}
 
 function setStatus(message, isError = false) {
   statusEl.textContent = message
@@ -17,15 +16,19 @@ function setStatus(message, isError = false) {
 }
 
 async function load() {
-  const data = await chrome.storage.sync.get(DEFAULTS)
-  form.apiBaseUrl.value = data.apiBaseUrl || DEFAULTS.apiBaseUrl
-  form.defaultTags.value = data.defaultTags || DEFAULTS.defaultTags
+  const data = await chrome.storage.sync.get(DEFAULT_SETTINGS)
+  form.apiBaseUrl.value = data.apiBaseUrl || DEFAULT_SETTINGS.apiBaseUrl
+  form.apiKey.value = data.apiKey || ""
+  form.defaultTags.value = data.defaultTags || DEFAULT_SETTINGS.defaultTags
+  form.enableDomainTags.checked = data.enableDomainTags ?? DEFAULT_SETTINGS.enableDomainTags
 }
 
 async function save() {
   const payload = {
-    apiBaseUrl: form.apiBaseUrl.value.trim() || DEFAULTS.apiBaseUrl,
-    defaultTags: form.defaultTags.value.trim() || DEFAULTS.defaultTags
+    apiBaseUrl: form.apiBaseUrl.value.trim() || DEFAULT_SETTINGS.apiBaseUrl,
+    apiKey: form.apiKey.value.trim(),
+    defaultTags: form.defaultTags.value.trim() || DEFAULT_SETTINGS.defaultTags,
+    enableDomainTags: form.enableDomainTags.checked
   }
 
   if (!payload.apiBaseUrl) {
@@ -33,7 +36,19 @@ async function save() {
     return
   }
 
+  try {
+    payload.apiBaseUrl = normalizeBaseUrl(payload.apiBaseUrl)
+    const url = new URL(payload.apiBaseUrl)
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      throw new Error("URL must start with http:// or https://")
+    }
+  } catch {
+    setStatus("Enter a valid API base URL", true)
+    return
+  }
+
   await chrome.storage.sync.set(payload)
+  form.apiBaseUrl.value = payload.apiBaseUrl
   setStatus("Saved")
 }
 

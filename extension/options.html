@@ -16,16 +16,26 @@
       </label>
 
       <label>
+        API Key (optional)
+        <input id="apiKey" type="password" placeholder="Supabase access token" />
+      </label>
+
+      <label>
         Default Tags (comma separated)
         <input id="defaultTags" type="text" placeholder="web,highlight" />
       </label>
 
+      <label class="checkbox-row">
+        <input id="enableDomainTags" type="checkbox" />
+        Enable domain-based auto tags in preview
+      </label>
+
       <p class="status">
-        REBAR Clipper uses your REBAR login session. Opened clips are saved on the Share page after login.
+        REBAR Clipper saves directly to REBAR API. Keep API Key empty to use login session when available.
       </p>
 
       <button id="save" type="button">Save</button>
-      <p id="status" class="status">Ready</p>
+      <p id="status" class="status" role="status" aria-live="polite">Ready</p>
     </main>
     <script src="options.js" type="module"></script>
   </body>
