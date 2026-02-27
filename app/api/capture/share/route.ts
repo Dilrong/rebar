@@ -2,7 +2,7 @@ import { NextRequest } from "next/server"
 import { z } from "zod"
 import { POST as ingestPost } from "@/app/api/capture/ingest/route"
 import { fail, rateLimited } from "@/lib/http"
-import { checkRateLimit, resolveClientKey } from "@/lib/rate-limit"
+import { checkRateLimitDistributed, resolveClientKey } from "@/lib/rate-limit"
 import { RecordKindSchema } from "@/lib/schemas"
 
 const ShareBodySchema = z
@@ -20,7 +20,7 @@ const ShareBodySchema = z
   .passthrough()
 
 export async function POST(request: NextRequest) {
-  const limitResult = checkRateLimit({
+  const limitResult = await checkRateLimitDistributed({
     key: `capture:share:${resolveClientKey(request.headers)}`,
     limit: 60,
     windowMs: 60_000

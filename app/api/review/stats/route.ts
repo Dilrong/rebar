@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server"
 import { getUserId } from "@/lib/auth"
-import { fail, ok } from "@/lib/http"
+import { fail, ok, rateLimited } from "@/lib/http"
+import { checkRateLimitDistributed, resolveClientKey } from "@/lib/rate-limit"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
 
 function ymd(input: Date): string {
@@ -8,6 +9,15 @@ function ymd(input: Date): string {
 }
 
 export async function GET(request: NextRequest) {
+  const limitResult = await checkRateLimitDistributed({
+    key: `review:stats:${resolveClientKey(request.headers)}`,
+    limit: 60,
+    windowMs: 60_000
+  })
+  if (!limitResult.ok) {
+    return rateLimited(limitResult.retryAfterSec)
+  }
+
   const userId = await getUserId(request.headers)
   if (!userId) {
     return fail("Unauthorized", 401)

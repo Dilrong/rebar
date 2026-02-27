@@ -1,6 +1,7 @@
 import { z } from "zod"
 import { getUserId } from "@/lib/auth"
-import { fail, ok } from "@/lib/http"
+import { fail, ok, rateLimited } from "@/lib/http"
+import { checkRateLimitDistributed, resolveClientKey } from "@/lib/rate-limit"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
 
 const ToolCallSchema = z.object({
@@ -37,6 +38,15 @@ function toolList() {
 }
 
 export async function GET(request: Request) {
+  const limitResult = await checkRateLimitDistributed({
+    key: `mcp:get:${resolveClientKey(request.headers)}`,
+    limit: 60,
+    windowMs: 60_000
+  })
+  if (!limitResult.ok) {
+    return rateLimited(limitResult.retryAfterSec)
+  }
+
   const userId = await getUserId(new Headers(request.headers))
   if (!userId) {
     return fail("Unauthorized", 401)
@@ -46,6 +56,15 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const limitResult = await checkRateLimitDistributed({
+    key: `mcp:post:${resolveClientKey(request.headers)}`,
+    limit: 40,
+    windowMs: 60_000
+  })
+  if (!limitResult.ok) {
+    return rateLimited(limitResult.retryAfterSec)
+  }
+
   const userId = await getUserId(new Headers(request.headers))
   if (!userId) {
     return fail("Unauthorized", 401)

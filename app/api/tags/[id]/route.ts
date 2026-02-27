@@ -2,7 +2,8 @@ import { NextRequest } from "next/server"
 import { z } from "zod"
 import { getUserId } from "@/lib/auth"
 import { PGRST_NOT_FOUND, PG_UNIQUE_VIOLATION } from "@/lib/constants"
-import { fail, ok } from "@/lib/http"
+import { fail, ok, rateLimited } from "@/lib/http"
+import { checkRateLimitDistributed, resolveClientKey } from "@/lib/rate-limit"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
 
 const ParamsSchema = z.object({ id: z.string().uuid() })
@@ -14,6 +15,15 @@ export async function PATCH(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
+  const limitResult = await checkRateLimitDistributed({
+    key: `tags:patch:${resolveClientKey(request.headers)}`,
+    limit: 60,
+    windowMs: 60_000
+  })
+  if (!limitResult.ok) {
+    return rateLimited(limitResult.retryAfterSec)
+  }
+
   const userId = await getUserId(request.headers)
   if (!userId) {
     return fail("Unauthorized", 401)
@@ -64,6 +74,15 @@ export async function DELETE(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
+  const limitResult = await checkRateLimitDistributed({
+    key: `tags:delete:${resolveClientKey(request.headers)}`,
+    limit: 60,
+    windowMs: 60_000
+  })
+  if (!limitResult.ok) {
+    return rateLimited(limitResult.retryAfterSec)
+  }
+
   const userId = await getUserId(request.headers)
   if (!userId) {
     return fail("Unauthorized", 401)

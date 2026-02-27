@@ -1,7 +1,8 @@
 import { NextRequest } from "next/server"
 import { z } from "zod"
 import { getUserId } from "@/lib/auth"
-import { fail } from "@/lib/http"
+import { fail, rateLimited } from "@/lib/http"
+import { checkRateLimitDistributed, resolveClientKey } from "@/lib/rate-limit"
 import { RecordStateSchema } from "@/lib/schemas"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
 
@@ -43,6 +44,15 @@ tagNames: string[]) {
 }
 
 export async function GET(request: NextRequest) {
+  const limitResult = await checkRateLimitDistributed({
+    key: `export:get:${resolveClientKey(request.headers)}`,
+    limit: 30,
+    windowMs: 60_000
+  })
+  if (!limitResult.ok) {
+    return rateLimited(limitResult.retryAfterSec)
+  }
+
   const userId = await getUserId(request.headers)
   if (!userId) {
     return fail("Unauthorized", 401)

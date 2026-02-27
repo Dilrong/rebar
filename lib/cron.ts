@@ -14,7 +14,8 @@ function safeEqual(a: string, b: string): boolean {
 export function verifyCronRequest(headers: Headers): { ok: true } | { ok: false; response: Response } {
   const expected = process.env.REBAR_CRON_SECRET
   if (!expected) {
-    return { ok: false, response: fail("Cron secret is not configured", 500) }
+    console.error("REBAR_CRON_SECRET is not configured")
+    return { ok: false, response: fail("Unauthorized", 401) }
   }
 
   const headerSecret = headers.get("x-cron-secret") ?? ""

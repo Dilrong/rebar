@@ -85,24 +85,24 @@ export default function ReviewPage() {
         <main className="max-w-3xl w-full mx-auto flex-1 flex flex-col animate-fade-in-up">
           <AppNav />
 
-          <div className="mb-8 flex items-center justify-between border-4 border-foreground bg-card p-3 shadow-brutal">
+          <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between border-4 border-foreground bg-card p-4 shadow-brutal gap-4">
             <span className="font-mono text-sm font-bold tracking-widest uppercase text-foreground">
               {t("review.workload", "TODAY'S REVIEW")}
             </span>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Link
                 href="/review/history"
-                className="font-mono text-xs font-bold uppercase border-2 border-foreground px-2 py-1 bg-background hover:bg-foreground hover:text-background"
+                className="min-h-[44px] flex items-center justify-center font-mono text-xs font-bold uppercase border-2 border-foreground px-4 py-3 bg-background hover:bg-foreground hover:text-background shadow-brutal-sm transition-colors"
               >
                 {t("review.history", "HISTORY")}
               </Link>
-              <div className="font-mono text-sm font-bold bg-foreground text-background px-2 py-1">
+              <div className="min-h-[44px] flex items-center justify-center font-mono text-sm font-bold bg-foreground text-background px-4 py-3 shadow-brutal-sm">
                 {t("review.remaining", "REMAINING")}: {today.data?.total || 0}
               </div>
             </div>
           </div>
 
-          <div className="mb-6 grid grid-cols-2 gap-2 border-4 border-foreground bg-card p-3 md:grid-cols-4">
+          <div className="mb-6 grid grid-cols-2 gap-3 border-4 border-foreground bg-card p-6 md:grid-cols-4 shadow-brutal">
             <p className="font-mono text-xs font-bold uppercase">REVIEWED: {stats.data?.today_reviewed ?? 0}</p>
             <p className="font-mono text-xs font-bold uppercase">REMAINING: {stats.data?.today_remaining ?? 0}</p>
             <p className="font-mono text-xs font-bold uppercase">STREAK: {stats.data?.streak_days ?? 0}d</p>
@@ -137,27 +137,28 @@ export default function ReviewPage() {
                 </blockquote>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 mt-8 pt-8 border-t-4 border-foreground">
+              {/* Desktop grid layout / Mobile sticky bottom wrapper */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8 pt-8 md:border-t-4 md:border-foreground max-md:fixed max-md:bottom-[80px] max-md:left-0 max-md:right-0 max-md:z-30 max-md:p-4 max-md:bg-background max-md:border-t-4 max-md:border-foreground max-md:shadow-[0_-4px_0_0_rgba(0,0,0,1)] dark:max-md:shadow-[0_-4px_0_0_rgba(255,255,255,0.1)]">
                 <button
                   type="button"
                   onClick={() => mutation.mutate({ id: first.id, action: "reviewed" })}
                   disabled={mutation.isPending}
                   aria-label={t("review.ack", "ACKNOWLEDGE")}
-                  className="group flex flex-col items-center justify-center p-4 md:p-6 bg-accent text-white border-4 border-foreground hover:bg-foreground hover:text-background transition-colors disabled:opacity-50 space-y-3 cursor-pointer rounded-none active:translate-y-1 min-h-[120px]"
+                  className="group flex flex-col items-center justify-center p-4 md:p-6 bg-accent text-white border-4 border-foreground hover:bg-foreground hover:text-background transition-colors disabled:opacity-50 space-y-2 md:space-y-4 cursor-pointer rounded-none active:translate-y-1 min-h-[80px] md:min-h-[140px]"
                 >
                   {mutation.isPending && mutation.variables?.action === "reviewed" ? (
                     <LoadingDots />
                   ) : (
-                    <Check className="w-8 h-8" strokeWidth={4} />
+                    <Check className="w-6 h-6 md:w-8 md:h-8" strokeWidth={4} />
                   )}
-                  <span className="font-black text-lg md:text-xl uppercase tracking-wider text-center">
+                  <span className="font-black text-sm md:text-xl uppercase tracking-wider text-center">
                     {mutation.isPending && mutation.variables?.action === "reviewed"
                       ? t("review.processing", "Processing...")
                       : t("review.ack", "ACKNOWLEDGE")}
                   </span>
                 </button>
 
-                <div className="border-4 border-foreground p-3">
+                <div className="border-4 border-foreground p-3 bg-card max-md:hidden">
                   <button
                     type="button"
                     onClick={() => mutation.mutate({ id: first.id, action: "resurface" })}
@@ -176,12 +177,12 @@ export default function ReviewPage() {
                         : t("review.resurface", "RESURFACE")}
                     </span>
                   </button>
-                  <div className="mt-2 grid grid-cols-3 gap-2">
+                  <div className="mt-3 grid grid-cols-3 gap-2">
                     <button
                       type="button"
                       onClick={() => mutation.mutate({ id: first.id, action: "resurface", snooze_days: 1 })}
                       aria-label={t("review.snooze1", "Tomorrow")}
-                      className="min-h-[44px] min-w-[44px] border-2 border-foreground px-3 py-2 font-mono text-xs font-bold uppercase"
+                      className="min-h-[44px] min-w-[44px] border-2 border-foreground px-3 py-2 font-mono text-xs font-bold uppercase hover:bg-foreground hover:text-background transition-colors"
                       disabled={mutation.isPending}
                     >
                       {t("review.snooze1", "내일")}
@@ -190,7 +191,7 @@ export default function ReviewPage() {
                       type="button"
                       onClick={() => mutation.mutate({ id: first.id, action: "resurface", snooze_days: 3 })}
                       aria-label={t("review.snooze3", "3 days")}
-                      className="min-h-[44px] min-w-[44px] border-2 border-foreground px-3 py-2 font-mono text-xs font-bold uppercase"
+                      className="min-h-[44px] min-w-[44px] border-2 border-foreground px-3 py-2 font-mono text-xs font-bold uppercase hover:bg-foreground hover:text-background transition-colors"
                       disabled={mutation.isPending}
                     >
                       {t("review.snooze3", "3일")}
@@ -199,12 +200,43 @@ export default function ReviewPage() {
                       type="button"
                       onClick={() => mutation.mutate({ id: first.id, action: "resurface", snooze_days: 7 })}
                       aria-label={t("review.snooze7", "1 week")}
-                      className="min-h-[44px] min-w-[44px] border-2 border-foreground px-3 py-2 font-mono text-xs font-bold uppercase"
+                      className="min-h-[44px] min-w-[44px] border-2 border-foreground px-3 py-2 font-mono text-xs font-bold uppercase hover:bg-foreground hover:text-background transition-colors"
                       disabled={mutation.isPending}
                     >
                       {t("review.snooze7", "1주")}
                     </button>
                   </div>
+                </div>
+
+                {/* Mobile simplified resurface row (visible only on small screens) */}
+                <div className="md:hidden flex gap-2 w-full mt-2">
+                  <button
+                    type="button"
+                    onClick={() => mutation.mutate({ id: first.id, action: "resurface" })}
+                    disabled={mutation.isPending}
+                    aria-label={t("review.resurface", "RESURFACE")}
+                    className="flex-1 min-h-[44px] flex items-center justify-center bg-background text-foreground border-4 border-foreground hover:bg-muted active:translate-y-1"
+                  >
+                    {mutation.isPending && mutation.variables?.action === "resurface" ? (
+                      <LoadingDots />
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <RefreshCcw className="w-4 h-4" strokeWidth={3} />
+                        <span className="font-black text-xs uppercase text-center">
+                          {t("review.resurface", "RESURFACE")}
+                        </span>
+                      </div>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => mutation.mutate({ id: first.id, action: "resurface", snooze_days: 1 })}
+                    aria-label={t("review.snooze1", "Tomorrow")}
+                    className="min-h-[44px] w-[60px] border-4 border-foreground font-mono text-xs font-bold uppercase hover:bg-foreground hover:text-background bg-card"
+                    disabled={mutation.isPending}
+                  >
+                    +1d
+                  </button>
                 </div>
               </div>
 
@@ -213,16 +245,16 @@ export default function ReviewPage() {
           )}
 
           {nextQueue.length > 0 ? (
-            <section className="mt-8 border-4 border-foreground bg-card p-4">
-              <h2 className="font-black text-2xl uppercase mb-4">{t("review.upNext", "UP NEXT")}</h2>
-              <div className="space-y-2">
+            <section className="mt-8 border-4 border-foreground bg-card p-6 shadow-brutal">
+              <h2 className="font-black text-2xl uppercase mb-4 border-l-4 border-accent pl-4">{t("review.upNext", "UP NEXT")}</h2>
+              <div className="space-y-3">
                 {nextQueue.map((record) => (
                   <Link
                     key={record.id}
                     href={`/records/${record.id}`}
-                    className="block border-2 border-foreground px-3 py-2 hover:bg-foreground hover:text-background"
+                    className="block min-h-[44px] border-2 border-foreground px-4 py-3 hover:bg-foreground hover:text-background transition-colors"
                   >
-                    <p className="font-mono text-xs font-bold uppercase mb-1">{record.kind} · {getStateLabel(record.state, t)}</p>
+                    <p className="font-mono text-xs font-bold uppercase mb-2">{record.kind} · {getStateLabel(record.state, t)}</p>
                     <p className="font-semibold text-sm line-clamp-2">{record.content}</p>
                   </Link>
                 ))}

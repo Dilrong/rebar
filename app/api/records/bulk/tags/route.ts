@@ -34,6 +34,19 @@ export async function POST(request: NextRequest) {
   const existingIds = new Set(records.data.map((row) => row.id))
   const targetIds = ids.filter((id) => existingIds.has(id))
 
+  if (tagIds.length > 0) {
+    const ownedTags = await supabase.from("tags").select("id").eq("user_id", userId).in("id", tagIds)
+    if (ownedTags.error) {
+      return fail(ownedTags.error.message, 500)
+    }
+
+    const ownedTagIds = new Set(ownedTags.data.map((row) => row.id))
+    const invalidTagIds = tagIds.filter((tagId) => !ownedTagIds.has(tagId))
+    if (invalidTagIds.length > 0) {
+      return fail("Invalid tag_ids", 400)
+    }
+  }
+
   if (targetIds.length === 0) {
     return ok({ requested: ids.length, processed: 0, mode: parsed.data.mode })
   }

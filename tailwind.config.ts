@@ -63,8 +63,8 @@ const config = {
                 sm: "calc(var(--radius) - 4px)",
             },
             boxShadow: {
-                "brutal-sm": "4px 4px 0px 0px rgba(0,0,0,1)",
-                brutal: "8px 8px 0px 0px rgba(0,0,0,1)",
+                "brutal-sm": "4px 4px 0px 0px var(--shadow-color)",
+                brutal: "8px 8px 0px 0px var(--shadow-color)",
             },
             keyframes: {
                 "fade-in-up": {

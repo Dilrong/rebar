@@ -7,7 +7,7 @@ import { sha256 } from "@/lib/hash"
 import { fail, ok, rateLimited } from "@/lib/http"
 import { decodeTimestampCursor, encodeTimestampCursor } from "@/lib/pagination"
 import { toPositiveInt } from "@/lib/query"
-import { checkRateLimit, resolveClientKey } from "@/lib/rate-limit"
+import { checkRateLimitDistributed, resolveClientKey } from "@/lib/rate-limit"
 import { CreateRecordSchema, RecordKindSchema, RecordStateSchema } from "@/lib/schemas"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
 
@@ -16,7 +16,7 @@ const SortSchema = z.enum(["created_at", "review_count", "due_at"])
 const OrderSchema = z.enum(["asc", "desc"])
 
 export async function GET(request: NextRequest) {
-  const limitResult = checkRateLimit({
+  const limitResult = await checkRateLimitDistributed({
     key: `records:get:${resolveClientKey(request.headers)}`,
     limit: 120,
     windowMs: 60_000
@@ -176,7 +176,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const limitResult = checkRateLimit({
+  const limitResult = await checkRateLimitDistributed({
     key: `records:post:${resolveClientKey(request.headers)}`,
     limit: 60,
     windowMs: 60_000

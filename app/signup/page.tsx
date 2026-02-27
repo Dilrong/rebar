@@ -89,27 +89,27 @@ export default function SignUpPage() {
           </p>
         </header>
 
-        <section className="border-4 border-foreground bg-card p-6 space-y-4">
+        <section className="border-4 border-foreground bg-card p-6 md:p-8 space-y-4 shadow-brutal">
           <input
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             placeholder={t("signup.email", "email")}
-            className="w-full bg-background border-2 border-foreground text-foreground p-3 font-mono text-sm"
+            className="min-h-[44px] w-full bg-background border-2 border-foreground text-foreground px-4 py-3 font-mono text-sm"
           />
           <input
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             type="password"
             placeholder={t("signup.password", "password")}
-            className="w-full bg-background border-2 border-foreground text-foreground p-3 font-mono text-sm"
+            className="min-h-[44px] w-full bg-background border-2 border-foreground text-foreground px-4 py-3 font-mono text-sm"
           />
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-3 mt-6">
             <button
               type="button"
               onClick={handleSignUp}
               disabled={pending}
-              className="px-3 py-2 border-2 border-foreground font-mono text-xs font-bold uppercase bg-background text-foreground"
+              className="min-h-[44px] px-4 py-3 border-2 border-foreground font-mono text-xs font-bold uppercase bg-background text-foreground hover:bg-foreground hover:text-background transition-colors flex-1 sm:flex-none justify-center flex items-center"
             >
               {pending ? <LoadingDots /> : t("signup.signup", "Signup")}
             </button>
@@ -117,13 +117,13 @@ export default function SignUpPage() {
               type="button"
               onClick={handleLogin}
               disabled={pending}
-              className="px-3 py-2 border-2 border-foreground font-mono text-xs font-bold uppercase bg-foreground text-background"
+              className="min-h-[44px] px-4 py-3 border-2 border-foreground font-mono text-xs font-bold uppercase bg-foreground text-background hover:bg-background hover:text-foreground transition-colors flex-1 sm:flex-none justify-center flex items-center"
             >
               {pending ? <LoadingDots /> : t("signup.login", "Login")}
             </button>
             <Link
               href="/"
-              className="px-3 py-2 border-2 border-foreground font-mono text-xs font-bold uppercase bg-background text-foreground"
+              className="min-h-[44px] px-4 py-3 border-2 border-foreground font-mono text-xs font-bold uppercase bg-background text-foreground hover:bg-foreground hover:text-background transition-colors w-full sm:w-auto text-center"
             >
               {t("signup.home", "Home")}
             </Link>

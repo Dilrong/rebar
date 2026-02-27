@@ -3,14 +3,14 @@ import { z } from "zod"
 import { getUserId } from "@/lib/auth"
 import { fail, ok, rateLimited } from "@/lib/http"
 import { decodeTimestampCursor, encodeTimestampCursor } from "@/lib/pagination"
-import { checkRateLimit, resolveClientKey } from "@/lib/rate-limit"
+import { checkRateLimitDistributed, resolveClientKey } from "@/lib/rate-limit"
 import { RecordStateSchema } from "@/lib/schemas"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
 
 const UuidSchema = z.string().uuid()
 
 export async function GET(request: NextRequest) {
-  const limitResult = checkRateLimit({
+  const limitResult = await checkRateLimitDistributed({
     key: `search:get:${resolveClientKey(request.headers)}`,
     limit: 120,
     windowMs: 60_000

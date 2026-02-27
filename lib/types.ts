@@ -47,4 +47,5 @@ export type ReviewLogRow = {
   prev_interval_days: number | null
   prev_due_at: string | null
   prev_review_count: number | null
+  prev_last_reviewed_at: string | null
 }

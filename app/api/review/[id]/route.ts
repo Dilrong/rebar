@@ -2,7 +2,8 @@ import { NextRequest } from "next/server"
 import { z } from "zod"
 import { getUserId } from "@/lib/auth"
 import { PGRST_NOT_FOUND } from "@/lib/constants"
-import { fail, ok } from "@/lib/http"
+import { fail, ok, rateLimited } from "@/lib/http"
+import { checkRateLimitDistributed, resolveClientKey } from "@/lib/rate-limit"
 import { calcNextInterval } from "@/lib/review"
 import { ReviewRecordSchema } from "@/lib/schemas"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
@@ -13,6 +14,15 @@ export async function POST(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
+  const limitResult = await checkRateLimitDistributed({
+    key: `review:post:${resolveClientKey(request.headers)}`,
+    limit: 60,
+    windowMs: 60_000
+  })
+  if (!limitResult.ok) {
+    return rateLimited(limitResult.retryAfterSec)
+  }
+
   const userId = await getUserId(request.headers)
   if (!userId) {
     return fail("Unauthorized", 401)
@@ -33,7 +43,7 @@ export async function POST(
   const supabase = getSupabaseAdmin()
   const current = await supabase
     .from("records")
-    .select("id, state, interval_days, due_at, review_count")
+    .select("id, state, interval_days, due_at, last_reviewed_at, review_count")
     .eq("id", parsedParams.data.id)
     .eq("user_id", userId)
     .single()
@@ -85,7 +95,8 @@ export async function POST(
     prev_state: current.data.state,
     prev_interval_days: current.data.interval_days,
     prev_due_at: current.data.due_at,
-    prev_review_count: current.data.review_count
+    prev_review_count: current.data.review_count,
+    prev_last_reviewed_at: current.data.last_reviewed_at
   })
 
   if (logInserted.error) {

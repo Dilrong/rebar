@@ -24,9 +24,9 @@
   - MCP read-only 엔드포인트 (`/api/mcp`)
   - Obsidian export (`format=obsidian`)
 
-### Round 2 (현재)
+### Round 2 (완료)
 
-아래 항목 작업 필요.
+Round 2 항목(`2S`, `2A`, `2B`, `2C`) 반영 완료.
 
 ---
 
@@ -375,6 +375,144 @@ review_log action enum 확장 필요: `'reviewed' | 'resurface' | 'undo'`
 11. **2A-8** → 모바일 터치 타겟
 12. **2B-1** → Cron 병렬화
 13. **2B-4** → 테스트 추가
+
+---
+
+## Round 3: 신규 점검 결과 (2026-02-27)
+
+Round 2 반영 이후 코드/문서/외부 레퍼런스를 다시 점검한 결과, 아래 항목을 다음 우선순위로 권장한다.
+
+### 3S-1. 벌크 태그 API의 tag ownership 검증 누락
+
+**상태**: 완료 (2026-02-27)
+
+**파일**: `app/api/records/bulk/tags/route.ts`
+
+**문제**: `tag_ids`가 현재 사용자 소유 태그인지 확인하지 않고 `record_tags`에 바로 연결한다.
+
+**수정**:
+1. `tags` 테이블에서 `user_id = currentUser` + `id in tag_ids`로 검증
+2. 누락/타인 태그가 있으면 400 반환
+
+---
+
+### 3S-2. Undo 원자성(동시성) 보강
+
+**상태**: 완료 (2026-02-27)
+
+**파일**: `app/api/review/[id]/undo/route.ts`
+
+**문제**: 4초 윈도우 체크 후 복원 업데이트까지 단일 원자 조건이 아니다. 동일 레코드에 대해 매우 근접한 중복 undo 요청 시 경쟁 가능성이 남는다.
+
+**수정**:
+1. 복원 UPDATE에 추가 보호 조건(예: 최근 `reviewed_at`/`updated_at` 비교) 도입
+2. 한 번 undo된 로그는 재사용 불가하도록 단일-적용 보장
+
+---
+
+### 3S-3. Cron 인증 실패 메시지 정보 노출 최소화
+
+**상태**: 완료 (2026-02-27)
+
+**파일**: `lib/cron.ts`
+
+**문제**: `REBAR_CRON_SECRET` 미설정 시 500 + 상세 메시지를 반환해 운영 설정 상태를 노출한다.
+
+**수정**:
+1. 외부 응답은 항상 `401 Unauthorized`로 통일
+2. 상세 원인은 서버 로그로만 남김
+
+---
+
+### 3A-1. 서버리스 환경에서 in-memory rate limit 한계
+
+**상태**: 완료 (2026-02-27, Upstash 분산 경로 + 폴백)
+
+**파일**: `lib/rate-limit.ts`
+
+**문제**: 인메모리 `Map`은 인스턴스별로 분리되어 글로벌 제한이 보장되지 않는다(스케일아웃 시 우회 가능).
+
+**수정**:
+1. Redis/Upstash 기반 분산 limiter로 전환
+2. Sliding window/token bucket 정책 도입
+
+---
+
+### 3A-2. Rate limit 적용 범위 확장
+
+**상태**: 완료 (2026-02-27, tags/review/export/mcp/ingest-jobs/records[id]/annotations 확장 적용)
+
+**파일**: `app/api/**/route.ts` (전역)
+
+**문제**: 현재 일부 엔드포인트에만 제한이 적용되어, 남은 route는 burst 트래픽 보호가 약하다.
+
+**수정**:
+1. `tags`, `review`, `export`, `mcp`, `ingest-jobs` 등 미적용 경로 점진 적용
+2. endpoint별 상한치 분리 (읽기/쓰기/고비용 연산)
+
+---
+
+### 3B-1. Quick Search 모달 접근성 보강
+
+**상태**: 완료 (2026-02-27)
+
+**파일**: `components/layout/app-nav.tsx`
+
+**문제**: 모달은 열리지만 `role="dialog"`/focus trap/ESC 외 키보드 탐색 보강이 부족하다.
+
+**수정**:
+1. `role="dialog"`, `aria-modal="true"`, label/description 지정
+2. 포커스 트랩 + 결과 목록 키보드(↑↓/Enter) 탐색 추가
+
+---
+
+### 3B-2. Library 카드 체크박스 터치 타겟
+
+**상태**: 완료 (2026-02-27)
+
+**파일**: `app/library/page.tsx`
+
+**문제**: 카드 선택 체크박스가 모바일 기준 최소 터치 영역(44x44)보다 작다.
+
+**수정**:
+1. 체크박스 히트박스 확장 (`min-h-[44px] min-w-[44px]` 수준)
+
+---
+
+### 3B-3. Export 드롭다운 UX 보강
+
+**상태**: 완료 (2026-02-27)
+
+**파일**: `app/library/page.tsx`
+
+**문제**: 드롭다운 외부 클릭 닫기/키보드 내비게이션/포커스 복귀가 불완전하다.
+
+**수정**:
+1. outside click close
+2. Escape/Arrow/Enter 지원
+3. 닫힐 때 트리거 버튼으로 포커스 복귀
+
+---
+
+### 3C-1. API 통합 테스트 보강
+
+**상태**: 1차 완료 (2026-02-27)
+
+**추가된 통합 테스트**:
+1. `tests/api-records-bulk-tags.test.ts` — bulk tags ownership 검증 실패(400)
+2. `tests/api-review-undo.test.ts` — undo stale 충돌(409)
+3. `tests/api-records-route.test.ts` — records cursor/sort 유효성(400)
+4. `tests/api-cron-cleanup-route.test.ts` — cron 미설정 인증 실패(401)
+
+**파일**: `tests/` (신규 통합 테스트)
+
+**문제**: 현재 단위 테스트는 충분히 확장되었으나, route 통합 테스트는 아직 부족하다.
+
+**우선 추가 권장**:
+1. `records/bulk` + `records/bulk/tags`
+2. `review/[id]` + `review/[id]/undo` (4초 윈도우/동시성)
+3. `search` cursor/sort 조합
+4. `cron` 인증 실패/성공 케이스
 
 ---
 

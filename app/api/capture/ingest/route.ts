@@ -2,10 +2,10 @@ import { NextRequest } from "next/server"
 import { getUserId } from "@/lib/auth"
 import { fail, ok, rateLimited } from "@/lib/http"
 import { IngestPayloadSchema, processIngest } from "@/lib/ingest"
-import { checkRateLimit, resolveClientKey } from "@/lib/rate-limit"
+import { checkRateLimitDistributed, resolveClientKey } from "@/lib/rate-limit"
 
 export async function POST(request: NextRequest) {
-  const limitResult = checkRateLimit({
+  const limitResult = await checkRateLimitDistributed({
     key: `capture:ingest:${resolveClientKey(request.headers)}`,
     limit: 60,
     windowMs: 60_000

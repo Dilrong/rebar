@@ -2,7 +2,7 @@ import { NextRequest } from "next/server"
 import { z } from "zod"
 import { getUserId } from "@/lib/auth"
 import { fail, ok, rateLimited } from "@/lib/http"
-import { checkRateLimit, resolveClientKey } from "@/lib/rate-limit"
+import { checkRateLimitDistributed, resolveClientKey } from "@/lib/rate-limit"
 
 const BodySchema = z.object({
   url: z.string().url()
@@ -92,7 +92,7 @@ function createYoutubeContent(title: string | null, description: string | null):
 }
 
 export async function POST(request: NextRequest) {
-  const limitResult = checkRateLimit({
+  const limitResult = await checkRateLimitDistributed({
     key: `capture:extract:${resolveClientKey(request.headers)}`,
     limit: 30,
     windowMs: 60_000

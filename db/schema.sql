@@ -44,7 +44,8 @@ CREATE TABLE review_log (
   prev_state TEXT,
   prev_interval_days INTEGER,
   prev_due_at TIMESTAMPTZ,
-  prev_review_count INTEGER
+  prev_review_count INTEGER,
+  prev_last_reviewed_at TIMESTAMPTZ
 );
 
 CREATE INDEX review_log_record ON review_log (record_id, reviewed_at DESC);

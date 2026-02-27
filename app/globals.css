@@ -29,6 +29,7 @@
     --ring: 21 100% 50%;
     --radius: 0rem;
     /* Sharp corners */
+    --shadow-color: rgba(0, 0, 0, 1);
   }
 
   .dark {
@@ -55,6 +56,7 @@
     /* Darker gray borders in dark mode to not be blinding */
     --input: 0 0% 25%;
     --ring: 21 100% 50%;
+    --shadow-color: rgba(255, 255, 255, 0.1);
   }
 }
 
@@ -65,13 +67,16 @@
 
   body {
     @apply bg-background text-foreground antialiased selection:bg-accent/30 selection:text-foreground font-sans;
+    /* Extra padding on mobile to account for fixed bottom nav */
+    padding-bottom: env(safe-area-inset-bottom);
+    @apply pb-24 md:pb-0;
   }
 }
 
 @layer utilities {
   .glass {
-    /* Brutalist solid card instead of glass */
-    @apply bg-background border-2 border-border shadow-[4px_4px_0px_0px_rgba(0, 0, 0, 1)] dark:shadow-[4px_4px_0px_0px_rgba(255, 255, 255, 0.1)];
+    /* Brutalist solid card */
+    @apply bg-background border-2 border-border shadow-brutal-sm;
   }
 
   .focus-ring {

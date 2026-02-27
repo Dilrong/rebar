@@ -9,11 +9,11 @@ describe("verifyCronRequest", () => {
     delete process.env.REBAR_CRON_SECRET
   })
 
-  it("returns 500 when cron secret is not configured", () => {
+  it("returns 401 when cron secret is not configured", () => {
     const result = verifyCronRequest(new Headers())
     expect(result.ok).toBe(false)
     if (!result.ok) {
-      expect(result.response.status).toBe(500)
+      expect(result.response.status).toBe(401)
     }
   })
 
