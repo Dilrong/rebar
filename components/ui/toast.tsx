@@ -15,7 +15,11 @@ export function Toast({ message, actionLabel, onAction, onClose, tone = "default
         : "border-foreground bg-foreground text-background"
 
   return (
-    <div className={`fixed bottom-4 right-4 z-50 max-w-sm border-2 p-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] ${toneClass}`}>
+    <div
+      role="status"
+      aria-live="polite"
+      className={`fixed bottom-4 right-4 z-50 max-w-sm border-2 p-3 shadow-brutal-sm ${toneClass}`}
+    >
       <div className="flex items-center gap-2 font-mono text-xs font-bold uppercase">
         <span className="flex-1">{message}</span>
         {actionLabel && onAction ? (

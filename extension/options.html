@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>REBAR Clipper Settings</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <main class="settings">
+      <h1>REBAR Clipper Settings</h1>
+
+      <label>
+        API Base URL
+        <input id="apiBaseUrl" type="text" placeholder="https://rebar.vercel.app" />
+      </label>
+
+      <label>
+        Default Tags (comma separated)
+        <input id="defaultTags" type="text" placeholder="web,highlight" />
+      </label>
+
+      <p class="status">
+        REBAR Clipper uses your REBAR login session. Opened clips are saved on the Share page after login.
+      </p>
+
+      <button id="save" type="button">Save</button>
+      <p id="status" class="status">Ready</p>
+    </main>
+    <script src="options.js" type="module"></script>
+  </body>
+</html>

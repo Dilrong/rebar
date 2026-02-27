@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>REBAR Clipper</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main class="popup">
+      <h1>REBAR Clipper</h1>
+      <p class="hint">Collect selected highlight or article text, then open REBAR Share.</p>
+
+      <div class="actions">
+        <button id="saveHighlight" type="button">Clip Highlight</button>
+        <button id="saveArticle" type="button">Clip Article</button>
+      </div>
+
+      <p id="status" class="status">Ready</p>
+      <a href="options.html" target="_blank" rel="noreferrer" class="settings-link">Open Settings</a>
+    </main>
+
+    <script src="popup.js" type="module"></script>
+  </body>
+</html>

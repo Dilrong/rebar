@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { getSupabaseBrowser } from "@/lib/supabase-browser"
 import { LoadingDots } from "@/components/ui/loading"
 import { useI18n } from "@/components/i18n/i18n-provider"
@@ -11,15 +11,19 @@ import { useI18n } from "@/components/i18n/i18n-provider"
 export default function SignUpPage() {
   const { t } = useI18n()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
 
+  const nextParam = searchParams.get("next") ?? "/library"
+  const safeNextPath = nextParam.startsWith("/") ? nextParam : "/library"
+
   const handleSignUp = async () => {
     if (!email.trim() || !password) {
-      setError("이메일과 비밀번호를 입력하세요.")
+      setError(t("signup.error.missingCredentials", "Enter email and password."))
       return
     }
 
@@ -32,8 +36,7 @@ export default function SignUpPage() {
         email,
         password,
         options: {
-          emailRedirectTo:
-            typeof window !== "undefined" ? `${window.location.origin}/library` : undefined
+          emailRedirectTo: typeof window !== "undefined" ? `${window.location.origin}${safeNextPath}` : undefined
         }
       })
 
@@ -42,7 +45,7 @@ export default function SignUpPage() {
         return
       }
 
-      setNotice("회원가입 요청을 보냈습니다. 이메일 인증 후 로그인해 주세요.")
+      setNotice(t("signup.notice.checkEmail", "Signup request sent. Verify email, then login."))
     } catch (error) {
       setError(error instanceof Error ? error.message : "Signup failed")
     } finally {
@@ -52,7 +55,7 @@ export default function SignUpPage() {
 
   const handleLogin = async () => {
     if (!email.trim() || !password) {
-      setError("이메일과 비밀번호를 입력하세요.")
+      setError(t("signup.error.missingCredentials", "Enter email and password."))
       return
     }
 
@@ -68,7 +71,7 @@ export default function SignUpPage() {
         return
       }
 
-      router.replace("/library")
+      router.replace(safeNextPath)
     } catch (error) {
       setError(error instanceof Error ? error.message : "Login failed")
     } finally {

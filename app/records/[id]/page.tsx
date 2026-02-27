@@ -256,14 +256,14 @@ export default function RecordDetailPage() {
                         {...form.register("kind")}
                         className="w-full bg-background border-2 border-foreground font-mono text-sm font-bold uppercase text-foreground p-3 focus:outline-none focus:ring-2 focus:ring-accent appearance-none cursor-pointer rounded-none"
                       >
-                        <option value="comment">COMMENT</option>
-                        <option value="highlight">HIGHLIGHT</option>
-                        <option value="correction">CORRECTION</option>
+                        <option value="comment">{t("record.annotation.comment", "COMMENT")}</option>
+                        <option value="highlight">{t("record.annotation.highlight", "HIGHLIGHT")}</option>
+                        <option value="correction">{t("record.annotation.correction", "CORRECTION")}</option>
                       </select>
                     </div>
                     <textarea
                       rows={4}
-                      placeholder="ENTER LOG DATA..."
+                      placeholder={t("record.annotation.placeholder", "Enter note")}
                       className="w-full bg-background border-2 border-foreground text-foreground font-mono text-sm p-3 focus:outline-none focus:ring-2 focus:ring-accent placeholder:text-muted-foreground/50 resize-y rounded-none"
                       {...form.register("body", { required: true })}
                     />

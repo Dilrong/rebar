@@ -8,7 +8,7 @@ import AppNav from "@/components/layout/app-nav"
 import { apiFetch } from "@/lib/client-http"
 import { CreateRecordSchema, type CreateRecordInput } from "@/lib/schemas"
 import type { TagRow } from "@/lib/types"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import type { ChangeEvent } from "react"
 import { useForm } from "react-hook-form"
 import { AlertTriangle, CheckSquare } from "lucide-react"
@@ -42,9 +42,26 @@ type IngestResponse = {
   ids: string[]
 }
 
-type ImportMode = "manual" | "url" | "batch" | "csv" | "ocr"
+type IngestJobRow = {
+  id: string
+  status: "PENDING" | "DONE" | "FAILED"
+  attempts: number
+  last_error: string | null
+  created_at: string
+}
 
-const INGEST_RETRY_KEY = "rebar.ingest.retry.queue"
+type IngestJobsResponse = {
+  data: IngestJobRow[]
+  total: number
+}
+
+type CsvPreview = {
+  totalRows: number
+  importableRows: number
+  readwiseDetected: boolean
+}
+
+type ImportMode = "manual" | "url" | "batch" | "csv" | "ocr"
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null
@@ -183,6 +200,25 @@ function splitCsvLine(line: string): string[] {
   return cells
 }
 
+function normalizeCsvHeader(header: string) {
+  return header.toLowerCase().replace(/[^a-z0-9]/g, "")
+}
+
+function firstNonEmpty(...values: Array<string | undefined>) {
+  for (const value of values) {
+    if (!value) {
+      continue
+    }
+
+    const trimmed = value.trim()
+    if (trimmed.length > 0) {
+      return trimmed
+    }
+  }
+
+  return ""
+}
+
 function parseCsvItems(raw: string): IngestItemInput[] {
   const lines = raw
     .split(/\r?\n/)
@@ -193,7 +229,7 @@ function parseCsvItems(raw: string): IngestItemInput[] {
     return []
   }
 
-  const headers = splitCsvLine(lines[0]).map((header) => header.toLowerCase())
+  const headers = splitCsvLine(lines[0]).map((header) => normalizeCsvHeader(header))
   const items: IngestItemInput[] = []
 
   for (const line of lines.slice(1)) {
@@ -204,7 +240,13 @@ function parseCsvItems(raw: string): IngestItemInput[] {
       row.set(header, values[index] ?? "")
     })
 
-    const content = (row.get("content") || row.get("text") || row.get("highlight") || "").trim()
+    const highlight = firstNonEmpty(row.get("content"), row.get("text"), row.get("highlight"))
+    const note = firstNonEmpty(row.get("note"))
+    const content =
+      highlight && note
+        ? `${highlight}\n\nNote: ${note}`
+        : highlight || note
+
     if (!content) {
       continue
     }
@@ -215,11 +257,26 @@ function parseCsvItems(raw: string): IngestItemInput[] {
       .map((tag) => tag.trim())
       .filter((tag) => tag.length > 0)
 
+    const bookTitle = firstNonEmpty(row.get("booktitle"), row.get("title"), row.get("sourcetitle"))
+    const bookAuthor = firstNonEmpty(row.get("bookauthor"), row.get("author"))
+    const sourceTitle =
+      bookTitle && bookAuthor
+        ? `${bookTitle} - ${bookAuthor}`
+        : bookTitle || bookAuthor || ""
+
+    const url = firstNonEmpty(row.get("url"), row.get("sourceurl"))
+
+    const rawKind = firstNonEmpty(row.get("kind")).toLowerCase()
+    const kind: IngestItemInput["kind"] | undefined =
+      rawKind === "quote" || rawKind === "note" || rawKind === "link" || rawKind === "ai"
+        ? rawKind
+        : "quote"
+
     const item: IngestItemInput = {
       content,
-      source_title: (row.get("title") || row.get("source_title") || "").trim() || undefined,
-      url: (row.get("url") || row.get("source_url") || "").trim() || undefined,
-      kind: ((row.get("kind") || "").trim() as IngestItemInput["kind"]) || undefined,
+      source_title: sourceTitle || undefined,
+      url: url || undefined,
+      kind,
       tags: tags.length > 0 ? tags : undefined
     }
 
@@ -227,6 +284,44 @@ function parseCsvItems(raw: string): IngestItemInput[] {
   }
 
   return items
+}
+
+function parseCsvPreview(raw: string): CsvPreview {
+  const lines = raw
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+
+  if (lines.length === 0) {
+    return { totalRows: 0, importableRows: 0, readwiseDetected: false }
+  }
+
+  const headers = splitCsvLine(lines[0]).map((header) => normalizeCsvHeader(header))
+  const readwiseDetected = ["highlight", "booktitle", "bookauthor", "amazonbookid", "highlightedat"].every((key) =>
+    headers.includes(key)
+  )
+
+  let importableRows = 0
+  for (const line of lines.slice(1)) {
+    const values = splitCsvLine(line)
+    const row = new Map<string, string>()
+
+    headers.forEach((header, index) => {
+      row.set(header, values[index] ?? "")
+    })
+
+    const highlight = firstNonEmpty(row.get("content"), row.get("text"), row.get("highlight"))
+    const note = firstNonEmpty(row.get("note"))
+    if (highlight || note) {
+      importableRows += 1
+    }
+  }
+
+  return {
+    totalRows: Math.max(lines.length - 1, 0),
+    importableRows,
+    readwiseDetected
+  }
 }
 
 export default function CapturePage() {
@@ -251,6 +346,7 @@ export default function CapturePage() {
   const [externalJson, setExternalJson] = useState("")
   const [csvText, setCsvText] = useState("")
   const [csvFileName, setCsvFileName] = useState<string | null>(null)
+  const [csvPreview, setCsvPreview] = useState<CsvPreview>({ totalRows: 0, importableRows: 0, readwiseDetected: false })
   const [ocrFile, setOcrFile] = useState<File | null>(null)
   const [ocrFileName, setOcrFileName] = useState<string | null>(null)
   const [showSavedToast, setShowSavedToast] = useState(false)
@@ -258,7 +354,6 @@ export default function CapturePage() {
   const [ingestError, setIngestError] = useState<string | null>(null)
   const [importMode, setImportMode] = useState<ImportMode>("manual")
   const [duplicateRecordId, setDuplicateRecordId] = useState<string | null>(null)
-  const [retryQueue, setRetryQueue] = useState<Array<{ items: IngestItemInput[] }>>([])
 
   const mutation = useMutation({
     mutationFn: async (payload: CreateRecordInput) =>
@@ -279,8 +374,9 @@ export default function CapturePage() {
       window.setTimeout(() => setShowSavedToast(false), 2500)
     },
     onError: (error: Error & { status?: number; payload?: unknown }) => {
-      if (error.status === 409 && error.payload && typeof error.payload === "object" && "record_id" in error.payload) {
-        const recordId = (error.payload as { record_id?: string | null }).record_id
+      if (error.status === 409 && error.payload && typeof error.payload === "object") {
+        const payload = error.payload as { record_id?: string | null; data?: { record_id?: string | null } }
+        const recordId = payload.record_id ?? payload.data?.record_id ?? null
         setDuplicateRecordId(recordId ?? null)
       }
     }
@@ -314,69 +410,58 @@ export default function CapturePage() {
       setExternalJson("")
       setCsvText("")
       setCsvFileName(null)
+      setCsvPreview({ totalRows: 0, importableRows: 0, readwiseDetected: false })
       setShowSavedToast(true)
       window.setTimeout(() => setShowSavedToast(false), 2500)
     }
   })
 
-  useEffect(() => {
-    const raw = window.localStorage.getItem(INGEST_RETRY_KEY)
-    if (!raw) {
-      return
+  const ingestJobs = useQuery({
+    queryKey: ["ingest-jobs", "pending"],
+    queryFn: () => apiFetch<IngestJobsResponse>("/api/ingest-jobs?status=PENDING")
+  })
+
+  const enqueueRetryMutation = useMutation({
+    mutationFn: (payload: { items: IngestItemInput[]; error?: string }) =>
+      apiFetch<{ id: string }>("/api/ingest-jobs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ payload: { items: payload.items }, error: payload.error })
+      }),
+    onSuccess: () => {
+      ingestJobs.refetch()
     }
+  })
 
-    try {
-      const parsed = JSON.parse(raw) as Array<{ items: IngestItemInput[] }>
-      setRetryQueue(parsed)
-    } catch {
-      window.localStorage.removeItem(INGEST_RETRY_KEY)
+  const clearRetryMutation = useMutation({
+    mutationFn: () =>
+      apiFetch<{ cleared: boolean }>("/api/ingest-jobs?status=PENDING", {
+        method: "DELETE"
+      }),
+    onSuccess: () => {
+      ingestJobs.refetch()
     }
-  }, [])
+  })
 
-  const enqueueRetry = (payload: { items: IngestItemInput[] }) => {
-    setRetryQueue((previous) => {
-      const next = [...previous, payload].slice(-20)
-      window.localStorage.setItem(INGEST_RETRY_KEY, JSON.stringify(next))
-      return next
-    })
-  }
+  const retryAllMutation = useMutation({
+    mutationFn: () =>
+      apiFetch<{ done: number; failed: number; pending: number }>("/api/ingest-jobs/retry", {
+        method: "POST"
+      }),
+    onSuccess: (data) => {
+      ingestJobs.refetch()
+      setIngestError(
+        data.failed > 0
+          ? t("capture.retryPartial", "일부 재시도만 성공했습니다.")
+          : t("capture.retryDone", "대기 중이던 인입이 모두 처리되었습니다.")
+      )
 
-  const clearRetryQueue = () => {
-    setRetryQueue([])
-    window.localStorage.removeItem(INGEST_RETRY_KEY)
-  }
-
-  const retryAllQueued = async () => {
-    const snapshot = [...retryQueue]
-    if (snapshot.length === 0) {
-      return
-    }
-
-    let successCount = 0
-    const failed: Array<{ items: IngestItemInput[] }> = []
-
-    for (const payload of snapshot) {
-      try {
-        await ingestMutation.mutateAsync(payload)
-        successCount += 1
-      } catch {
-        failed.push(payload)
+      if (data.done > 0) {
+        setShowSavedToast(true)
+        window.setTimeout(() => setShowSavedToast(false), 2500)
       }
     }
-
-    setRetryQueue(failed)
-    window.localStorage.setItem(INGEST_RETRY_KEY, JSON.stringify(failed))
-    setIngestError(
-      failed.length > 0
-        ? t("capture.retryPartial", "일부 재시도만 성공했습니다.")
-        : t("capture.retryDone", "대기 중이던 인입이 모두 처리되었습니다.")
-    )
-
-    if (successCount > 0) {
-      setShowSavedToast(true)
-      window.setTimeout(() => setShowSavedToast(false), 2500)
-    }
-  }
+  })
 
   const ocrMutation = useMutation({
     mutationFn: async (file: File) => {
@@ -418,7 +503,11 @@ export default function CapturePage() {
       ingestMutation.mutate(
         { items },
         {
-          onError: () => enqueueRetry({ items })
+          onError: (error) =>
+            enqueueRetryMutation.mutate({
+              items,
+              error: error instanceof Error ? error.message : "Ingest failed"
+            })
         }
       )
     } catch (error) {
@@ -440,7 +529,11 @@ export default function CapturePage() {
       ingestMutation.mutate(
         { items },
         {
-          onError: () => enqueueRetry({ items })
+          onError: (error) =>
+            enqueueRetryMutation.mutate({
+              items,
+              error: error instanceof Error ? error.message : "Ingest failed"
+            })
         }
       )
     } catch (error) {
@@ -458,6 +551,7 @@ export default function CapturePage() {
     setCsvFileName(file.name)
     const text = await file.text()
     setCsvText(text)
+    setCsvPreview(parseCsvPreview(text))
   }
 
   const handleOcrFileChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -627,60 +721,63 @@ export default function CapturePage() {
                   {ingestMutation.isPending ? t("capture.ingesting", "IMPORTING...") : t("capture.ingestRun", "BATCH IMPORT")}
                 </button>
               </div>
-              <div className="mt-3 border-2 border-foreground bg-background p-3">
-                <p className="mb-2 font-mono text-[10px] font-bold uppercase">{t("capture.agentTitle", "EXTERNAL AGENT (OPENCLAW) HEADERS")}</p>
-                <p className="font-mono text-[10px] text-muted-foreground">
-                  {t("capture.agentHint", "Use Authorization Bearer (session) or x-rebar-ingest-key + x-user-id.")}
-                </p>
-                <pre className="mt-2 overflow-x-auto border border-foreground p-2 font-mono text-[10px]">
+              <details className="mt-3 border-2 border-foreground bg-background p-3">
+                <summary className="cursor-pointer font-mono text-[10px] font-bold uppercase">ADVANCED IMPORT TOOLS</summary>
+                <div className="mt-3 border-2 border-foreground bg-background p-3">
+                  <p className="mb-2 font-mono text-[10px] font-bold uppercase">{t("capture.agentTitle", "EXTERNAL AGENT (OPENCLAW) HEADERS")}</p>
+                  <p className="font-mono text-[10px] text-muted-foreground">
+                    {t("capture.agentHint", "Use Authorization Bearer (session) or x-rebar-ingest-key + x-user-id.")}
+                  </p>
+                  <pre className="mt-2 overflow-x-auto border border-foreground p-2 font-mono text-[10px]">
 {`POST /api/capture/ingest
 x-rebar-ingest-key: <REBAR_INGEST_API_KEY>
 x-user-id: <USER_UUID>
 content-type: application/json
 
 {"items":[{"content":"...","title":"...","url":"https://..."}]}`}
-                </pre>
-              </div>
-              <div className="mt-3 border-2 border-foreground bg-background p-3">
-                <p className="mb-2 font-mono text-[10px] font-bold uppercase">{t("capture.shareTitle", "SHARE WEBHOOK (KAKAO/TELEGRAM)")}</p>
-                <Link
-                  href="/share"
-                  className="mb-2 inline-block border border-foreground px-2 py-1 font-mono text-[10px] font-bold uppercase"
-                >
-                  {t("capture.sharePage", "OPEN MOBILE SHARE PAGE")}
-                </Link>
-                <pre className="overflow-x-auto border border-foreground p-2 font-mono text-[10px]">
+                  </pre>
+                </div>
+                <div className="mt-3 border-2 border-foreground bg-background p-3">
+                  <p className="mb-2 font-mono text-[10px] font-bold uppercase">{t("capture.shareTitle", "SHARE WEBHOOK (KAKAO/TELEGRAM)")}</p>
+                  <Link
+                    href="/share"
+                    className="mb-2 inline-block border border-foreground px-2 py-1 font-mono text-[10px] font-bold uppercase"
+                  >
+                    {t("capture.sharePage", "OPEN MOBILE SHARE PAGE")}
+                  </Link>
+                  <pre className="overflow-x-auto border border-foreground p-2 font-mono text-[10px]">
 {`POST /api/capture/share
 x-rebar-ingest-key: <REBAR_INGEST_API_KEY>
 x-user-id: <USER_UUID>
 content-type: application/json
 
 {"content":"공유 텍스트","title":"공유 제목","url":"https://..."}`}
-                </pre>
-              </div>
-              <div className="mt-3 border-2 border-foreground bg-background p-3">
-                <p className="mb-2 font-mono text-[10px] font-bold uppercase">
-                  {t("capture.retryTitle", "INGEST RETRY QUEUE")}: {retryQueue.length}
-                </p>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={retryAllQueued}
-                    disabled={retryQueue.length === 0 || ingestMutation.isPending}
-                    className="border-2 border-foreground bg-foreground px-2 py-1 font-mono text-[10px] font-bold uppercase text-background disabled:opacity-60"
-                  >
-                    {t("capture.retryRun", "RETRY ALL")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={clearRetryQueue}
-                    disabled={retryQueue.length === 0}
-                    className="border-2 border-foreground bg-background px-2 py-1 font-mono text-[10px] font-bold uppercase disabled:opacity-60"
-                  >
-                    {t("capture.retryClear", "CLEAR")}
-                  </button>
+                  </pre>
                 </div>
-              </div>
+                <div className="mt-3 border-2 border-foreground bg-background p-3">
+                  <p className="mb-2 font-mono text-[10px] font-bold uppercase">
+                    {t("capture.retryTitle", "INGEST RETRY QUEUE")}: {ingestJobs.data?.total ?? 0}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => retryAllMutation.mutate()}
+                      disabled={(ingestJobs.data?.total ?? 0) === 0 || retryAllMutation.isPending}
+                      className="border-2 border-foreground bg-foreground px-2 py-1 font-mono text-[10px] font-bold uppercase text-background disabled:opacity-60"
+                    >
+                      {t("capture.retryRun", "RETRY ALL")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => clearRetryMutation.mutate()}
+                      disabled={(ingestJobs.data?.total ?? 0) === 0 || clearRetryMutation.isPending}
+                      className="border-2 border-foreground bg-background px-2 py-1 font-mono text-[10px] font-bold uppercase disabled:opacity-60"
+                    >
+                      {t("capture.retryClear", "CLEAR")}
+                    </button>
+                  </div>
+                </div>
+              </details>
               {ingestError ? <p className="mt-2 font-mono text-xs text-destructive">{ingestError}</p> : null}
               {ingestMutation.error ? (
                 <p className="mt-2 font-mono text-xs text-destructive">{ingestMutation.error.message}</p>
@@ -711,6 +808,16 @@ content-type: application/json
                   <p className="mt-2 font-mono text-xs text-foreground">
                     {t("capture.csvSelected", "Selected file")}: {csvFileName}
                   </p>
+                ) : null}
+                {csvFileName ? (
+                  <div className="mt-2 border border-foreground p-2 font-mono text-[10px]">
+                    <p>
+                      {t("capture.csvRows", "Rows")}: {csvPreview.totalRows} / {t("capture.csvImportable", "Importable")}: {csvPreview.importableRows}
+                    </p>
+                    <p>
+                      {t("capture.csvReadwise", "Readwise format")}: {csvPreview.readwiseDetected ? t("common.yes", "Yes") : t("common.no", "No")}
+                    </p>
+                  </div>
                 ) : null}
                 <details className="mt-3 border border-foreground p-2">
                   <summary className="cursor-pointer font-mono text-[10px] font-bold uppercase">
@@ -792,10 +899,10 @@ content-type: application/json
                     {...form.register("kind")}
                     className="w-full bg-background border-4 border-foreground text-foreground p-4 focus:outline-none focus:ring-4 focus:ring-accent transition-none appearance-none cursor-pointer font-bold uppercase rounded-none"
                   >
-                    <option value="quote">Quote / Highlight</option>
-                    <option value="note">Personal Note</option>
-                    <option value="link">Web Link</option>
-                    <option value="ai">AI Content</option>
+                    <option value="quote">{t("capture.kind.quote", "Quote / Highlight")}</option>
+                    <option value="note">{t("capture.kind.note", "Personal Note")}</option>
+                    <option value="link">{t("capture.kind.link", "Web Link")}</option>
+                    <option value="ai">{t("capture.kind.ai", "AI Content")}</option>
                   </select>
                   <div className="absolute top-1/2 right-4 -translate-y-1/2 pointer-events-none font-black text-xl">
                     ▼
@@ -807,7 +914,7 @@ content-type: application/json
                 <label className="font-mono text-sm font-bold uppercase text-foreground">{`>> ${t("capture.dataPayload", "DATA.PAYLOAD")}`}</label>
                 <textarea
                   rows={6}
-                  placeholder="EXECUTE RAW DUMP..."
+                  placeholder={t("capture.contentPlaceholder", "Paste your content")}
                   className="w-full bg-background border-4 border-foreground text-foreground text-lg md:text-xl p-4 focus:outline-none focus:ring-4 focus:ring-accent transition-none resize-y placeholder:text-muted-foreground/50 rounded-none"
                   {...form.register("content")}
                 />

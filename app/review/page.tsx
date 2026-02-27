@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import Link from "next/link"
+import { useRef, useState } from "react"
 import AuthGate from "@/components/auth/auth-gate"
 import AppNav from "@/components/layout/app-nav"
 import { useI18n } from "@/components/i18n/i18n-provider"
@@ -10,15 +11,35 @@ import { getStateLabel } from "@/lib/i18n/state-label"
 import type { RecordRow } from "@/lib/types"
 import { Check, RefreshCcw } from "lucide-react"
 import { LoadingSpinner, LoadingDots } from "@/components/ui/loading"
+import { EmptyState } from "@/components/ui/empty-state"
+import { ErrorState } from "@/components/ui/error-state"
+import { LoadingState } from "@/components/ui/loading-state"
+import { Toast } from "@/components/ui/toast"
 
 type ReviewTodayResponse = {
   data: RecordRow[]
   total: number
 }
 
+type ReviewStatsResponse = {
+  today_reviewed: number
+  today_remaining: number
+  streak_days: number
+  total_active: number
+  total_records: number
+}
+
 export default function ReviewPage() {
   const { t } = useI18n()
   const queryClient = useQueryClient()
+  const [undoTargetId, setUndoTargetId] = useState<string | null>(null)
+  const undoTimerRef = useRef<number | null>(null)
+
+  const stats = useQuery({
+    queryKey: ["review-stats"],
+    queryFn: () => apiFetch<ReviewStatsResponse>("/api/review/stats")
+  })
+
   const today = useQuery({
     queryKey: ["review-today"],
     queryFn: () => apiFetch<ReviewTodayResponse>("/api/review/today?n=20")
@@ -31,7 +52,28 @@ export default function ReviewPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action, snooze_days })
       }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["review-today"] })
+    onSuccess: (_data, variables) => {
+      setUndoTargetId(variables.id)
+      if (undoTimerRef.current) {
+        window.clearTimeout(undoTimerRef.current)
+      }
+      undoTimerRef.current = window.setTimeout(() => {
+        setUndoTargetId(null)
+        undoTimerRef.current = null
+      }, 4000)
+
+      queryClient.invalidateQueries({ queryKey: ["review-today"] })
+      queryClient.invalidateQueries({ queryKey: ["review-stats"] })
+    }
+  })
+
+  const undoMutation = useMutation({
+    mutationFn: (id: string) => apiFetch<{ record: RecordRow }>(`/api/review/${id}/undo`, { method: "POST" }),
+    onSuccess: () => {
+      setUndoTargetId(null)
+      queryClient.invalidateQueries({ queryKey: ["review-today"] })
+      queryClient.invalidateQueries({ queryKey: ["review-stats"] })
+    }
   })
 
   const first = today.data?.data[0]
@@ -43,7 +85,7 @@ export default function ReviewPage() {
         <main className="max-w-3xl w-full mx-auto flex-1 flex flex-col animate-fade-in-up">
           <AppNav />
 
-          <div className="flex items-center justify-between mb-8 border-4 border-foreground bg-card p-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.1)]">
+          <div className="mb-8 flex items-center justify-between border-4 border-foreground bg-card p-3 shadow-brutal">
             <span className="font-mono text-sm font-bold tracking-widest uppercase text-foreground">
               {t("review.workload", "TODAY'S REVIEW")}
             </span>
@@ -60,38 +102,26 @@ export default function ReviewPage() {
             </div>
           </div>
 
-          {today.isLoading && (
-            <div className="flex-1 flex justify-center mt-32">
-              <div className="flex flex-col items-center gap-4 font-mono font-bold text-muted-foreground uppercase">
-                <LoadingSpinner className="w-10 h-10 text-accent" />
-                <span>{t("review.fetching", "Fetching blocks...")}</span>
-              </div>
-            </div>
-          )}
+          <div className="mb-6 grid grid-cols-2 gap-2 border-4 border-foreground bg-card p-3 md:grid-cols-4">
+            <p className="font-mono text-xs font-bold uppercase">REVIEWED: {stats.data?.today_reviewed ?? 0}</p>
+            <p className="font-mono text-xs font-bold uppercase">REMAINING: {stats.data?.today_remaining ?? 0}</p>
+            <p className="font-mono text-xs font-bold uppercase">STREAK: {stats.data?.streak_days ?? 0}d</p>
+            <p className="font-mono text-xs font-bold uppercase">TOTAL: {stats.data?.total_records ?? 0}</p>
+          </div>
+
+          {today.isLoading ? <LoadingState label={t("review.fetching", "Fetching blocks...")} /> : null}
 
           {today.isSuccess && !first && (
-            <div className="flex-1 flex flex-col items-center justify-center text-center animate-fade-in-up pb-24 border-4 border-dashed border-border mt-12 p-12 bg-muted/20">
-              <h2 className="font-black text-4xl uppercase text-muted-foreground mb-4">{t("review.empty", "ALL CAUGHT UP")}</h2>
-              <p className="font-mono text-sm font-bold text-muted-foreground/70 uppercase">{t("review.noPending", "No pending operations.")}</p>
-              <div className="mt-4 flex items-center gap-2">
-                <Link
-                  href="/capture"
-                  className="border-2 border-foreground bg-foreground px-3 py-2 font-mono text-xs font-bold uppercase text-background"
-                >
-                  {t("review.goCapture", "Add new item")}
-                </Link>
-                <Link
-                  href="/review/history"
-                  className="border-2 border-foreground bg-background px-3 py-2 font-mono text-xs font-bold uppercase text-foreground"
-                >
-                  {t("review.history", "HISTORY")}
-                </Link>
-              </div>
-            </div>
+            <EmptyState
+              title={t("review.empty", "ALL CAUGHT UP")}
+              description={t("review.noPending", "No pending operations.")}
+              actionLabel={t("review.goCapture", "Add new item")}
+              actionHref="/capture"
+            />
           )}
 
           {first && (
-            <div className="flex-1 flex flex-col relative w-full border-4 border-foreground bg-card shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.1)] p-6 md:p-10" key={first.id}>
+            <div className="relative flex w-full flex-1 flex-col border-4 border-foreground bg-card p-6 shadow-brutal md:p-10" key={first.id}>
               <div className="flex-1 flex flex-col py-6">
                 <div className="flex items-center gap-2 mb-8 border-b-2 border-foreground pb-4">
                   <span className="bg-muted text-muted-foreground font-mono text-xs font-bold px-2 py-1 uppercase border-2 border-muted-foreground">ID: {first.id.substring(0, 8)}</span>
@@ -112,6 +142,7 @@ export default function ReviewPage() {
                   type="button"
                   onClick={() => mutation.mutate({ id: first.id, action: "reviewed" })}
                   disabled={mutation.isPending}
+                  aria-label={t("review.ack", "ACKNOWLEDGE")}
                   className="group flex flex-col items-center justify-center p-4 md:p-6 bg-accent text-white border-4 border-foreground hover:bg-foreground hover:text-background transition-colors disabled:opacity-50 space-y-3 cursor-pointer rounded-none active:translate-y-1 min-h-[120px]"
                 >
                   {mutation.isPending && mutation.variables?.action === "reviewed" ? (
@@ -131,6 +162,7 @@ export default function ReviewPage() {
                     type="button"
                     onClick={() => mutation.mutate({ id: first.id, action: "resurface" })}
                     disabled={mutation.isPending}
+                    aria-label={t("review.resurface", "RESURFACE")}
                     className="group flex w-full flex-col items-center justify-center p-4 bg-background text-foreground border-2 border-foreground hover:bg-muted transition-colors disabled:opacity-50 space-y-3 cursor-pointer rounded-none active:translate-y-1"
                   >
                     {mutation.isPending && mutation.variables?.action === "resurface" ? (
@@ -148,7 +180,8 @@ export default function ReviewPage() {
                     <button
                       type="button"
                       onClick={() => mutation.mutate({ id: first.id, action: "resurface", snooze_days: 1 })}
-                      className="border-2 border-foreground px-2 py-2 font-mono text-[10px] font-bold uppercase"
+                      aria-label={t("review.snooze1", "Tomorrow")}
+                      className="min-h-[44px] min-w-[44px] border-2 border-foreground px-3 py-2 font-mono text-xs font-bold uppercase"
                       disabled={mutation.isPending}
                     >
                       {t("review.snooze1", "내일")}
@@ -156,7 +189,8 @@ export default function ReviewPage() {
                     <button
                       type="button"
                       onClick={() => mutation.mutate({ id: first.id, action: "resurface", snooze_days: 3 })}
-                      className="border-2 border-foreground px-2 py-2 font-mono text-[10px] font-bold uppercase"
+                      aria-label={t("review.snooze3", "3 days")}
+                      className="min-h-[44px] min-w-[44px] border-2 border-foreground px-3 py-2 font-mono text-xs font-bold uppercase"
                       disabled={mutation.isPending}
                     >
                       {t("review.snooze3", "3일")}
@@ -164,7 +198,8 @@ export default function ReviewPage() {
                     <button
                       type="button"
                       onClick={() => mutation.mutate({ id: first.id, action: "resurface", snooze_days: 7 })}
-                      className="border-2 border-foreground px-2 py-2 font-mono text-[10px] font-bold uppercase"
+                      aria-label={t("review.snooze7", "1 week")}
+                      className="min-h-[44px] min-w-[44px] border-2 border-foreground px-3 py-2 font-mono text-xs font-bold uppercase"
                       disabled={mutation.isPending}
                     >
                       {t("review.snooze7", "1주")}
@@ -173,9 +208,7 @@ export default function ReviewPage() {
                 </div>
               </div>
 
-              {mutation.error ? (
-                <p className="text-background bg-destructive font-mono text-sm font-bold uppercase p-3 mt-6 border-4 border-foreground">ERR: {mutation.error.message}</p>
-              ) : null}
+              {mutation.error ? <ErrorState message={mutation.error.message} /> : null}
             </div>
           )}
 
@@ -198,6 +231,15 @@ export default function ReviewPage() {
           ) : null}
         </main>
       </AuthGate>
+      {undoTargetId ? (
+        <Toast
+          message={t("review.undoReady", "ACKNOWLEDGED. [UNDO] available")}
+          actionLabel={t("toast.undo", "Undo")}
+          onAction={() => undoMutation.mutate(undoTargetId)}
+          onClose={() => setUndoTargetId(null)}
+          tone="success"
+        />
+      ) : null}
     </div>
   )
 }

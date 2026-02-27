@@ -62,6 +62,10 @@ const config = {
                 md: "calc(var(--radius) - 2px)",
                 sm: "calc(var(--radius) - 4px)",
             },
+            boxShadow: {
+                "brutal-sm": "4px 4px 0px 0px rgba(0,0,0,1)",
+                brutal: "8px 8px 0px 0px rgba(0,0,0,1)",
+            },
             keyframes: {
                 "fade-in-up": {
                     "0%": { opacity: "0", transform: "translateY(10px)" },

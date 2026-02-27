@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useTheme } from "next-themes"
-import { Square } from "lucide-react"
+import { Search, Square } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useI18n } from "@/components/i18n/i18n-provider"
 import { cn } from "@/lib/utils"
@@ -21,6 +21,9 @@ export default function AppNav() {
   const [authError, setAuthError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
   const [homeHref, setHomeHref] = useState("/")
+  const [quickOpen, setQuickOpen] = useState(false)
+  const [quickQuery, setQuickQuery] = useState("")
+  const [quickResults, setQuickResults] = useState<Array<{ id: string; kind: string; content: string }>>([])
 
   useEffect(() => {
     setMounted(true)
@@ -41,6 +44,43 @@ export default function AppNav() {
       setAuthError(error instanceof Error ? error.message : "Auth client init failed")
     }
   }, [])
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault()
+        setQuickOpen(true)
+      }
+      if (event.key === "Escape") {
+        setQuickOpen(false)
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown)
+    return () => window.removeEventListener("keydown", onKeyDown)
+  }, [])
+
+  useEffect(() => {
+    if (!quickOpen) {
+      return
+    }
+    if (!quickQuery.trim()) {
+      setQuickResults([])
+      return
+    }
+
+    const timer = window.setTimeout(async () => {
+      try {
+        const response = await fetch(`/api/search?q=${encodeURIComponent(quickQuery.trim())}&limit=5`)
+        const data = (await response.json()) as { data?: Array<{ id: string; kind: string; content: string }> }
+        setQuickResults(data.data ?? [])
+      } catch {
+        setQuickResults([])
+      }
+    }, 180)
+
+    return () => window.clearTimeout(timer)
+  }, [quickOpen, quickQuery])
 
   useEffect(() => {
     setHomeHref(getStartPagePreference())
@@ -68,7 +108,7 @@ export default function AppNav() {
       <div className="flex items-center gap-6">
         <Link
           href={homeHref}
-          className="rotate-[-2deg] border-2 border-foreground bg-accent px-2 py-1 font-black text-3xl uppercase tracking-tighter text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-transform hover:rotate-0 dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.2)]"
+          className="rotate-[-2deg] border-2 border-foreground bg-accent px-2 py-1 font-black text-3xl uppercase tracking-tighter text-white shadow-brutal-sm transition-transform hover:rotate-0"
         >
           REBAR_
         </Link>
@@ -80,7 +120,7 @@ export default function AppNav() {
               className={cn(
                 "border-2 px-3 py-1.5 font-mono text-sm font-bold transition-all",
                 pathname === `/${segment}`
-                  ? "translate-x-[-2px] translate-y-[-2px] border-foreground bg-foreground text-background shadow-[2px_2px_0px_0px_theme(colors.accent)]"
+                  ? "translate-x-[-2px] translate-y-[-2px] border-foreground bg-foreground text-background shadow-brutal-sm"
                   : "border-transparent text-muted-foreground hover:border-border hover:text-foreground"
               )}
             >
@@ -118,8 +158,16 @@ export default function AppNav() {
         )}
 
         <button
+          type="button"
+          onClick={() => setQuickOpen(true)}
+          className="border-2 border-foreground bg-background px-2 py-1 font-mono text-xs font-bold uppercase text-foreground"
+          aria-label="Quick search"
+        >
+          <Search className="h-4 w-4" />
+        </button>
+        <button
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          className="active:translate-y-[2px] active:translate-x-[2px] active:shadow-none dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.2)]" 
+          className="active:translate-y-[2px] active:translate-x-[2px] active:shadow-none"
           aria-label={t("nav.theme")}
           type="button"
         >
@@ -128,7 +176,7 @@ export default function AppNav() {
               size={18}
               strokeWidth={3}
               className={cn(
-                "border-2 border-foreground bg-background p-2 text-foreground shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-muted",
+                "border-2 border-foreground bg-background p-2 text-foreground shadow-brutal-sm hover:bg-muted",
                 theme === "dark" && "fill-accent"
               )}
             />
@@ -136,6 +184,39 @@ export default function AppNav() {
         </button>
       </div>
       {authError ? <p className="font-mono text-xs text-destructive">{authError}</p> : null}
+
+      {quickOpen ? (
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-4">
+          <div className="mt-16 w-full max-w-2xl border-4 border-foreground bg-card p-4 shadow-brutal">
+            <div className="mb-3 flex items-center justify-between border-b-2 border-foreground pb-2">
+              <p className="font-mono text-xs font-bold uppercase">QUICK SEARCH (⌘K / Ctrl+K)</p>
+              <button type="button" onClick={() => setQuickOpen(false)} className="border-2 border-foreground px-2 py-1 font-mono text-xs font-bold uppercase">
+                CLOSE
+              </button>
+            </div>
+            <input
+              value={quickQuery}
+              onChange={(event) => setQuickQuery(event.target.value)}
+              placeholder="검색어 입력..."
+              className="mb-3 w-full border-2 border-foreground bg-background p-3 font-mono text-sm"
+              autoFocus
+            />
+            <div className="space-y-2">
+              {quickResults.map((item) => (
+                <Link
+                  key={item.id}
+                  href={`/records/${item.id}`}
+                  onClick={() => setQuickOpen(false)}
+                  className="block border-2 border-foreground px-3 py-2 hover:bg-foreground hover:text-background"
+                >
+                  <p className="font-mono text-[10px] font-bold uppercase">{item.kind}</p>
+                  <p className="line-clamp-2 text-sm font-semibold">{item.content}</p>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </nav>
   )
 }

@@ -13,7 +13,7 @@ type ReviewHistoryItem = {
   id: string
   record_id: string
   reviewed_at: string
-  action: "reviewed" | "resurface"
+  action: "reviewed" | "resurface" | "undo"
   record: {
     id: string
     kind: string
@@ -93,6 +93,7 @@ export default function ReviewHistoryPage() {
                 <option value="">ALL</option>
                 <option value="reviewed">REVIEWED</option>
                 <option value="resurface">RESURFACE</option>
+                <option value="undo">UNDO</option>
               </select>
             </label>
             <label className="font-mono text-xs font-bold uppercase">
