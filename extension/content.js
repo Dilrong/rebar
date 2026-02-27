@@ -61,7 +61,7 @@ function getArticlePayload() {
     title: document.title || "",
     url: window.location.href,
     kind: "link",
-    tags: ["web-scrape"]
+    tags: ["web"]
   }
 }
 

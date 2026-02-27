@@ -1,54 +1,71 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>REBAR Clipper</title>
-    <link rel="stylesheet" href="popup.css" />
-  </head>
-  <body>
-    <main class="popup">
-      <h1>REBAR Clipper</h1>
-      <p class="hint">Collect selected highlight or article text, then save directly to REBAR.</p>
 
-      <div class="actions">
-        <button id="saveHighlight" type="button">Clip Highlight</button>
-        <button id="saveArticle" type="button">Clip Article</button>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>REBAR Clipper</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+
+<body>
+  <main class="popup">
+    <h1 data-i18n="ext.title">REBAR Clipper</h1>
+    <p class="hint" data-i18n="ext.hint">Collect selected highlight or article text, then save directly to REBAR.</p>
+
+    <div id="loginMessage" class="login-message hidden">
+      <div class="login-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+          class="lucide lucide-lock">
+          <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+        </svg>
       </div>
+      <p data-i18n="ext.loginReq">Login required to save clips.</p>
+      <button id="goToLogin" type="button" class="button-link" data-i18n="ext.loginBtn">Sign In to REBAR</button>
+    </div>
 
-      <button id="domainTagBadge" type="button" class="badge">Domain tags: ...</button>
+    <div id="actions" class="actions">
+      <button id="saveArticle" type="button" data-i18n="ext.articleBtn">Clip Article</button>
+    </div>
 
-      <section id="preview" class="preview hidden">
-        <p class="preview-title">Clip Preview</p>
-        <label>
-          Title
-          <input id="previewTitle" type="text" />
-        </label>
-        <label>
-          URL
-          <input id="previewUrl" type="text" />
-        </label>
-        <label>
-          Tags (comma separated)
-          <input id="previewTags" type="text" placeholder="highlight,web" />
-        </label>
-        <label>
-          Content
-          <textarea id="previewContent" rows="7"></textarea>
-          <span id="charCount" class="char-count">0 / 2500</span>
-        </label>
-        <div class="preview-actions">
-          <button id="openShare" type="button">Save to REBAR</button>
-          <button id="cancelPreview" type="button" class="secondary">Cancel</button>
-        </div>
-      </section>
+    <button id="domainTagBadge" type="button" class="badge"><span data-i18n="ext.domainTags">Domain tags</span>:
+      ...</button>
 
-      <div class="status-bar">
-        <p id="status" class="status" role="status" aria-live="polite">Ready</p>
-        <a href="options.html" target="_blank" rel="noreferrer" class="settings-link">Open Settings</a>
+    <section id="preview" class="preview hidden">
+      <p class="preview-title" data-i18n="ext.previewTitle">Clip Preview</p>
+      <label>
+        <span data-i18n="record.title">Title</span>
+        <input id="previewTitle" type="text" />
+      </label>
+      <label>
+        <span data-i18n="record.url">URL</span>
+        <input id="previewUrl" type="text" />
+      </label>
+      <label>
+        <span data-i18n="record.tags">Tags (comma separated)</span>
+        <input id="previewTags" type="text" placeholder="highlight,web" />
+      </label>
+      <label>
+        <span data-i18n="record.content">Content</span>
+        <textarea id="previewContent" rows="7"></textarea>
+        <span id="charCount" class="char-count">0 / 2500</span>
+      </label>
+      <div class="preview-actions">
+        <button id="openShare" type="button" data-i18n="ext.saveToRebar">Save to REBAR</button>
+        <button id="cancelPreview" type="button" class="secondary" data-i18n="ui.cancel">Cancel</button>
       </div>
-    </main>
+    </section>
 
-    <script src="popup.js" type="module"></script>
-  </body>
+    <div class="status-bar">
+      <p id="status" class="status" role="status" aria-live="polite" data-i18n="ext.status.ready">Ready</p>
+      <a href="options.html" target="_blank" rel="noreferrer" class="settings-link" data-i18n="ext.openSettings">Open
+        Settings</a>
+    </div>
+  </main>
+
+  <script src="popup.js" type="module"></script>
+</body>
+
 </html>

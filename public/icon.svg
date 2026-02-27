@@ -1,6 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" fill="#111111" />
-  <rect x="32" y="32" width="448" height="448" fill="none" stroke="#FF5A00" stroke-width="48" />
-  <text x="50%" y="54%" font-family="monospace, sans-serif" font-weight="900" font-size="340" fill="#FF5A00" text-anchor="middle" dominant-baseline="middle">R</text>
-  <rect x="360" y="360" width="80" height="80" fill="#FF5A00" />
+  <rect width="512" height="512" fill="#ffffff" />
+  <rect x="32" y="32" width="448" height="448" fill="#FF5A00" stroke="#111111" stroke-width="48" />
+
+  <!-- Shadow -->
+  <text x="272" y="288" font-family="'Inter', 'Helvetica Neue', Helvetica, monospace, sans-serif" font-weight="900" font-size="320" fill="#111111" text-anchor="middle" dominant-baseline="central">R</text>
+  
+  <!-- Main Letter -->
+  <text x="256" y="272" font-family="'Inter', 'Helvetica Neue', Helvetica, monospace, sans-serif" font-weight="900" font-size="320" fill="#ffffff" stroke="#111111" stroke-width="16" text-anchor="middle" dominant-baseline="central">R</text>
 </svg>

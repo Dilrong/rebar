@@ -1,8 +1,7 @@
 export const DEFAULT_SETTINGS = {
-  apiBaseUrl: "http://localhost:3000",
+  rebarUrl: "https://rebarops.com",
   defaultTags: "web,clipper",
-  enableDomainTags: true,
-  apiKey: ""
+  enableDomainTags: true
 }
 
 export const DOMAIN_TAG_RULES = [
@@ -19,14 +18,4 @@ export function parseTags(tagText) {
     .split(",")
     .map((tag) => tag.trim())
     .filter((tag) => tag.length > 0)
-}
-
-export function normalizeBaseUrl(value) {
-  const trimmed = (value || "").trim()
-  if (!trimmed) {
-    return ""
-  }
-
-  const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`
-  return withProtocol.replace(/\/+$/, "")
 }

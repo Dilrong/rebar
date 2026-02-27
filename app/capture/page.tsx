@@ -591,53 +591,47 @@ export default function CapturePage() {
               </span>
             </header>
 
-            <section className="mb-6 border-2 border-foreground p-4 bg-background/60">
-              <p className="mb-3 font-mono text-xs font-bold uppercase">{t("capture.modeTitle", "HOW DO YOU WANT TO IMPORT?")}</p>
-              <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+            <section className="mb-6 border-b-4 border-foreground pb-0">
+              <div className="flex flex-wrap border-2 border-foreground bg-background">
                 <button
                   type="button"
                   onClick={() => setImportMode("manual")}
-                  className={`min-h-[64px] border-2 px-4 py-3 text-left font-mono text-xs font-bold uppercase flex flex-col justify-center transition-colors ${importMode === "manual" ? "border-foreground bg-foreground text-background" : "border-foreground bg-background text-foreground hover:bg-foreground hover:text-background"
-                    }`}
+                  className={`min-h-[44px] flex-1 px-4 py-2 text-center font-mono text-xs font-bold uppercase transition-colors border-r-2 border-transparent ${importMode === "manual" ? "bg-foreground text-background" : "text-foreground hover:bg-muted"
+                    } md:border-r-foreground`}
                 >
-                  <span className="block">{t("capture.modeManual", "MANUAL INPUT")}</span>
-                  <span className="block mt-1 text-[10px] opacity-80">{t("capture.modeManualDesc", "Type content directly")}</span>
+                  {t("capture.modeManual", "MANUAL")}
                 </button>
                 <button
                   type="button"
                   onClick={() => setImportMode("url")}
-                  className={`min-h-[64px] border-2 px-4 py-3 text-left font-mono text-xs font-bold uppercase flex flex-col justify-center transition-colors ${importMode === "url" ? "border-foreground bg-foreground text-background" : "border-foreground bg-background text-foreground hover:bg-foreground hover:text-background"
-                    }`}
+                  className={`min-h-[44px] flex-1 px-4 py-2 text-center font-mono text-xs font-bold uppercase transition-colors border-r-2 border-transparent ${importMode === "url" ? "bg-foreground text-background" : "text-foreground hover:bg-muted"
+                    } md:border-r-foreground`}
                 >
-                  <span className="block">{t("capture.modeUrl", "URL QUICK IMPORT")}</span>
-                  <span className="block mt-1 text-[10px] opacity-80">{t("capture.modeUrlDesc", "Bring one link quickly")}</span>
+                  {t("capture.modeUrl", "URL")}
                 </button>
                 <button
                   type="button"
                   onClick={() => setImportMode("batch")}
-                  className={`min-h-[64px] border-2 px-4 py-3 text-left font-mono text-xs font-bold uppercase flex flex-col justify-center transition-colors ${importMode === "batch" ? "border-foreground bg-foreground text-background" : "border-foreground bg-background text-foreground hover:bg-foreground hover:text-background"
-                    }`}
+                  className={`min-h-[44px] flex-1 px-4 py-2 text-center font-mono text-xs font-bold uppercase transition-colors border-r-2 border-transparent ${importMode === "batch" ? "bg-foreground text-background" : "text-foreground hover:bg-muted"
+                    } md:border-r-foreground`}
                 >
-                  <span className="block">{t("capture.modeBatch", "BATCH IMPORT")}</span>
-                  <span className="block mt-1 text-[10px] opacity-80">{t("capture.modeBatchDesc", "Paste Readwise-style JSON")}</span>
+                  {t("capture.modeBatch", "BATCH")}
                 </button>
                 <button
                   type="button"
                   onClick={() => setImportMode("csv")}
-                  className={`min-h-[64px] border-2 px-4 py-3 text-left font-mono text-xs font-bold uppercase flex flex-col justify-center transition-colors ${importMode === "csv" ? "border-foreground bg-foreground text-background" : "border-foreground bg-background text-foreground hover:bg-foreground hover:text-background"
-                    }`}
+                  className={`min-h-[44px] flex-1 px-4 py-2 text-center font-mono text-xs font-bold uppercase transition-colors border-r-2 border-transparent ${importMode === "csv" ? "bg-foreground text-background" : "text-foreground hover:bg-muted"
+                    } md:border-r-foreground`}
                 >
-                  <span className="block">{t("capture.modeCsv", "CSV IMPORT")}</span>
-                  <span className="block mt-1 text-[10px] opacity-80">{t("capture.modeCsvDesc", "Upload/export table data")}</span>
+                  {t("capture.modeCsv", "CSV")}
                 </button>
                 <button
                   type="button"
                   onClick={() => setImportMode("ocr")}
-                  className={`min-h-[64px] border-2 px-4 py-3 text-left font-mono text-xs font-bold uppercase flex flex-col justify-center transition-colors ${importMode === "ocr" ? "border-foreground bg-foreground text-background" : "border-foreground bg-background text-foreground hover:bg-foreground hover:text-background"
+                  className={`min-h-[44px] flex-1 px-4 py-2 text-center font-mono text-xs font-bold uppercase transition-colors ${importMode === "ocr" ? "bg-foreground text-background" : "text-foreground hover:bg-muted"
                     }`}
                 >
-                  <span className="block">{t("capture.modeOcr", "IMAGE OCR")}</span>
-                  <span className="block mt-1 text-[10px] opacity-80">{t("capture.modeOcrDesc", "Extract text from photos")}</span>
+                  {t("capture.modeOcr", "OCR")}
                 </button>
               </div>
             </section>
@@ -912,6 +906,7 @@ content-type: application/json
                     placeholder={t("capture.contentPlaceholder", "Paste your content")}
                     className="w-full bg-background border-4 border-foreground text-foreground text-lg md:text-xl p-4 focus:outline-none focus:ring-4 focus:ring-accent transition-none resize-y placeholder:text-muted-foreground/50 rounded-none"
                     {...form.register("content")}
+                    autoFocus
                   />
                 </div>
 
@@ -952,8 +947,8 @@ content-type: application/json
                             form.setValue("tag_ids", next)
                           }}
                           className={`min-h-[44px] px-4 py-2 border-2 font-mono text-xs font-bold uppercase flex items-center justify-center hover:bg-foreground hover:text-background transition-colors ${checked
-                              ? "border-foreground bg-foreground text-background"
-                              : "border-foreground bg-background text-foreground"
+                            ? "border-foreground bg-foreground text-background"
+                            : "border-foreground bg-background text-foreground"
                             }`}
                         >
                           #{tag.name}

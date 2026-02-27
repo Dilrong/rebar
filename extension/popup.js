@@ -1,4 +1,5 @@
 import { DEFAULT_SETTINGS, DOMAIN_TAG_RULES, parseTags } from "./shared.js"
+import { t } from "./i18n.js"
 
 const statusEl = document.getElementById("status")
 const saveHighlightButton = document.getElementById("saveHighlight")
@@ -12,6 +13,9 @@ const charCountEl = document.getElementById("charCount")
 const openShareButton = document.getElementById("openShare")
 const cancelPreviewButton = document.getElementById("cancelPreview")
 const domainTagBadgeEl = document.getElementById("domainTagBadge")
+const loginMessageEl = document.getElementById("loginMessage")
+const goToLoginButton = document.getElementById("goToLogin")
+const actionsEl = document.getElementById("actions")
 
 let lastPayload = null
 let cachedSettings = null
@@ -23,10 +27,18 @@ function setStatus(message, isError = false) {
 }
 
 function setBusy(busy) {
-  saveHighlightButton.disabled = busy
-  saveArticleButton.disabled = busy
-  openShareButton.disabled = busy
-  cancelPreviewButton.disabled = busy
+  if (saveHighlightButton) {
+    saveHighlightButton.disabled = busy
+  }
+  if (saveArticleButton) {
+    saveArticleButton.disabled = busy
+  }
+  if (openShareButton) {
+    openShareButton.disabled = busy
+  }
+  if (cancelPreviewButton) {
+    cancelPreviewButton.disabled = busy
+  }
 }
 
 function updateCharCount(value) {
@@ -41,7 +53,8 @@ function updateCharCount(value) {
 
 function setDomainBadge(enabled) {
   const on = enabled !== false
-  domainTagBadgeEl.textContent = `Domain tags: ${on ? "ON" : "OFF"}`
+  const prefix = t("ext.domainTags")
+  domainTagBadgeEl.textContent = `${prefix}: ${on ? "ON" : "OFF"}`
   domainTagBadgeEl.classList.toggle("off", !on)
 }
 
@@ -78,6 +91,42 @@ function saveSettingsPatch(patch) {
 async function refreshSettings() {
   cachedSettings = await getSettings()
   setDomainBadge(cachedSettings?.enableDomainTags !== false)
+
+  if (!cachedSettings.rebarUrl) {
+    return
+  }
+
+  try {
+    setBusy(true)
+    setStatus(t("ext.status.checking"))
+
+    const res = await fetch(`${cachedSettings.rebarUrl}/api/auth/check`, { credentials: "include" })
+    if (!res.ok) {
+      // Unauthenticated
+      loginMessageEl.classList.remove("hidden")
+      actionsEl.classList.add("hidden")
+      domainTagBadgeEl.classList.add("hidden")
+
+      goToLoginButton.onclick = () => {
+        window.open(`${cachedSettings.rebarUrl}/signup`, "_blank")
+      }
+      setStatus(t("ext.status.ready"))
+    } else {
+      // Authenticated
+      loginMessageEl.classList.add("hidden")
+      actionsEl.classList.remove("hidden")
+      domainTagBadgeEl.classList.remove("hidden")
+      setStatus(t("ext.status.ready"))
+    }
+  } catch (err) {
+    console.error("Failed to check auth status", err)
+    loginMessageEl.classList.remove("hidden")
+    actionsEl.classList.add("hidden")
+    domainTagBadgeEl.classList.add("hidden")
+    setStatus(t("ext.status.connError"), true)
+  } finally {
+    setBusy(false)
+  }
 }
 
 function toHostTag(urlValue) {
@@ -203,7 +252,7 @@ function sendCapture(payload) {
 async function runCapture(mode) {
   try {
     setBusy(true)
-    setStatus("Collecting content...")
+    setStatus(t("ext.status.collecting"))
     await refreshSettings()
     const tab = await queryActiveTab()
 
@@ -211,7 +260,7 @@ async function runCapture(mode) {
       const blockedPrefixes = ["chrome://", "chrome-extension://", "edge://", "about:"]
       const isBlockedPage = blockedPrefixes.some((prefix) => tab.url.startsWith(prefix))
       if (isBlockedPage) {
-        throw new Error("This page cannot be clipped. Open a normal website tab and try again.")
+        throw new Error(t("ext.blockedPage"))
       }
     }
 
@@ -227,13 +276,57 @@ async function runCapture(mode) {
     const payload = response?.payload
 
     if (!payload || !payload.content) {
-      throw new Error(mode === "highlight" ? "Select text before saving" : "Could not extract article text")
+      throw new Error(mode === "highlight" ? t("ext.noHighlight") : t("ext.noArticle"))
     }
 
     showPreview(payload, cachedSettings)
-    setStatus("Preview loaded. Edit if needed, then save to REBAR.")
+    setStatus(t("ext.previewLoaded"))
   } catch (error) {
-    setStatus(error instanceof Error ? error.message : "Unknown error", true)
+    setStatus(error instanceof Error ? error.message : t("ui.error"), true)
+  } finally {
+    setBusy(false)
+  }
+}
+
+async function clipArticleInstantly() {
+  try {
+    setBusy(true)
+    setStatus(t("ext.status.collecting"))
+    await refreshSettings()
+    const tab = await queryActiveTab()
+
+    if (typeof tab.url === "string") {
+      const blockedPrefixes = ["chrome://", "chrome-extension://", "edge://", "about:"]
+      const isBlockedPage = blockedPrefixes.some((prefix) => tab.url.startsWith(prefix))
+      if (isBlockedPage) {
+        throw new Error(t("ext.blockedPage"))
+      }
+    }
+
+    let response
+
+    try {
+      response = await sendMessageToTab(tab.id, { type: "GET_ARTICLE" })
+    } catch {
+      await injectContentScript(tab.id)
+      response = await sendMessageToTab(tab.id, { type: "GET_ARTICLE" })
+    }
+
+    const payload = response?.payload
+    if (!payload || !payload.content) {
+      throw new Error(t("ext.noArticle"))
+    }
+
+    setStatus(t("ext.status.saving"))
+    const saved = await sendCapture(payload)
+    if (!saved?.ok) {
+      throw new Error(saved?.error || t("ui.error"))
+    }
+
+    hidePreview()
+    setStatus(t("ext.savedSuccess"))
+  } catch (error) {
+    setStatus(error instanceof Error ? error.message : t("ui.error"), true)
   } finally {
     setBusy(false)
   }
@@ -241,28 +334,28 @@ async function runCapture(mode) {
 
 async function openShareFromPreview() {
   if (!lastPayload) {
-    setStatus("No clip preview available", true)
+    setStatus(t("ext.noClipPreview"), true)
     return
   }
 
   const payload = buildPreviewPayload()
   if (!payload.content) {
-    setStatus("Content is required", true)
+    setStatus(t("ext.contentReq"), true)
     return
   }
 
   try {
     setBusy(true)
-    setStatus("Saving to REBAR...")
+    setStatus(t("ext.status.saving"))
     const saved = await sendCapture(payload)
     if (!saved?.ok) {
-      throw new Error(saved?.error || "Save failed")
+      throw new Error(saved?.error || t("ui.error"))
     }
 
-    setStatus("Saved to REBAR")
+    setStatus(t("ext.savedSuccess"))
     hidePreview()
   } catch (error) {
-    setStatus(error instanceof Error ? error.message : "Unknown error", true)
+    setStatus(error instanceof Error ? error.message : t("ui.error"), true)
   } finally {
     setBusy(false)
   }
@@ -276,19 +369,33 @@ async function toggleDomainTags() {
     cachedSettings = { ...(cachedSettings || {}), enableDomainTags: next }
     setDomainBadge(next)
     refreshPreviewTagsFromSettings()
-    setStatus(`Domain tags ${next ? "enabled" : "disabled"}`)
+    setStatus(next ? t("ext.domainTagsEnabled") : t("ext.domainTagsDisabled"))
   } catch (error) {
-    setStatus(error instanceof Error ? error.message : "Could not toggle domain tags", true)
+    setStatus(error instanceof Error ? error.message : t("ext.domainTagsFail"), true)
   }
 }
 
-saveHighlightButton.addEventListener("click", () => {
-  runCapture("highlight")
+// Auto-refresh settings when changed in options page
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === "sync" && (changes.rebarUrl || changes.defaultTags || changes.enableDomainTags)) {
+    cachedSettings = null
+    refreshSettings().catch(() => {
+      setDomainBadge(true)
+    })
+  }
 })
 
-saveArticleButton.addEventListener("click", () => {
-  runCapture("article")
-})
+if (saveHighlightButton) {
+  saveHighlightButton.addEventListener("click", () => {
+    runCapture("highlight")
+  })
+}
+
+if (saveArticleButton) {
+  saveArticleButton.addEventListener("click", () => {
+    clipArticleInstantly()
+  })
+}
 
 openShareButton.addEventListener("click", () => {
   openShareFromPreview()
@@ -296,7 +403,7 @@ openShareButton.addEventListener("click", () => {
 
 cancelPreviewButton.addEventListener("click", () => {
   hidePreview()
-  setStatus("Preview canceled")
+  setStatus(t("ext.previewCanceled"))
 })
 
 previewContentInput.addEventListener("input", () => {

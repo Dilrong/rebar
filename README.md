@@ -130,9 +130,9 @@ Preview shows total rows, importable rows, and Readwise format detection.
 
 - Path: `extension/`
 - Guide: `docs/chrome-extension.md`
-- Supports: highlight/article clipping, opens authenticated `/share` auto-save flow
+- Supports: highlight/article clipping with direct save via authenticated session
 
-Extension no longer requires per-user API key/user ID input. It forwards clips to `/share` and relies on your normal REBAR login session.
+Extension does not require API key/user ID input. It sends clips to `/api/capture/share` and relies on your normal REBAR login session.
 
 ## Docs
 

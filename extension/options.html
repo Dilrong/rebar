@@ -1,42 +1,48 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>REBAR Clipper Settings</title>
-    <link rel="stylesheet" href="options.css" />
-  </head>
-  <body>
-    <main class="settings">
-      <h1>REBAR Clipper Settings</h1>
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title data-i18n="ext.opt.title">REBAR Clipper Settings</title>
+  <link rel="stylesheet" href="options.css" />
+</head>
+
+<body>
+  <main class="settings">
+    <h1 data-i18n="ext.opt.title">REBAR Clipper Settings</h1>
+
+    <fieldset class="connection-settings">
+      <legend data-i18n="ext.opt.conn">Connection</legend>
+      <p class="hint" data-i18n="ext.opt.connHint">Enter the URL where your REBAR app is hosted. The extension will
+        securely use your active browser login session.</p>
 
       <label>
-        API Base URL
-        <input id="apiBaseUrl" type="text" placeholder="https://rebar.vercel.app" />
+        <span data-i18n="ext.opt.url">REBAR URL</span>
+        <input id="rebarUrl" type="url" placeholder="https://rebarops.com" required />
       </label>
+    </fieldset>
 
+    <fieldset class="capture-settings">
+      <legend data-i18n="ext.opt.prefs">Capture Preferences</legend>
       <label>
-        API Key (optional)
-        <input id="apiKey" type="password" placeholder="Supabase access token" />
-      </label>
-
-      <label>
-        Default Tags (comma separated)
+        <span data-i18n="ext.opt.tags">Default Tags (comma separated)</span>
         <input id="defaultTags" type="text" placeholder="web,highlight" />
       </label>
 
       <label class="checkbox-row">
         <input id="enableDomainTags" type="checkbox" />
-        Enable domain-based auto tags in preview
+        <span data-i18n="ext.opt.domainTags">Always suggest domain-based tags</span>
       </label>
+    </fieldset>
 
-      <p class="status">
-        REBAR Clipper saves directly to REBAR API. Keep API Key empty to use login session when available.
-      </p>
+    <div class="button-row">
+      <button id="save" type="button" class="save-btn" data-i18n="ext.opt.save">Save Settings</button>
+      <button id="testConn" type="button" class="test-btn" data-i18n="ext.opt.testConn">Test Connection</button>
+    </div>
+    <p id="status" class="status" role="status" aria-live="polite" data-i18n="ext.status.ready">Ready</p>
+  </main>
+  <script src="options.js" type="module"></script>
+</body>
 
-      <button id="save" type="button">Save</button>
-      <p id="status" class="status" role="status" aria-live="polite">Ready</p>
-    </main>
-    <script src="options.js" type="module"></script>
-  </body>
 </html>

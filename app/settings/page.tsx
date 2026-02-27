@@ -17,7 +17,7 @@ type AccountInfo = {
 export default function SettingsPage() {
   const { locale, setLocale, t } = useI18n()
   const [account, setAccount] = useState<AccountInfo>({ id: null, email: null, createdAt: null })
-  const [startPage, setStartPage] = useState<StartPage>("/")
+  const [startPage, setStartPage] = useState<StartPage>("/library")
   const [origin, setOrigin] = useState("http://localhost:3000")
   const [copied, setCopied] = useState(false)
 
@@ -113,7 +113,6 @@ export default function SettingsPage() {
             }}
             className="w-full border-2 border-foreground bg-background p-3 font-mono text-xs font-bold uppercase text-foreground"
           >
-            <option value="/">{t("settings.start.home", "Home")}</option>
             <option value="/review">{t("settings.start.review", "Review")}</option>
             <option value="/capture">{t("settings.start.capture", "Capture")}</option>
             <option value="/library">{t("settings.start.library", "Vault")}</option>

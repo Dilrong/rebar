@@ -137,8 +137,8 @@ export default function ReviewPage() {
                 </blockquote>
               </div>
 
-              {/* Desktop grid layout / Mobile sticky bottom wrapper */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8 pt-8 md:border-t-4 md:border-foreground max-md:fixed max-md:bottom-[80px] max-md:left-0 max-md:right-0 max-md:z-30 max-md:p-4 max-md:bg-background max-md:border-t-4 max-md:border-foreground max-md:shadow-[0_-4px_0_0_rgba(0,0,0,1)] dark:max-md:shadow-[0_-4px_0_0_rgba(255,255,255,0.1)]">
+              {/* Sticky bottom wrapper for all screen sizes */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8 pt-8 md:border-t-4 md:border-foreground sticky bottom-0 md:bottom-6 left-0 right-0 z-30 p-4 md:p-0 bg-background md:bg-transparent border-t-4 border-foreground md:border-t-0 shadow-[0_-4px_0_0_rgba(0,0,0,1)] md:shadow-none dark:shadow-[0_-4px_0_0_rgba(255,255,255,0.1)] md:dark:shadow-none mx-[-24px] md:mx-0 px-6 md:px-0 mb-[-24px] md:mb-0">
                 <button
                   type="button"
                   onClick={() => mutation.mutate({ id: first.id, action: "reviewed" })}

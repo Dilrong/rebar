@@ -1,13 +1,14 @@
-import { DEFAULT_SETTINGS, normalizeBaseUrl } from "./shared.js"
+import { DEFAULT_SETTINGS } from "./shared.js"
+import { initI18n, t } from "./i18n.js"
 
 const form = {
-  apiBaseUrl: document.getElementById("apiBaseUrl"),
-  apiKey: document.getElementById("apiKey"),
+  rebarUrl: document.getElementById("rebarUrl"),
   defaultTags: document.getElementById("defaultTags"),
   enableDomainTags: document.getElementById("enableDomainTags")
 }
 
 const saveButton = document.getElementById("save")
+const testConnButton = document.getElementById("testConn")
 const statusEl = document.getElementById("status")
 
 function setStatus(message, isError = false) {
@@ -15,49 +16,85 @@ function setStatus(message, isError = false) {
   statusEl.style.color = isError ? "#b91c1c" : "#111"
 }
 
+function isValidUrl(value) {
+  try {
+    const url = new URL(value)
+    return url.protocol === "http:" || url.protocol === "https:"
+  } catch {
+    return false
+  }
+}
+
 async function load() {
   const data = await chrome.storage.sync.get(DEFAULT_SETTINGS)
-  form.apiBaseUrl.value = data.apiBaseUrl || DEFAULT_SETTINGS.apiBaseUrl
-  form.apiKey.value = data.apiKey || ""
+  form.rebarUrl.value = data.rebarUrl || DEFAULT_SETTINGS.rebarUrl
   form.defaultTags.value = data.defaultTags || DEFAULT_SETTINGS.defaultTags
   form.enableDomainTags.checked = data.enableDomainTags ?? DEFAULT_SETTINGS.enableDomainTags
 }
 
 async function save() {
+  let urlStr = form.rebarUrl.value.trim() || DEFAULT_SETTINGS.rebarUrl
+  // clean up URL, remove trailing slash
+  urlStr = urlStr.replace(/\/+$/, "")
+
+  if (!isValidUrl(urlStr)) {
+    setStatus(t("ext.opt.invalidUrl"), true)
+    return
+  }
+
   const payload = {
-    apiBaseUrl: form.apiBaseUrl.value.trim() || DEFAULT_SETTINGS.apiBaseUrl,
-    apiKey: form.apiKey.value.trim(),
+    rebarUrl: urlStr,
     defaultTags: form.defaultTags.value.trim() || DEFAULT_SETTINGS.defaultTags,
     enableDomainTags: form.enableDomainTags.checked
   }
 
-  if (!payload.apiBaseUrl) {
-    setStatus("API base URL is required", true)
+  await chrome.storage.sync.set(payload)
+  setStatus(t("ext.opt.saved"))
+}
+
+async function testConnection() {
+  let urlStr = form.rebarUrl.value.trim() || DEFAULT_SETTINGS.rebarUrl
+  urlStr = urlStr.replace(/\/+$/, "")
+
+  if (!isValidUrl(urlStr)) {
+    setStatus(t("ext.opt.invalidUrl"), true)
     return
   }
+
+  testConnButton.disabled = true
+  setStatus(t("ext.status.checking"))
 
   try {
-    payload.apiBaseUrl = normalizeBaseUrl(payload.apiBaseUrl)
-    const url = new URL(payload.apiBaseUrl)
-    if (url.protocol !== "http:" && url.protocol !== "https:") {
-      throw new Error("URL must start with http:// or https://")
+    const res = await fetch(`${urlStr}/api/auth/check`, { credentials: "include" })
+
+    if (res.ok) {
+      setStatus(t("ext.opt.connOk"))
+    } else if (res.status === 401) {
+      setStatus(t("ext.opt.connNoAuth"), true)
+    } else {
+      setStatus(t("ext.opt.connFail"), true)
     }
   } catch {
-    setStatus("Enter a valid API base URL", true)
-    return
+    setStatus(t("ext.opt.connFail"), true)
+  } finally {
+    testConnButton.disabled = false
   }
-
-  await chrome.storage.sync.set(payload)
-  form.apiBaseUrl.value = payload.apiBaseUrl
-  setStatus("Saved")
 }
 
 saveButton.addEventListener("click", () => {
   save().catch((error) => {
-    setStatus(error instanceof Error ? error.message : "Save failed", true)
+    setStatus(error instanceof Error ? error.message : t("ui.error"), true)
+  })
+})
+
+testConnButton.addEventListener("click", () => {
+  testConnection().catch((error) => {
+    setStatus(error instanceof Error ? error.message : t("ui.error"), true)
   })
 })
 
 load().catch((error) => {
-  setStatus(error instanceof Error ? error.message : "Load failed", true)
+  setStatus(error instanceof Error ? error.message : t("ui.error"), true)
 })
+
+initI18n()

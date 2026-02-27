@@ -61,6 +61,59 @@ h1 {
   border-width: 2px;
 }
 
+.login-message {
+  margin-top: 16px;
+  border: 4px solid #111;
+  background: #fff;
+  padding: 24px 16px;
+  box-shadow: 4px 4px 0 #111;
+  text-align: center;
+}
+
+.login-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 12px;
+  background: #f0f0f0;
+  border: 4px solid #111;
+  border-radius: 50%;
+  color: #111;
+}
+
+.login-message p {
+  margin: 0 0 16px;
+  font-size: 14px;
+  font-weight: 800;
+  color: #111;
+}
+
+.login-message.hidden {
+  display: none;
+}
+
+.button-link {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  background: #111;
+  color: #fff;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 900;
+  text-transform: uppercase;
+  border: 4px solid #111;
+  box-shadow: 4px 4px 0 #111;
+  cursor: pointer;
+}
+
+.button-link:active {
+  box-shadow: 0 0 0 #111;
+  transform: translate(4px, 4px);
+}
+
 .preview {
   margin-top: 16px;
   border: 4px solid #111;

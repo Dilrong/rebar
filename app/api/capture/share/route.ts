@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server"
 import { z } from "zod"
 import { POST as ingestPost } from "@/app/api/capture/ingest/route"
+import { isValidOrigin } from "@/lib/auth"
 import { fail, rateLimited } from "@/lib/http"
 import { checkRateLimitDistributed, resolveClientKey } from "@/lib/rate-limit"
 import { RecordKindSchema } from "@/lib/schemas"
@@ -20,6 +21,10 @@ const ShareBodySchema = z
   .passthrough()
 
 export async function POST(request: NextRequest) {
+  if (!isValidOrigin(request.headers)) {
+    return fail("Forbidden", 403)
+  }
+
   const limitResult = await checkRateLimitDistributed({
     key: `capture:share:${resolveClientKey(request.headers)}`,
     limit: 60,
