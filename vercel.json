@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/cron/ingest-jobs/retry",
-      "schedule": "*/5 * * * *"
+      "schedule": "0 4 * * *"
     },
     {
       "path": "/api/cron/records/cleanup",
