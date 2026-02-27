@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server"
 import { z } from "zod"
 import { getUserId } from "@/lib/auth"
+import { PGRST_NOT_FOUND } from "@/lib/constants"
 import { fail, ok } from "@/lib/http"
 import { isValidStateTransition, UpdateRecordSchema } from "@/lib/schemas"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
@@ -31,7 +32,7 @@ export async function GET(
     .single()
 
   if (recordResult.error) {
-    if (recordResult.error.code === "PGRST116") {
+    if (recordResult.error.code === PGRST_NOT_FOUND) {
       return fail("Record not found", 404)
     }
 
@@ -111,7 +112,7 @@ export async function PATCH(
     .single()
 
   if (existing.error) {
-    if (existing.error.code === "PGRST116") {
+    if (existing.error.code === PGRST_NOT_FOUND) {
       return fail("Record not found", 404)
     }
 
@@ -158,26 +159,39 @@ export async function PATCH(
     return fail(updated.error.message, 500)
   }
 
-  if (parsedBody.data.tag_ids) {
-    const deleted = await supabase
-      .from("record_tags")
-      .delete()
-      .eq("record_id", parsedParams.data.id)
+  if (Object.prototype.hasOwnProperty.call(parsedBody.data, "tag_ids")) {
+    const nextTagIds = parsedBody.data.tag_ids ?? []
 
-    if (deleted.error) {
-      return fail(deleted.error.message, 500)
-    }
-
-    if (parsedBody.data.tag_ids.length > 0) {
-      const inserted = await supabase.from("record_tags").insert(
-        parsedBody.data.tag_ids.map((tagId) => ({
+    if (nextTagIds.length > 0) {
+      const upserted = await supabase.from("record_tags").upsert(
+        nextTagIds.map((tagId) => ({
           record_id: parsedParams.data.id,
           tag_id: tagId
-        }))
+        })),
+        { onConflict: "record_id,tag_id" }
       )
 
-      if (inserted.error) {
-        return fail(inserted.error.message, 500)
+      if (upserted.error) {
+        return fail(upserted.error.message, 500)
+      }
+
+      const removeStale = await supabase
+        .from("record_tags")
+        .delete()
+        .eq("record_id", parsedParams.data.id)
+        .not("tag_id", "in", `(${nextTagIds.join(",")})`)
+
+      if (removeStale.error) {
+        return fail(removeStale.error.message, 500)
+      }
+    } else {
+      const removedAll = await supabase
+        .from("record_tags")
+        .delete()
+        .eq("record_id", parsedParams.data.id)
+
+      if (removedAll.error) {
+        return fail(removedAll.error.message, 500)
       }
     }
   }
@@ -210,7 +224,7 @@ export async function DELETE(
     .single()
 
   if (deleted.error) {
-    if (deleted.error.code === "PGRST116") {
+    if (deleted.error.code === PGRST_NOT_FOUND) {
       return fail("Record not found", 404)
     }
 

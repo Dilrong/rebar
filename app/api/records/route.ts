@@ -2,15 +2,29 @@ import { NextRequest } from "next/server"
 import { NextResponse } from "next/server"
 import { z } from "zod"
 import { getUserId } from "@/lib/auth"
+import { PG_UNIQUE_VIOLATION } from "@/lib/constants"
 import { sha256 } from "@/lib/hash"
-import { fail, ok } from "@/lib/http"
+import { fail, ok, rateLimited } from "@/lib/http"
+import { decodeTimestampCursor, encodeTimestampCursor } from "@/lib/pagination"
 import { toPositiveInt } from "@/lib/query"
+import { checkRateLimit, resolveClientKey } from "@/lib/rate-limit"
 import { CreateRecordSchema, RecordKindSchema, RecordStateSchema } from "@/lib/schemas"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
 
 const UuidSchema = z.string().uuid()
+const SortSchema = z.enum(["created_at", "review_count", "due_at"])
+const OrderSchema = z.enum(["asc", "desc"])
 
 export async function GET(request: NextRequest) {
+  const limitResult = checkRateLimit({
+    key: `records:get:${resolveClientKey(request.headers)}`,
+    limit: 120,
+    windowMs: 60_000
+  })
+  if (!limitResult.ok) {
+    return rateLimited(limitResult.retryAfterSec)
+  }
+
   const userId = await getUserId(request.headers)
   if (!userId) {
     return fail("Unauthorized", 401)
@@ -21,16 +35,34 @@ export async function GET(request: NextRequest) {
   const kindParam = params.get("kind")
   const tagIdParam = params.get("tag_id")
   const qParam = params.get("q")
+  const cursorParam = params.get("cursor")
+  const sortParam = params.get("sort")
+  const orderParam = params.get("order")
   const page = toPositiveInt(params.get("page"), 1)
   const limit = Math.min(toPositiveInt(params.get("limit"), 20), 100)
   const from = (page - 1) * limit
   const to = from + limit - 1
+
+  const cursorTs = cursorParam ? decodeTimestampCursor(cursorParam) : null
+  if (cursorParam && !cursorTs) {
+    return fail("Invalid cursor", 400)
+  }
+
+  if (cursorParam && sortParam && sortParam !== "created_at") {
+    return fail("Cursor pagination supports created_at sort only", 400)
+  }
+
+  let validState: z.infer<typeof RecordStateSchema> | undefined
+  let validKind: z.infer<typeof RecordKindSchema> | undefined
+  let validSort: z.infer<typeof SortSchema> = "created_at"
+  let validOrder: z.infer<typeof OrderSchema> = "desc"
 
   if (stateParam) {
     const parsedState = RecordStateSchema.safeParse(stateParam)
     if (!parsedState.success) {
       return fail("Invalid state", 400)
     }
+    validState = parsedState.data
   }
 
   if (kindParam) {
@@ -38,6 +70,23 @@ export async function GET(request: NextRequest) {
     if (!parsedKind.success) {
       return fail("Invalid kind", 400)
     }
+    validKind = parsedKind.data
+  }
+
+  if (sortParam) {
+    const parsedSort = SortSchema.safeParse(sortParam)
+    if (!parsedSort.success) {
+      return fail("Invalid sort", 400)
+    }
+    validSort = parsedSort.data
+  }
+
+  if (orderParam) {
+    const parsedOrder = OrderSchema.safeParse(orderParam)
+    if (!parsedOrder.success) {
+      return fail("Invalid order", 400)
+    }
+    validOrder = parsedOrder.data
   }
 
   if (tagIdParam) {
@@ -70,38 +119,72 @@ export async function GET(request: NextRequest) {
     .from("records")
     .select("*", { count: "exact" })
     .eq("user_id", userId)
-    .order("created_at", { ascending: false })
+    .order(validSort, { ascending: validOrder === "asc", nullsFirst: validSort === "due_at" })
 
-  if (stateParam) {
-    query = query.eq("state", stateParam)
+  if (validState) {
+    query = query.eq("state", validState)
   }
 
-  if (kindParam) {
-    query = query.eq("kind", kindParam)
+  if (validKind) {
+    query = query.eq("kind", validKind)
   }
 
-  if (!stateParam) {
+  if (!validState) {
     query = query.neq("state", "TRASHED")
-  }
-
-  if (qParam) {
-    const escaped = qParam.replace(/,/g, "")
-    query = query.or(`content.ilike.%${escaped}%,source_title.ilike.%${escaped}%`)
   }
 
   if (filteredRecordIds) {
     query = query.in("id", filteredRecordIds)
   }
 
-  const result = await query.range(from, to)
+  const runQuery = async (useTextSearch: boolean) => {
+    let runnable = query
+
+    if (cursorTs) {
+      runnable = runnable.lt("created_at", cursorTs)
+    }
+
+    if (qParam) {
+      if (useTextSearch) {
+        runnable = runnable.textSearch("fts", qParam, { type: "plain", config: "simple" })
+      } else {
+        const escaped = qParam.replace(/,/g, "")
+        runnable = runnable.or(`content.ilike.%${escaped}%,source_title.ilike.%${escaped}%`)
+      }
+    }
+
+    if (cursorTs) {
+      return runnable.limit(limit)
+    }
+
+    return runnable.range(from, to)
+  }
+
+  let result = await runQuery(true)
+  if (qParam && result.error && /fts|textSearch|column/i.test(result.error.message)) {
+    result = await runQuery(false)
+  }
+
   if (result.error) {
     return fail(result.error.message, 500)
   }
 
-  return ok({ data: result.data, total: result.count ?? 0 })
+  const rows = result.data ?? []
+  const nextCursor = rows.length === limit ? encodeTimestampCursor(rows[rows.length - 1].created_at) : null
+
+  return ok({ data: rows, total: result.count ?? 0, next_cursor: nextCursor })
 }
 
 export async function POST(request: NextRequest) {
+  const limitResult = checkRateLimit({
+    key: `records:post:${resolveClientKey(request.headers)}`,
+    limit: 60,
+    windowMs: 60_000
+  })
+  if (!limitResult.ok) {
+    return rateLimited(limitResult.retryAfterSec)
+  }
+
   const userId = await getUserId(request.headers)
   if (!userId) {
     return fail("Unauthorized", 401)
@@ -134,7 +217,7 @@ export async function POST(request: NextRequest) {
     .single()
 
   if (created.error) {
-    if (created.error.code === "23505") {
+    if (created.error.code === PG_UNIQUE_VIOLATION) {
       if (parsed.data.on_duplicate === "merge") {
         const existing = await supabase
           .from("records")
@@ -188,7 +271,10 @@ export async function POST(request: NextRequest) {
         .eq("content_hash", contentHash)
         .single()
 
-      return NextResponse.json({ error: "Duplicated content", record_id: existing.data?.id ?? null }, { status: 409 })
+      return NextResponse.json(
+        { error: "Duplicated content", data: { record_id: existing.data?.id ?? null } },
+        { status: 409 }
+      )
     }
 
     return fail(created.error.message, 500)

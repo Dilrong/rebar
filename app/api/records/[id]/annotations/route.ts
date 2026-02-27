@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server"
 import { z } from "zod"
 import { getUserId } from "@/lib/auth"
+import { PGRST_NOT_FOUND } from "@/lib/constants"
 import { fail, ok } from "@/lib/http"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
 
@@ -70,7 +71,7 @@ export async function POST(
     .single()
 
   if (record.error) {
-    if (record.error.code === "PGRST116") {
+    if (record.error.code === PGRST_NOT_FOUND) {
       return fail("Record not found", 404)
     }
 

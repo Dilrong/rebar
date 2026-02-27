@@ -2,10 +2,11 @@ import { NextRequest } from "next/server"
 import { z } from "zod"
 import { getUserId } from "@/lib/auth"
 import { fail, ok } from "@/lib/http"
+import { decodeTimestampCursor, encodeTimestampCursor } from "@/lib/pagination"
 import { toPositiveInt } from "@/lib/query"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
 
-const ActionSchema = z.enum(["reviewed", "resurface"])
+const ActionSchema = z.enum(["reviewed", "resurface", "undo"])
 
 export async function GET(request: NextRequest) {
   const userId = await getUserId(request.headers)
@@ -19,8 +20,14 @@ export async function GET(request: NextRequest) {
   const actionParam = params.get("action")
   const fromParam = params.get("from")
   const toParam = params.get("to")
+  const cursorParam = params.get("cursor")
   const from = (page - 1) * limit
   const to = from + limit - 1
+  const cursorTs = cursorParam ? decodeTimestampCursor(cursorParam) : null
+
+  if (cursorParam && !cursorTs) {
+    return fail("Invalid cursor", 400)
+  }
 
   if (actionParam) {
     const parsedAction = ActionSchema.safeParse(actionParam)
@@ -56,7 +63,11 @@ export async function GET(request: NextRequest) {
     query = query.lte("reviewed_at", inclusiveTo.toISOString())
   }
 
-  const logsResult = await query.range(from, to)
+  if (cursorTs) {
+    query = query.lt("reviewed_at", cursorTs)
+  }
+
+  const logsResult = cursorTs ? await query.limit(limit) : await query.range(from, to)
 
   if (logsResult.error) {
     return fail(logsResult.error.message, 500)
@@ -64,7 +75,7 @@ export async function GET(request: NextRequest) {
 
   const logs = logsResult.data
   if (logs.length === 0) {
-    return ok({ data: [], total: logsResult.count ?? 0 })
+    return ok({ data: [], total: logsResult.count ?? 0, next_cursor: null })
   }
 
   const recordIds = Array.from(new Set(logs.map((log) => log.record_id)))
@@ -94,5 +105,7 @@ export async function GET(request: NextRequest) {
     }
   })
 
-  return ok({ data: merged, total: logsResult.count ?? 0 })
+  const nextCursor = merged.length === limit ? encodeTimestampCursor(merged[merged.length - 1].reviewed_at) : null
+
+  return ok({ data: merged, total: logsResult.count ?? 0, next_cursor: nextCursor })
 }

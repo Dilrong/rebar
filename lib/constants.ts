@@ -1,0 +1,2 @@
+export const PG_UNIQUE_VIOLATION = "23505"
+export const PGRST_NOT_FOUND = "PGRST116"

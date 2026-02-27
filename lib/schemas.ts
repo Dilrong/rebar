@@ -45,6 +45,14 @@ export const UpdateRecordSchema = z
 export const ReviewRecordSchema = z.object({
   action: ReviewActionSchema,
   snooze_days: z.number().int().min(1).max(30).optional()
+}).superRefine((value, ctx) => {
+  if (value.snooze_days && value.action !== "resurface") {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["snooze_days"],
+      message: "snooze_days is only valid with resurface action"
+    })
+  }
 })
 
 export type RecordKind = z.infer<typeof RecordKindSchema>

@@ -1,6 +1,8 @@
 import { NextRequest } from "next/server"
 import { z } from "zod"
 import { POST as ingestPost } from "@/app/api/capture/ingest/route"
+import { fail, rateLimited } from "@/lib/http"
+import { checkRateLimit, resolveClientKey } from "@/lib/rate-limit"
 import { RecordKindSchema } from "@/lib/schemas"
 
 const ShareBodySchema = z
@@ -18,22 +20,25 @@ const ShareBodySchema = z
   .passthrough()
 
 export async function POST(request: NextRequest) {
+  const limitResult = checkRateLimit({
+    key: `capture:share:${resolveClientKey(request.headers)}`,
+    limit: 60,
+    windowMs: 60_000
+  })
+  if (!limitResult.ok) {
+    return rateLimited(limitResult.retryAfterSec)
+  }
+
   const body = await request.json().catch(() => null)
   const parsed = ShareBodySchema.safeParse(body)
 
   if (!parsed.success) {
-    return new Response(JSON.stringify({ error: parsed.error.issues[0]?.message ?? "Invalid payload" }), {
-      status: 400,
-      headers: { "Content-Type": "application/json" }
-    })
+    return fail(parsed.error.issues[0]?.message ?? "Invalid payload", 400)
   }
 
   const content = (parsed.data.content ?? parsed.data.text ?? "").trim()
   if (!content) {
-    return new Response(JSON.stringify({ error: "content is required" }), {
-      status: 400,
-      headers: { "Content-Type": "application/json" }
-    })
+    return fail("content is required", 400)
   }
 
   const ingestBody = {

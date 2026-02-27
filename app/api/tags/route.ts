@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server"
 import { z } from "zod"
 import { getUserId } from "@/lib/auth"
+import { PG_UNIQUE_VIOLATION } from "@/lib/constants"
 import { fail, ok } from "@/lib/http"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
 
@@ -53,7 +54,7 @@ export async function POST(request: NextRequest) {
     .single()
 
   if (created.error) {
-    if (created.error.code === "23505") {
+    if (created.error.code === PG_UNIQUE_VIOLATION) {
       return fail("Tag already exists", 409)
     }
 

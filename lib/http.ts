@@ -7,3 +7,15 @@ export function ok<T>(data: T, init?: ResponseInit): NextResponse {
 export function fail(message: string, status: number): NextResponse {
   return NextResponse.json({ error: message }, { status })
 }
+
+export function rateLimited(retryAfterSec: number): NextResponse {
+  return NextResponse.json(
+    { error: "Too Many Requests" },
+    {
+      status: 429,
+      headers: {
+        "Retry-After": String(retryAfterSec)
+      }
+    }
+  )
+}

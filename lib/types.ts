@@ -42,5 +42,9 @@ export type ReviewLogRow = {
   user_id: string
   record_id: string
   reviewed_at: string
-  action: "reviewed" | "resurface"
+  action: "reviewed" | "resurface" | "undo"
+  prev_state: RecordState | null
+  prev_interval_days: number | null
+  prev_due_at: string | null
+  prev_review_count: number | null
 }

@@ -1,7 +1,8 @@
 import { NextRequest } from "next/server"
 import { z } from "zod"
 import { getUserId } from "@/lib/auth"
-import { fail, ok } from "@/lib/http"
+import { fail, ok, rateLimited } from "@/lib/http"
+import { checkRateLimit, resolveClientKey } from "@/lib/rate-limit"
 
 const BodySchema = z.object({
   url: z.string().url()
@@ -91,6 +92,15 @@ function createYoutubeContent(title: string | null, description: string | null):
 }
 
 export async function POST(request: NextRequest) {
+  const limitResult = checkRateLimit({
+    key: `capture:extract:${resolveClientKey(request.headers)}`,
+    limit: 30,
+    windowMs: 60_000
+  })
+  if (!limitResult.ok) {
+    return rateLimited(limitResult.retryAfterSec)
+  }
+
   const userId = await getUserId(request.headers)
   if (!userId) {
     return fail("Unauthorized", 401)
@@ -102,10 +112,14 @@ export async function POST(request: NextRequest) {
     return fail(parsed.error.issues[0]?.message ?? "Invalid payload", 400)
   }
 
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 10000)
   const response = await fetch(parsed.data.url, {
     method: "GET",
-    redirect: "follow"
+    redirect: "follow",
+    signal: controller.signal
   }).catch(() => null)
+  clearTimeout(timeout)
 
   if (!response || !response.ok) {
     return fail("Failed to fetch URL", 400)

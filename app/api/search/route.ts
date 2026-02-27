@@ -1,13 +1,24 @@
 import { NextRequest } from "next/server"
 import { z } from "zod"
 import { getUserId } from "@/lib/auth"
-import { fail, ok } from "@/lib/http"
+import { fail, ok, rateLimited } from "@/lib/http"
+import { decodeTimestampCursor, encodeTimestampCursor } from "@/lib/pagination"
+import { checkRateLimit, resolveClientKey } from "@/lib/rate-limit"
 import { RecordStateSchema } from "@/lib/schemas"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
 
 const UuidSchema = z.string().uuid()
 
 export async function GET(request: NextRequest) {
+  const limitResult = checkRateLimit({
+    key: `search:get:${resolveClientKey(request.headers)}`,
+    limit: 120,
+    windowMs: 60_000
+  })
+  if (!limitResult.ok) {
+    return rateLimited(limitResult.retryAfterSec)
+  }
+
   const userId = await getUserId(request.headers)
   if (!userId) {
     return fail("Unauthorized", 401)
@@ -19,9 +30,17 @@ export async function GET(request: NextRequest) {
   const tagId = params.get("tag_id")?.trim() ?? ""
   const fromDate = params.get("from")?.trim() ?? ""
   const toDate = params.get("to")?.trim() ?? ""
+  const limit = Math.min(Number(params.get("limit") ?? "50") || 50, 100)
+  const cursorParam = params.get("cursor")
+  const cursorTs = cursorParam ? decodeTimestampCursor(cursorParam) : null
+  let validState: z.infer<typeof RecordStateSchema> | undefined
 
   if (!q && !state && !tagId && !fromDate && !toDate) {
     return fail("At least one filter is required", 400)
+  }
+
+  if (cursorParam && !cursorTs) {
+    return fail("Invalid cursor", 400)
   }
 
   if (state) {
@@ -29,6 +48,8 @@ export async function GET(request: NextRequest) {
     if (!parsedState.success) {
       return fail("Invalid state", 400)
     }
+
+    validState = parsedState.data
   }
 
   if (tagId) {
@@ -63,14 +84,10 @@ export async function GET(request: NextRequest) {
     .eq("user_id", userId)
     .neq("state", "TRASHED")
     .order("created_at", { ascending: false })
+    .limit(limit)
 
-  if (q) {
-    const escaped = q.replace(/[,%]/g, "")
-    query = query.or(`content.ilike.%${escaped}%,source_title.ilike.%${escaped}%`)
-  }
-
-  if (state) {
-    query = query.eq("state", state)
+  if (validState) {
+    query = query.eq("state", validState)
   }
 
   if (fromDate) {
@@ -85,11 +102,36 @@ export async function GET(request: NextRequest) {
     query = query.in("id", filteredRecordIds)
   }
 
-  const result = await query
+  if (cursorTs) {
+    query = query.lt("created_at", cursorTs)
+  }
+
+  const runQuery = async (useTextSearch: boolean) => {
+    let runnable = query
+
+    if (q) {
+      if (useTextSearch) {
+        runnable = runnable.textSearch("fts", q, { type: "plain", config: "simple" })
+      } else {
+        const escaped = q.replace(/[,%]/g, "")
+        runnable = runnable.or(`content.ilike.%${escaped}%,source_title.ilike.%${escaped}%`)
+      }
+    }
+
+    return runnable
+  }
+
+  let result = await runQuery(true)
+  if (q && result.error && /fts|textSearch|column/i.test(result.error.message)) {
+    result = await runQuery(false)
+  }
 
   if (result.error) {
     return fail(result.error.message, 500)
   }
 
-  return ok({ data: result.data })
+  const rows = result.data ?? []
+  const nextCursor = rows.length === limit ? encodeTimestampCursor(rows[rows.length - 1].created_at) : null
+
+  return ok({ data: rows, next_cursor: nextCursor })
 }

@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server"
 import { z } from "zod"
 import { getUserId } from "@/lib/auth"
+import { PGRST_NOT_FOUND, PG_UNIQUE_VIOLATION } from "@/lib/constants"
 import { fail, ok } from "@/lib/http"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
 
@@ -45,11 +46,11 @@ export async function PATCH(
     .single()
 
   if (updated.error) {
-    if (updated.error.code === "PGRST116") {
+    if (updated.error.code === PGRST_NOT_FOUND) {
       return fail("Tag not found", 404)
     }
 
-    if (updated.error.code === "23505") {
+    if (updated.error.code === PG_UNIQUE_VIOLATION) {
       return fail("Tag already exists", 409)
     }
 
@@ -84,7 +85,7 @@ export async function DELETE(
     .single()
 
   if (deleted.error) {
-    if (deleted.error.code === "PGRST116") {
+    if (deleted.error.code === PGRST_NOT_FOUND) {
       return fail("Tag not found", 404)
     }
 

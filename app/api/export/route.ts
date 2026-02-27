@@ -11,6 +11,37 @@ function escapeMarkdown(value: string): string {
   return value.replace(/[\\`*_{}\[\]()#+\-.!|>]/g, "\\$&")
 }
 
+function toObsidianFrontmatter(record: {
+  kind: string
+  state: string
+  source_title: string | null
+  url: string | null
+  created_at: string
+  updated_at: string
+},
+tagNames: string[]) {
+  const lines = [
+    "---",
+    `kind: ${record.kind}`,
+    `state: ${record.state}`,
+    `created_at: ${record.created_at}`,
+    `updated_at: ${record.updated_at}`
+  ]
+
+  if (record.source_title) {
+    lines.push(`source_title: "${record.source_title.replace(/"/g, "\\\"")}"`)
+  }
+  if (record.url) {
+    lines.push(`url: "${record.url.replace(/"/g, "\\\"")}"`)
+  }
+  if (tagNames.length > 0) {
+    lines.push(`tags: [${tagNames.map((name) => `"${name.replace(/"/g, "\\\"")}"`).join(", ")}]`)
+  }
+
+  lines.push("---", "")
+  return lines.join("\n")
+}
+
 export async function GET(request: NextRequest) {
   const userId = await getUserId(request.headers)
   if (!userId) {
@@ -21,9 +52,10 @@ export async function GET(request: NextRequest) {
   const format = params.get("format") ?? "markdown"
   const stateParam = params.get("state")
   const tagIdParam = params.get("tag_id")
+  let validState: z.infer<typeof RecordStateSchema> | undefined
 
-  if (format !== "markdown") {
-    return fail("Only markdown is supported", 400)
+  if (format !== "markdown" && format !== "obsidian") {
+    return fail("Supported formats: markdown, obsidian", 400)
   }
 
   if (stateParam) {
@@ -31,6 +63,8 @@ export async function GET(request: NextRequest) {
     if (!parsedState.success) {
       return fail("Invalid state", 400)
     }
+
+    validState = parsedState.data
   }
 
   if (tagIdParam) {
@@ -71,8 +105,8 @@ export async function GET(request: NextRequest) {
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
 
-  if (stateParam) {
-    query = query.eq("state", stateParam)
+  if (validState) {
+    query = query.eq("state", validState)
   }
 
   if (recordIdsByTag) {
@@ -148,8 +182,29 @@ export async function GET(request: NextRequest) {
     sections.push("")
   }
 
+  const markdownContent = sections.join("\n")
+
+  if (format === "obsidian") {
+    const obsidianNotes = records
+      .map((record) => {
+        const names = tagMap.get(record.id) ?? []
+        const frontmatter = toObsidianFrontmatter(record, names)
+        return `${frontmatter}${record.content}\n`
+      })
+      .join("\n")
+
+    const obsidianFilename = `rebar-obsidian-export-${today}.md`
+    return new Response(obsidianNotes, {
+      status: 200,
+      headers: {
+        "Content-Type": "text/markdown; charset=utf-8",
+        "Content-Disposition": `attachment; filename="${obsidianFilename}"`
+      }
+    })
+  }
+
   const filename = `rebar-export-${today}.md`
-  return new Response(sections.join("\n"), {
+  return new Response(markdownContent, {
     status: 200,
     headers: {
       "Content-Type": "text/markdown; charset=utf-8",
