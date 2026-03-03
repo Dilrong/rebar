@@ -230,6 +230,14 @@ export default function RecordDetailPage() {
     })
   }
 
+  const quickArchive = () => {
+    updateRecord.mutate({
+      source_title: detail.data?.record.source_title ?? "",
+      url: detail.data?.record.url ?? "",
+      state: "ARCHIVED"
+    })
+  }
+
   const requestDeleteRecord = () => {
     setPendingDeleteConfirm(true)
   }
@@ -254,60 +262,10 @@ export default function RecordDetailPage() {
         <main className="max-w-5xl mx-auto animate-fade-in-up pb-32">
           <AppNav />
 
-          <div className="mb-4 mt-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="mb-4 mt-4 flex justify-between gap-4">
             <Link href="/library" className="inline-flex items-center text-sm font-black uppercase text-foreground hover:bg-foreground hover:text-background border-2 border-transparent hover:border-foreground px-2 py-1 transition-colors self-start">
               <ArrowLeftSquare className="w-5 h-5 mr-2" strokeWidth={2.5} /> {t("record.back", "BACK")}
             </Link>
-
-            {detail.data ? (
-              <div className="flex flex-col gap-2 border-2 border-foreground bg-card p-3 shadow-brutal-sm">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <input
-                    value={editSourceTitle}
-                    onChange={(event) => setEditSourceTitle(event.target.value)}
-                    placeholder="SOURCE TITLE"
-                    className="min-h-[44px] w-full border-2 border-foreground bg-background p-2 font-mono text-xs text-foreground"
-                  />
-                  <input
-                    value={editUrl}
-                    onChange={(event) => setEditUrl(event.target.value)}
-                    placeholder="https://..."
-                    className="min-h-[44px] w-full border-2 border-foreground bg-background p-2 font-mono text-xs text-foreground"
-                  />
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <select
-                    value={editState}
-                    onChange={(event) => setEditState(event.target.value as RecordRow["state"])}
-                    className="min-h-[44px] flex-1 border-2 border-foreground bg-background p-2 font-mono text-xs text-foreground"
-                  >
-                    <option value="INBOX">{getStateLabel("INBOX", t)}</option>
-                    <option value="ACTIVE">{getStateLabel("ACTIVE", t)}</option>
-                    <option value="PINNED">{getStateLabel("PINNED", t)}</option>
-                    <option value="ARCHIVED">{getStateLabel("ARCHIVED", t)}</option>
-                    <option value="TRASHED">{getStateLabel("TRASHED", t)}</option>
-                  </select>
-
-                  <button
-                    type="button"
-                    onClick={requestSaveRecord}
-                    disabled={updateRecord.isPending}
-                    className="min-h-[44px] flex-1 border-2 border-foreground bg-foreground px-3 py-2 font-mono text-xs font-bold uppercase text-background disabled:opacity-60"
-                  >
-                    {updateRecord.isPending ? t("record.updating", "UPDATING...") : t("record.update", "UPDATE RECORD")}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={requestDeleteRecord}
-                    disabled={deleteRecord.isPending}
-                    className="min-h-[44px] flex-1 border-2 border-foreground bg-destructive px-3 py-2 font-mono text-xs font-bold uppercase text-white disabled:opacity-60"
-                  >
-                    {deleteRecord.isPending ? t("record.deleting", "DELETING...") : t("record.delete", "DELETE RECORD")}
-                  </button>
-                </div>
-              </div>
-            ) : null}
           </div>
 
           {detail.isLoading && (
@@ -364,7 +322,7 @@ export default function RecordDetailPage() {
                   {detail.data.tags && detail.data.tags.length > 0 && (
                     <div className="flex items-center gap-2 mt-6 flex-wrap">
                       <Hash className="w-5 h-5 text-accent" strokeWidth={3} />
-                      {detail.data.tags.map(tag => (
+                      {detail.data.tags.map((tag: Pick<TagRow, "id" | "name">) => (
                         <span key={tag.id} className="font-mono text-xs font-bold uppercase border-b-2 border-foreground text-foreground">
                           {tag.name}
                         </span>
@@ -376,85 +334,143 @@ export default function RecordDetailPage() {
 
               <section className="lg:col-span-4 flex flex-col gap-6">
                 <div className="border-4 border-foreground bg-card p-5 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.1)]">
-                  <h3 className="font-black text-xl uppercase text-foreground mb-4 flex items-center gap-2 border-b-4 border-foreground pb-2">
-                    <PlusSquare className="w-6 h-6" strokeWidth={3} /> {t("record.appendLog", "APPEND.LOG")}
-                  </h3>
-                  <form onSubmit={form.handleSubmit(payload => addAnnotation.mutate(payload))} className="space-y-4">
-                    <div className="relative">
-                      <select
-                        {...form.register("kind")}
-                        className="w-full bg-background border-2 border-foreground font-mono text-sm font-bold uppercase text-foreground p-3 focus:outline-none focus:ring-2 focus:ring-accent appearance-none cursor-pointer rounded-none"
-                      >
-                        <option value="comment">{t("record.annotation.comment", "COMMENT")}</option>
-                        <option value="highlight">{t("record.annotation.highlight", "HIGHLIGHT")}</option>
-                        <option value="correction">{t("record.annotation.correction", "CORRECTION")}</option>
-                      </select>
-                    </div>
-                    <textarea
-                      rows={4}
-                      placeholder={t("record.annotation.placeholder", "Enter note")}
-                      className="w-full bg-background border-2 border-foreground text-foreground font-mono text-sm p-3 focus:outline-none focus:ring-2 focus:ring-accent placeholder:text-muted-foreground/50 resize-y rounded-none"
-                      {...form.register("body", { required: true })}
-                    />
-                    <div className="flex justify-end pt-2">
+                  <h3 className="font-black text-xl uppercase text-foreground mb-4 flex items-center justify-between border-b-4 border-foreground pb-2">
+                    <span className="flex items-center gap-2"><ArrowLeftSquare className="w-6 h-6 rotate-180" strokeWidth={3} /> {t("record.manageRecord", "MANAGE")}</span>
+                    {detail.data.record.state !== "ARCHIVED" && (
                       <button
-                        type="submit"
-                        disabled={addAnnotation.isPending}
-                        className="w-full bg-foreground text-background font-black text-sm uppercase py-3 hover:bg-accent hover:text-white transition-colors disabled:opacity-50 border-2 border-transparent rounded-none flex items-center justify-center min-h-[44px]"
+                        type="button"
+                        onClick={quickArchive}
+                        disabled={updateRecord.isPending}
+                        className="bg-accent text-white font-mono text-[10px] font-bold px-2 py-1 uppercase shadow-brutal-sm hover:scale-105 transition-transform"
                       >
-                        {addAnnotation.isPending ? <LoadingDots /> : t("record.execute", "EXECUTE")}
+                        {t("record.quickArchive", "ARCHIVE")}
+                      </button>
+                    )}
+                  </h3>
+                  <div className="space-y-3">
+                    <input
+                      value={editSourceTitle}
+                      onChange={(event) => setEditSourceTitle(event.target.value)}
+                      placeholder="SOURCE TITLE"
+                      className="min-h-[44px] w-full border-2 border-foreground bg-background p-2 font-mono text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+                    />
+                    <input
+                      value={editUrl}
+                      onChange={(event) => setEditUrl(event.target.value)}
+                      placeholder="https://..."
+                      className="min-h-[44px] w-full border-2 border-foreground bg-background p-2 font-mono text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+                    />
+                    <select
+                      value={editState}
+                      onChange={(event) => setEditState(event.target.value as RecordRow["state"])}
+                      className="min-h-[44px] w-full border-2 border-foreground bg-background p-2 font-mono text-xs font-bold uppercase text-foreground focus:outline-none focus:ring-2 focus:ring-accent appearance-none cursor-pointer rounded-none"
+                    >
+                      <option value="INBOX">{getStateLabel("INBOX", t)}</option>
+                      <option value="ACTIVE">{getStateLabel("ACTIVE", t)}</option>
+                      <option value="PINNED">{getStateLabel("PINNED", t)}</option>
+                      <option value="ARCHIVED">{getStateLabel("ARCHIVED", t)}</option>
+                      <option value="TRASHED">{getStateLabel("TRASHED", t)}</option>
+                    </select>
+                    <div className="flex gap-2 pt-2">
+                      <button
+                        type="button"
+                        onClick={requestSaveRecord}
+                        disabled={updateRecord.isPending}
+                        className="min-h-[44px] flex-1 bg-foreground text-background font-black text-xs uppercase py-2 hover:bg-accent hover:text-white transition-colors disabled:opacity-50"
+                      >
+                        {updateRecord.isPending ? "..." : t("record.update", "UPDATE")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={requestDeleteRecord}
+                        disabled={deleteRecord.isPending}
+                        className="min-h-[44px] flex-1 bg-destructive text-white font-black text-xs uppercase py-2 hover:bg-red-600 transition-colors disabled:opacity-50"
+                      >
+                        {deleteRecord.isPending ? "..." : t("record.delete", "DELETE")}
                       </button>
                     </div>
-                  </form>
+                  </div>
                 </div>
 
                 <div className="border-4 border-foreground bg-card p-5 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
                   <h3 className="font-black text-xl uppercase text-foreground mb-4 flex items-center gap-2 border-b-4 border-foreground pb-2">
-                    <Hash className="w-6 h-6" strokeWidth={3} /> {t("record.tagsEdit", "TAGS.EDIT")}
+                    <Hash className="w-6 h-6" strokeWidth={3} /> {t("record.tagsEdit", "TAGS")}
                   </h3>
-                  <div className="flex flex-wrap gap-2">
-                    {(tags.data?.data ?? []).map((tag) => {
-                      const active = selectedTagIds.has(tag.id)
-                      return (
-                        <button
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {(tags.data?.data ?? []).length === 0 && (
+                      <span className="font-mono text-xs text-muted-foreground uppercase">{t("record.noTagsAvail", "NO TAGS AVAILABLE")}</span>
+                    )}
+                    {(tags.data?.data ?? [])
+                      .filter((tag: TagRow) => selectedTagIds.has(tag.id))
+                      .map((tag: TagRow) => (
+                        <div
                           key={tag.id}
-                          type="button"
-                          onClick={() => toggleTag(tag.id)}
-                          disabled={updateTags.isPending}
-                          className={`px-2 py-1 border-2 font-mono text-xs font-bold uppercase ${active
-                            ? "border-foreground bg-foreground text-background"
-                            : "border-foreground bg-background text-foreground"
-                            }`}
+                          className="flex items-center border-2 border-foreground bg-foreground text-background font-mono text-xs font-bold uppercase transition-transform hover:scale-105"
                         >
-                          #{tag.name}
-                        </button>
-                      )
-                    })}
+                          <span className="px-2 py-1">#{tag.name}</span>
+                          <button
+                            type="button"
+                            onClick={() => toggleTag(tag.id)}
+                            disabled={updateTags.isPending}
+                            className="px-2 py-1 border-l-2 border-background/20 hover:bg-destructive hover:text-white transition-colors"
+                            aria-label="Remove tag"
+                          >
+                            X
+                          </button>
+                        </div>
+                      ))}
                   </div>
+
+                  {/* Select for unassigned tags */}
+                  {(() => {
+                    const unassignedTags = (tags.data?.data ?? []).filter((tag: TagRow) => !selectedTagIds.has(tag.id))
+                    if (unassignedTags.length === 0) return null
+
+                    return (
+                      <select
+                        onChange={(e) => {
+                          if (e.target.value) toggleTag(e.target.value)
+                          e.target.value = "" // Reset after selection
+                        }}
+                        disabled={updateTags.isPending}
+                        className="w-full bg-background border-2 border-dashed border-foreground/50 text-foreground font-mono text-xs font-bold p-2 focus:outline-none focus:border-accent appearance-none rounded-none cursor-pointer uppercase"
+                        defaultValue=""
+                      >
+                        <option value="" disabled>+ {t("record.addTag", "ADD TAG...")}</option>
+                        {unassignedTags.map((tag: TagRow) => (
+                          <option key={tag.id} value={tag.id}>{tag.name}</option>
+                        ))}
+                      </select>
+                    )
+                  })()}
+
                   {updateTags.error ? (
                     <p className="font-mono text-xs text-destructive mt-3">{updateTags.error.message}</p>
                   ) : null}
                 </div>
 
-                {updateRecord.error ? <p className="font-mono text-xs text-destructive">{updateRecord.error.message}</p> : null}
-                {deleteRecord.error ? <p className="font-mono text-xs text-destructive">{deleteRecord.error.message}</p> : null}
+                <div className="border-4 border-foreground bg-card p-5 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.1)]">
 
-                <div className="flex flex-col gap-4">
-                  <h2 className="font-black text-2xl text-foreground uppercase pt-4 px-2">{t("record.logHistory", "LOG.HISTORY")}</h2>
+                  {updateRecord.error ? <p className="font-mono text-xs text-destructive">{updateRecord.error.message}</p> : null}
+                  {deleteRecord.error ? <p className="font-mono text-xs text-destructive">{deleteRecord.error.message}</p> : null}
 
-                  {detail.data.annotations.length === 0 && (
-                    <p className="font-mono text-sm font-bold text-muted-foreground uppercase border-2 border-dashed border-border p-4 text-center">{t("record.noLogs", "NO LOGS FOUND.")}</p>
-                  )}
+                  <div className="flex flex-col gap-4">
+                    <h2 className="font-black text-2xl text-foreground uppercase pt-4 px-2">{t("record.logHistory", "LOG.HISTORY")}</h2>
 
-                  <div className="space-y-4">
-                    {detail.data.annotations.map(ann => (
-                      <div key={ann.id} className="border-2 border-foreground bg-background p-4 relative shadow-[2px_2px_0px_0px_theme(colors.accent)]">
-                        <span className="inline-block bg-accent text-white font-mono text-[10px] font-bold px-1.5 py-0.5 uppercase mb-2">
-                          {ann.kind}
-                        </span>
-                        <p className="text-foreground font-medium text-sm whitespace-pre-wrap">{ann.body}</p>
-                      </div>
-                    ))}
+                    {detail.data.annotations.length === 0 && (
+                      <p className="font-mono text-sm font-bold text-muted-foreground uppercase border-2 border-dashed border-border p-4 text-center">{t("record.noLogs", "NO LOGS FOUND.")}</p>
+                    )}
+
+                    <div className="space-y-4">
+                      {detail.data.annotations.map(ann => (
+                        <div key={ann.id} className="border-2 border-foreground bg-background p-4 relative shadow-[2px_2px_0px_0px_theme(colors.accent)]">
+                          <span className="inline-block bg-accent text-white font-mono text-[10px] font-bold px-1.5 py-0.5 uppercase mb-2">
+                            {ann.kind}
+                          </span>
+                          <p className="text-foreground font-medium text-sm whitespace-pre-wrap">{ann.body}</p>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </section>
