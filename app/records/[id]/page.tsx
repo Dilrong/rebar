@@ -192,48 +192,52 @@ export default function RecordDetailPage() {
             </Link>
 
             {detail.data ? (
-              <div className="flex flex-wrap items-center gap-2 border-2 border-foreground bg-card p-2 shadow-brutal-sm">
-                <input
-                  value={editSourceTitle}
-                  onChange={(event) => setEditSourceTitle(event.target.value)}
-                  placeholder="SOURCE TITLE"
-                  className="border-2 border-foreground bg-background p-2 font-mono text-xs text-foreground min-w-[150px]"
-                />
-                <input
-                  value={editUrl}
-                  onChange={(event) => setEditUrl(event.target.value)}
-                  placeholder="https://..."
-                  className="border-2 border-foreground bg-background p-2 font-mono text-xs text-foreground min-w-[150px]"
-                />
-                <select
-                  value={editState}
-                  onChange={(event) => setEditState(event.target.value as RecordRow["state"])}
-                  className="border-2 border-foreground bg-background p-2 font-mono text-xs text-foreground"
-                >
-                  <option value="INBOX">{getStateLabel("INBOX", t)}</option>
-                  <option value="ACTIVE">{getStateLabel("ACTIVE", t)}</option>
-                  <option value="PINNED">{getStateLabel("PINNED", t)}</option>
-                  <option value="ARCHIVED">{getStateLabel("ARCHIVED", t)}</option>
-                  <option value="TRASHED">{getStateLabel("TRASHED", t)}</option>
-                </select>
+              <div className="flex flex-col gap-2 border-2 border-foreground bg-card p-3 shadow-brutal-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <input
+                    value={editSourceTitle}
+                    onChange={(event) => setEditSourceTitle(event.target.value)}
+                    placeholder="SOURCE TITLE"
+                    className="min-h-[44px] w-full border-2 border-foreground bg-background p-2 font-mono text-xs text-foreground"
+                  />
+                  <input
+                    value={editUrl}
+                    onChange={(event) => setEditUrl(event.target.value)}
+                    placeholder="https://..."
+                    className="min-h-[44px] w-full border-2 border-foreground bg-background p-2 font-mono text-xs text-foreground"
+                  />
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <select
+                    value={editState}
+                    onChange={(event) => setEditState(event.target.value as RecordRow["state"])}
+                    className="min-h-[44px] flex-1 border-2 border-foreground bg-background p-2 font-mono text-xs text-foreground"
+                  >
+                    <option value="INBOX">{getStateLabel("INBOX", t)}</option>
+                    <option value="ACTIVE">{getStateLabel("ACTIVE", t)}</option>
+                    <option value="PINNED">{getStateLabel("PINNED", t)}</option>
+                    <option value="ARCHIVED">{getStateLabel("ARCHIVED", t)}</option>
+                    <option value="TRASHED">{getStateLabel("TRASHED", t)}</option>
+                  </select>
 
-                <button
-                  type="button"
-                  onClick={requestSaveRecord}
-                  disabled={updateRecord.isPending}
-                  className="border-2 border-foreground bg-foreground px-3 py-2 font-mono text-xs font-bold uppercase text-background disabled:opacity-60"
-                >
-                  {updateRecord.isPending ? t("record.updating", "UPDATING...") : t("record.update", "UPDATE RECORD")}
-                </button>
+                  <button
+                    type="button"
+                    onClick={requestSaveRecord}
+                    disabled={updateRecord.isPending}
+                    className="min-h-[44px] flex-1 border-2 border-foreground bg-foreground px-3 py-2 font-mono text-xs font-bold uppercase text-background disabled:opacity-60"
+                  >
+                    {updateRecord.isPending ? t("record.updating", "UPDATING...") : t("record.update", "UPDATE RECORD")}
+                  </button>
 
-                <button
-                  type="button"
-                  onClick={requestDeleteRecord}
-                  disabled={deleteRecord.isPending}
-                  className="border-2 border-foreground bg-destructive px-3 py-2 font-mono text-xs font-bold uppercase text-white disabled:opacity-60"
-                >
-                  {deleteRecord.isPending ? t("record.deleting", "DELETING...") : t("record.delete", "DELETE RECORD")}
-                </button>
+                  <button
+                    type="button"
+                    onClick={requestDeleteRecord}
+                    disabled={deleteRecord.isPending}
+                    className="min-h-[44px] flex-1 border-2 border-foreground bg-destructive px-3 py-2 font-mono text-xs font-bold uppercase text-white disabled:opacity-60"
+                  >
+                    {deleteRecord.isPending ? t("record.deleting", "DELETING...") : t("record.delete", "DELETE RECORD")}
+                  </button>
+                </div>
               </div>
             ) : null}
           </div>
@@ -339,8 +343,8 @@ export default function RecordDetailPage() {
                           onClick={() => toggleTag(tag.id)}
                           disabled={updateTags.isPending}
                           className={`px-2 py-1 border-2 font-mono text-xs font-bold uppercase ${active
-                              ? "border-foreground bg-foreground text-background"
-                              : "border-foreground bg-background text-foreground"
+                            ? "border-foreground bg-foreground text-background"
+                            : "border-foreground bg-background text-foreground"
                             }`}
                         >
                           #{tag.name}

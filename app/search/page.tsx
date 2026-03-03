@@ -69,7 +69,7 @@ export default function SearchPage() {
                 value={q}
                 onChange={(event) => setQ(event.target.value)}
                 placeholder={t("search.placeholder", "content / source title")}
-                className="w-full bg-background border-2 border-foreground text-foreground text-lg p-3 lg:col-span-2"
+                className="min-h-[44px] w-full bg-background border-2 border-foreground text-foreground text-lg p-3 lg:col-span-2"
               />
               <select
                 value={state}
@@ -103,7 +103,7 @@ export default function SearchPage() {
                     type="date"
                     value={fromDate}
                     onChange={(event) => setFromDate(event.target.value)}
-                    className="w-full bg-background border-2 border-foreground text-foreground p-3 font-mono text-xs"
+                    className="min-h-[44px] w-full bg-background border-2 border-foreground text-foreground p-3 font-mono text-xs"
                   />
                 </div>
                 <div className="w-full">
@@ -115,7 +115,7 @@ export default function SearchPage() {
                     type="date"
                     value={toDate}
                     onChange={(event) => setToDate(event.target.value)}
-                    className="w-full bg-background border-2 border-foreground text-foreground p-3 font-mono text-xs"
+                    className="min-h-[44px] w-full bg-background border-2 border-foreground text-foreground p-3 font-mono text-xs"
                   />
                 </div>
               </div>

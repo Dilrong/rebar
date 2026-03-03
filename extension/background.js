@@ -75,9 +75,9 @@ async function saveCapture(payload) {
 
   if (!res.ok) {
     if (res.status === 401 || res.status === 403) {
-      throw new Error(`Login required. Please sign in to your REBAR instance.`)
+      throw new Error(t("ext.status.authRequired"))
     }
-    throw new Error(`Save failed: ${res.status}`)
+    throw new Error(`${t("ext.saveFailed")}: ${res.status}`)
   }
 
   return res.json()

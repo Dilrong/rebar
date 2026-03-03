@@ -10,9 +10,11 @@ const saveButton = document.getElementById("save")
 const testConnButton = document.getElementById("testConn")
 const statusEl = document.getElementById("status")
 
-function setStatus(message, isError = false) {
+function setStatus(message, tone = "normal") {
   statusEl.textContent = message
-  statusEl.style.color = isError ? "#b91c1c" : "#111"
+  statusEl.className = ""
+  if (tone === "error") statusEl.classList.add("is-error")
+  else if (tone === "success") statusEl.classList.add("is-success")
 }
 
 function isValidUrl(value) {
@@ -36,7 +38,7 @@ async function save() {
   urlStr = urlStr.replace(/\/+$/, "")
 
   if (!isValidUrl(urlStr)) {
-    setStatus(t("ext.opt.invalidUrl"), true)
+    setStatus(t("ext.opt.invalidUrl"), "error")
     return
   }
 
@@ -46,7 +48,7 @@ async function save() {
   }
 
   await chrome.storage.sync.set(payload)
-  setStatus(t("ext.opt.saved"))
+  setStatus(t("ext.opt.saved"), "success")
 }
 
 async function testConnection() {
@@ -54,7 +56,7 @@ async function testConnection() {
   urlStr = urlStr.replace(/\/+$/, "")
 
   if (!isValidUrl(urlStr)) {
-    setStatus(t("ext.opt.invalidUrl"), true)
+    setStatus(t("ext.opt.invalidUrl"), "error")
     return
   }
 
@@ -65,14 +67,14 @@ async function testConnection() {
     const res = await fetch(`${urlStr}/api/auth/check`, { credentials: "include" })
 
     if (res.ok) {
-      setStatus(t("ext.opt.connOk"))
+      setStatus(t("ext.opt.connOk"), "success")
     } else if (res.status === 401) {
-      setStatus(t("ext.opt.connNoAuth"), true)
+      setStatus(t("ext.opt.connNoAuth"), "error")
     } else {
-      setStatus(t("ext.opt.connFail"), true)
+      setStatus(t("ext.opt.connFail"), "error")
     }
   } catch {
-    setStatus(t("ext.opt.connFail"), true)
+    setStatus(t("ext.opt.connFail"), "error")
   } finally {
     testConnButton.disabled = false
   }
@@ -80,18 +82,18 @@ async function testConnection() {
 
 saveButton.addEventListener("click", () => {
   save().catch((error) => {
-    setStatus(error instanceof Error ? error.message : t("ui.error"), true)
+    setStatus(error instanceof Error ? error.message : t("ui.error"), "error")
   })
 })
 
 testConnButton.addEventListener("click", () => {
   testConnection().catch((error) => {
-    setStatus(error instanceof Error ? error.message : t("ui.error"), true)
+    setStatus(error instanceof Error ? error.message : t("ui.error"), "error")
   })
 })
 
 load().catch((error) => {
-  setStatus(error instanceof Error ? error.message : t("ui.error"), true)
+  setStatus(error instanceof Error ? error.message : t("ui.error"), "error")
 })
 
 initI18n()

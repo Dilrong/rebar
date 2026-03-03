@@ -232,10 +232,28 @@ export default function ReviewPage() {
                     type="button"
                     onClick={() => mutation.mutate({ id: first.id, action: "resurface", snooze_days: 1 })}
                     aria-label={t("review.snooze1", "Tomorrow")}
-                    className="min-h-[44px] w-[60px] border-4 border-foreground font-mono text-xs font-bold uppercase hover:bg-foreground hover:text-background bg-card"
+                    className="min-h-[44px] w-[52px] border-4 border-foreground font-mono text-xs font-bold uppercase hover:bg-foreground hover:text-background bg-card active:translate-y-1"
                     disabled={mutation.isPending}
                   >
                     +1d
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => mutation.mutate({ id: first.id, action: "resurface", snooze_days: 3 })}
+                    aria-label={t("review.snooze3", "3 days")}
+                    className="min-h-[44px] w-[52px] border-4 border-foreground font-mono text-xs font-bold uppercase hover:bg-foreground hover:text-background bg-card active:translate-y-1"
+                    disabled={mutation.isPending}
+                  >
+                    +3d
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => mutation.mutate({ id: first.id, action: "resurface", snooze_days: 7 })}
+                    aria-label={t("review.snooze7", "1 week")}
+                    className="min-h-[44px] w-[52px] border-4 border-foreground font-mono text-xs font-bold uppercase hover:bg-foreground hover:text-background bg-card active:translate-y-1"
+                    disabled={mutation.isPending}
+                  >
+                    +7d
                   </button>
                 </div>
               </div>
@@ -245,20 +263,29 @@ export default function ReviewPage() {
           )}
 
           {nextQueue.length > 0 ? (
-            <section className="mt-8 border-4 border-foreground bg-card p-6 shadow-brutal">
-              <h2 className="font-black text-2xl uppercase mb-4 border-l-4 border-accent pl-4">{t("review.upNext", "UP NEXT")}</h2>
-              <div className="space-y-3">
-                {nextQueue.map((record) => (
-                  <Link
-                    key={record.id}
-                    href={`/records/${record.id}`}
-                    className="block min-h-[44px] border-2 border-foreground px-4 py-3 hover:bg-foreground hover:text-background transition-colors"
-                  >
-                    <p className="font-mono text-xs font-bold uppercase mb-2">{record.kind} · {getStateLabel(record.state, t)}</p>
-                    <p className="font-semibold text-sm line-clamp-2">{record.content}</p>
-                  </Link>
-                ))}
-              </div>
+            <section className="mt-8 border-4 border-foreground bg-card shadow-brutal">
+              <details open className="group">
+                <summary className="flex cursor-pointer items-center justify-between border-b-4 border-foreground p-4 md:p-6 font-black text-xl uppercase select-none list-none">
+                  <span className="flex items-center gap-3">
+                    <span className="border-l-4 border-accent pl-4">{t("review.upNext", "UP NEXT")}</span>
+                    <span className="font-mono text-sm text-muted-foreground">({nextQueue.length})</span>
+                  </span>
+                  <span className="font-mono text-xs text-muted-foreground group-open:hidden">▼ SHOW</span>
+                  <span className="font-mono text-xs text-muted-foreground hidden group-open:inline">▲ HIDE</span>
+                </summary>
+                <div className="space-y-0 p-4 md:p-6 pt-0 md:pt-0">
+                  {nextQueue.map((record) => (
+                    <Link
+                      key={record.id}
+                      href={`/records/${record.id}`}
+                      className="block min-h-[44px] border-2 border-foreground px-4 py-3 mt-3 hover:bg-foreground hover:text-background transition-colors"
+                    >
+                      <p className="font-mono text-xs font-bold uppercase mb-2">{record.kind} · {getStateLabel(record.state, t)}</p>
+                      <p className="font-semibold text-sm line-clamp-2">{record.content}</p>
+                    </Link>
+                  ))}
+                </div>
+              </details>
             </section>
           ) : null}
         </main>

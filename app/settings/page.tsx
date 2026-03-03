@@ -79,8 +79,8 @@ export default function SettingsPage() {
               onClick={() => setLocale("ko")}
               className={
                 locale === "ko"
-                  ? "border-2 border-foreground bg-foreground px-3 py-2 font-mono text-xs font-bold text-background"
-                  : "border-2 border-foreground bg-background px-3 py-2 font-mono text-xs font-bold text-foreground"
+                  ? "min-h-[44px] border-2 border-foreground bg-foreground px-4 py-2 font-mono text-xs font-bold text-background"
+                  : "min-h-[44px] border-2 border-foreground bg-background px-4 py-2 font-mono text-xs font-bold text-foreground"
               }
             >
               한국어
@@ -90,8 +90,8 @@ export default function SettingsPage() {
               onClick={() => setLocale("en")}
               className={
                 locale === "en"
-                  ? "border-2 border-foreground bg-foreground px-3 py-2 font-mono text-xs font-bold text-background"
-                  : "border-2 border-foreground bg-background px-3 py-2 font-mono text-xs font-bold text-foreground"
+                  ? "min-h-[44px] border-2 border-foreground bg-foreground px-4 py-2 font-mono text-xs font-bold text-background"
+                  : "min-h-[44px] border-2 border-foreground bg-background px-4 py-2 font-mono text-xs font-bold text-foreground"
               }
             >
               English

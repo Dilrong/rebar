@@ -47,7 +47,11 @@ export const messages = {
         "ext.opt.connOk": "Connected and authenticated!",
         "ext.opt.connNoAuth": "Connected, but not logged in.",
         "ext.opt.connFail": "Cannot reach server.",
-        "ext.tooManyReq": "Too many requests. Wait a moment."
+        "ext.tooManyReq": "Too many requests. Wait a moment.",
+        "ext.highlightBtn": "Clip Selection",
+        "ext.noSelection": "Select text on the page first.",
+        "ext.status.authRequired": "Login required. Please sign in to your REBAR instance.",
+        "ext.saveFailed": "Save failed"
     },
     ko: {
         "ext.title": "REBAR 클리퍼",
@@ -97,7 +101,11 @@ export const messages = {
         "ext.opt.connOk": "연결 및 인증 성공!",
         "ext.opt.connNoAuth": "연결됨, 로그인 필요",
         "ext.opt.connFail": "서버에 연결할 수 없습니다.",
-        "ext.tooManyReq": "요청이 너무 많습니다. 잠시 후 다시 시도해주세요."
+        "ext.tooManyReq": "요청이 너무 많습니다. 잠시 후 다시 시도해주세요.",
+        "ext.highlightBtn": "선택 텍스트 스크랩",
+        "ext.noSelection": "먼저 페이지에서 텍스트를 선택해주세요.",
+        "ext.status.authRequired": "로그인이 필요합니다. REBAR에 로그인해주세요.",
+        "ext.saveFailed": "저장 실패"
     }
 }
 

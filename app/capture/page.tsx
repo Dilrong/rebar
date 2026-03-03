@@ -592,43 +592,43 @@ export default function CapturePage() {
             </header>
 
             <section className="mb-6 border-b-4 border-foreground pb-0">
-              <div className="flex flex-wrap border-2 border-foreground bg-background">
+              <div className="flex overflow-x-auto overflow-y-hidden flex-nowrap border-2 border-foreground bg-background hide-scrollbar">
                 <button
                   type="button"
                   onClick={() => setImportMode("manual")}
-                  className={`min-h-[44px] flex-1 px-4 py-2 text-center font-mono text-xs font-bold uppercase transition-colors border-r-2 border-transparent ${importMode === "manual" ? "bg-foreground text-background" : "text-foreground hover:bg-muted"
-                    } md:border-r-foreground`}
+                  className={`min-h-[44px] flex-none px-4 py-2 text-center font-mono text-xs font-bold uppercase transition-colors border-r-2 border-foreground ${importMode === "manual" ? "bg-foreground text-background" : "text-foreground hover:bg-muted"
+                    }`}
                 >
                   {t("capture.modeManual", "MANUAL")}
                 </button>
                 <button
                   type="button"
                   onClick={() => setImportMode("url")}
-                  className={`min-h-[44px] flex-1 px-4 py-2 text-center font-mono text-xs font-bold uppercase transition-colors border-r-2 border-transparent ${importMode === "url" ? "bg-foreground text-background" : "text-foreground hover:bg-muted"
-                    } md:border-r-foreground`}
+                  className={`min-h-[44px] flex-none px-4 py-2 text-center font-mono text-xs font-bold uppercase transition-colors border-r-2 border-foreground ${importMode === "url" ? "bg-foreground text-background" : "text-foreground hover:bg-muted"
+                    }`}
                 >
                   {t("capture.modeUrl", "URL")}
                 </button>
                 <button
                   type="button"
                   onClick={() => setImportMode("batch")}
-                  className={`min-h-[44px] flex-1 px-4 py-2 text-center font-mono text-xs font-bold uppercase transition-colors border-r-2 border-transparent ${importMode === "batch" ? "bg-foreground text-background" : "text-foreground hover:bg-muted"
-                    } md:border-r-foreground`}
+                  className={`min-h-[44px] flex-none px-4 py-2 text-center font-mono text-xs font-bold uppercase transition-colors border-r-2 border-foreground ${importMode === "batch" ? "bg-foreground text-background" : "text-foreground hover:bg-muted"
+                    }`}
                 >
                   {t("capture.modeBatch", "BATCH")}
                 </button>
                 <button
                   type="button"
                   onClick={() => setImportMode("csv")}
-                  className={`min-h-[44px] flex-1 px-4 py-2 text-center font-mono text-xs font-bold uppercase transition-colors border-r-2 border-transparent ${importMode === "csv" ? "bg-foreground text-background" : "text-foreground hover:bg-muted"
-                    } md:border-r-foreground`}
+                  className={`min-h-[44px] flex-none px-4 py-2 text-center font-mono text-xs font-bold uppercase transition-colors border-r-2 border-foreground ${importMode === "csv" ? "bg-foreground text-background" : "text-foreground hover:bg-muted"
+                    }`}
                 >
                   {t("capture.modeCsv", "CSV")}
                 </button>
                 <button
                   type="button"
                   onClick={() => setImportMode("ocr")}
-                  className={`min-h-[44px] flex-1 px-4 py-2 text-center font-mono text-xs font-bold uppercase transition-colors ${importMode === "ocr" ? "bg-foreground text-background" : "text-foreground hover:bg-muted"
+                  className={`min-h-[44px] flex-none px-4 py-2 text-center font-mono text-xs font-bold uppercase transition-colors border-r-0 ${importMode === "ocr" ? "bg-foreground text-background" : "text-foreground hover:bg-muted"
                     }`}
                 >
                   {t("capture.modeOcr", "OCR")}

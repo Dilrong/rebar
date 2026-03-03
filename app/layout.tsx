@@ -1,4 +1,4 @@
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next"
 import { Inter, Roboto_Mono } from "next/font/google"
 import type { ReactNode } from "react"
 import "./globals.css"
@@ -6,6 +6,14 @@ import Providers from "@/app/providers"
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
 const mono = Roboto_Mono({ subsets: ["latin"], variable: "--font-mono" })
+
+export const viewport: Viewport = {
+  themeColor: "#000000",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+}
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://rebar.vercel.app"),

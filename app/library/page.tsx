@@ -49,6 +49,10 @@ export default function LibraryPage() {
   const exportItemRefs = useRef<Array<HTMLButtonElement | null>>([])
   const [exportPending, setExportPending] = useState(false)
   const [exportError, setExportError] = useState<string | null>(null)
+  const [cursor, setCursor] = useState<string | null>(null)
+  const [allRecords, setAllRecords] = useState<RecordRow[]>([])
+  const [editingTagId, setEditingTagId] = useState<string | null>(null)
+  const [editingTagName, setEditingTagName] = useState("")
 
   const queryString = useMemo(() => {
     const params = new URLSearchParams()
@@ -69,9 +73,22 @@ export default function LibraryPage() {
     return params.toString()
   }, [kind, order, q, sort, state, tagId])
 
+  // Reset accumulated records + cursor when filters change
+  useEffect(() => {
+    setAllRecords([])
+    setCursor(null)
+  }, [queryString])
+
+
+
   const records = useQuery({
     queryKey: ["records", queryString, sort, order],
-    queryFn: () => apiFetch<RecordsResponse>(`/api/records?${queryString}`)
+    queryFn: async () => {
+      const data = await apiFetch<RecordsResponse>(`/api/records?${queryString}`)
+      setAllRecords(data.data)
+      setCursor(data.next_cursor ?? null)
+      return data
+    }
   })
 
   const tags = useQuery({
@@ -218,12 +235,27 @@ export default function LibraryPage() {
     }
   }
 
+  const loadMore = async () => {
+    if (!cursor) return
+    const params = new URLSearchParams(queryString)
+    params.set("cursor", cursor)
+    try {
+      const data = await apiFetch<RecordsResponse>(`/api/records?${params.toString()}`)
+      setAllRecords((prev) => [...prev, ...data.data])
+      setCursor(data.next_cursor ?? null)
+    } catch { }
+  }
+
   const handleRenameTag = (tag: TagRow) => {
-    const nextName = window.prompt(t("library.renameTagPrompt", "New tag name"), tag.name)
-    if (!nextName || nextName.trim() === tag.name) {
-      return
-    }
-    renameTag.mutate({ id: tag.id, name: nextName.trim() })
+    setEditingTagId(tag.id)
+    setEditingTagName(tag.name)
+  }
+
+  const submitRenameTag = (id: string) => {
+    const trimmed = editingTagName.trim()
+    setEditingTagId(null)
+    if (!trimmed) return
+    renameTag.mutate({ id, name: trimmed })
   }
 
   const clearAllFilters = () => {
@@ -531,28 +563,28 @@ export default function LibraryPage() {
           {selectedIds.length > 0 ? (
             <section className="mb-8 border-4 border-foreground bg-card p-4">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <p className="font-mono text-xs font-bold uppercase">{selectedIds.length} selected</p>
+                <p className="font-mono text-xs font-bold uppercase">{selectedIds.length} {t("library.selected", "선택됨")}</p>
                 <div className="flex items-center gap-2">
                   <button type="button" onClick={selectVisible} className="min-h-[44px] border-2 border-foreground px-3 py-2 font-mono text-xs font-bold uppercase">
-                    Select visible
+                    {t("library.selectVisible", "보이는 항목 선택")}
                   </button>
                   <button type="button" onClick={clearSelection} className="min-h-[44px] border-2 border-foreground px-3 py-2 font-mono text-xs font-bold uppercase">
-                    Clear
+                    {t("library.clearSelection", "선택 해제")}
                   </button>
                 </div>
               </div>
               <div className="mb-3 flex flex-wrap items-center gap-2">
                 <button type="button" onClick={() => applyBulkState("ACTIVE")} className="min-h-[44px] border-2 border-foreground bg-background px-3 py-2 font-mono text-xs font-bold uppercase">
-                  Activate
+                  {t("library.bulk.activate", "활성화")}
                 </button>
                 <button type="button" onClick={() => applyBulkState("PINNED")} className="min-h-[44px] border-2 border-foreground bg-background px-3 py-2 font-mono text-xs font-bold uppercase">
-                  Pin
+                  {t("library.bulk.pin", "핀 고정")}
                 </button>
                 <button type="button" onClick={() => applyBulkState("ARCHIVED")} className="min-h-[44px] border-2 border-foreground bg-background px-3 py-2 font-mono text-xs font-bold uppercase">
-                  Archive
+                  {t("library.bulk.archive", "보관")}
                 </button>
                 <button type="button" onClick={() => applyBulkState("TRASHED")} className="min-h-[44px] border-2 border-foreground bg-background px-3 py-2 font-mono text-xs font-bold uppercase">
-                  Trash
+                  {t("library.bulk.trash", "휴지통")}
                 </button>
               </div>
               <div className="flex flex-wrap items-center gap-2">
@@ -561,16 +593,16 @@ export default function LibraryPage() {
                   onChange={(event) => setBulkTagIds(event.target.value ? [event.target.value] : [])}
                   className="min-h-[44px] border-2 border-foreground bg-background px-3 py-2 font-mono text-xs"
                 >
-                  <option value="">Tag to apply</option>
+                  <option value="">{t("library.bulk.tagPlaceholder", "태그 선택")}</option>
                   {(tags.data?.data ?? []).map((tag) => (
                     <option key={tag.id} value={tag.id}>#{tag.name}</option>
                   ))}
                 </select>
                 <button type="button" onClick={() => applyBulkTags("add")} className="min-h-[44px] border-2 border-foreground px-3 py-2 font-mono text-xs font-bold uppercase">
-                  Add tag
+                  {t("library.bulk.addTag", "태그 추가")}
                 </button>
                 <button type="button" onClick={() => applyBulkTags("replace")} className="min-h-[44px] border-2 border-foreground px-3 py-2 font-mono text-xs font-bold uppercase">
-                  Replace tags
+                  {t("library.bulk.replaceTags", "태그 교체")}
                 </button>
               </div>
             </section>
@@ -599,14 +631,28 @@ export default function LibraryPage() {
             <div className="flex flex-wrap gap-3">
               {(tags.data?.data ?? []).map((tag) => (
                 <div key={tag.id} className="min-h-[44px] inline-flex items-center justify-between gap-3 border-2 border-foreground pl-3 pr-1 py-1 bg-background flex-grow md:flex-grow-0">
-                  <span className="font-mono text-xs font-bold truncate max-w-[150px]">#{tag.name}</span>
+                  {editingTagId === tag.id ? (
+                    <input
+                      value={editingTagName}
+                      onChange={(event) => setEditingTagName(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") submitRenameTag(tag.id)
+                        if (event.key === "Escape") setEditingTagId(null)
+                      }}
+                      onBlur={() => submitRenameTag(tag.id)}
+                      autoFocus
+                      className="bg-background border-b-2 border-foreground font-mono text-xs font-bold w-[120px] focus:outline-none"
+                    />
+                  ) : (
+                    <span className="font-mono text-xs font-bold truncate max-w-[150px]">#{tag.name}</span>
+                  )}
                   <div className="flex items-center gap-1">
                     <button
                       type="button"
                       onClick={() => handleRenameTag(tag)}
                       className="min-h-[36px] min-w-[36px] flex items-center justify-center font-mono text-[10px] font-bold uppercase border border-transparent hover:border-foreground hover:bg-muted"
                     >
-                      Edit
+                      {t("library.tagEdit", "편집")}
                     </button>
                     <button
                       type="button"
@@ -631,7 +677,7 @@ export default function LibraryPage() {
               </div>
             ) : null}
 
-            {!records.isLoading && (records.data?.data ?? []).map((record) => (
+            {!records.isLoading && (allRecords).map((record) => (
               <div
                 key={record.id}
                 className="group flex h-[280px] flex-col border-4 border-foreground bg-card p-4 md:p-6 shadow-brutal hover:bg-foreground hover:text-background transition-colors md:h-72"
@@ -690,7 +736,19 @@ export default function LibraryPage() {
             ))}
           </div>
 
-          {records.isSuccess && !records.isLoading && records.data.data.length === 0 ? (
+          {cursor ? (
+            <div className="mt-8 flex justify-center">
+              <button
+                type="button"
+                onClick={loadMore}
+                className="min-h-[44px] border-4 border-foreground bg-background px-8 py-3 font-mono text-sm font-bold uppercase hover:bg-foreground hover:text-background shadow-brutal-sm transition-colors"
+              >
+                {t("library.loadMore", "더 불러오기")} ↓
+              </button>
+            </div>
+          ) : null}
+
+          {records.isSuccess && !records.isLoading && allRecords.length === 0 ? (
             <EmptyState
               title={t("library.noResults", "0 RESULTS FOUND.")}
               actionLabel={t("library.goCapture", "Go capture")}

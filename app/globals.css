@@ -67,9 +67,14 @@
 
   body {
     @apply bg-background text-foreground antialiased selection:bg-accent/30 selection:text-foreground font-sans;
-    /* Extra padding on mobile to account for fixed bottom nav */
-    padding-bottom: env(safe-area-inset-bottom);
-    @apply pb-24 md:pb-0;
+    /* Extra padding on mobile to account for fixed bottom nav + safe area */
+    padding-bottom: calc(5rem + env(safe-area-inset-bottom));
+  }
+
+  @media (min-width: 768px) {
+    body {
+      padding-bottom: 0;
+    }
   }
 }
 
@@ -81,5 +86,18 @@
 
   .focus-ring {
     @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-none;
+  }
+
+  /* Hide scrollbar but keep functionality */
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    /* IE/Edge */
+    scrollbar-width: none;
+    /* Firefox */
+  }
+
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+    /* Chrome/Safari/iOS */
   }
 }

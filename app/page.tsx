@@ -3,9 +3,28 @@
 import Link from "next/link"
 import { Terminal, Database, CheckSquare } from "lucide-react"
 import { useI18n } from "@/components/i18n/i18n-provider"
+import { useQuery } from "@tanstack/react-query"
+import { apiFetch } from "@/lib/client-http"
+
+type ReviewStatsResponse = {
+  today_reviewed: number
+  today_remaining: number
+  streak_days: number
+  total_active: number
+  total_records: number
+}
 
 export default function HomePage() {
   const { t } = useI18n()
+
+  const stats = useQuery({
+    queryKey: ["review-stats-home"],
+    queryFn: () => apiFetch<ReviewStatsResponse>("/api/review/stats"),
+    retry: false
+  })
+
+  const remaining = stats.data?.today_remaining ?? null
+  const streak = stats.data?.streak_days ?? null
 
   return (
     <div className="min-h-screen flex flex-col p-6 bg-background font-sans">
@@ -26,12 +45,21 @@ export default function HomePage() {
             href="/review"
             className="group block border-4 border-foreground bg-card p-6 md:p-8 hover:bg-accent hover:text-white transition-colors shadow-brutal active:translate-x-2 active:translate-y-2 active:shadow-none"
           >
-            <div className="flex justify-between items-start mb-12">
+            <div className="flex justify-between items-start mb-8">
               <CheckSquare className="w-10 h-10 group-hover:animate-pulse" strokeWidth={2.5} />
               <span className="font-mono text-xs font-bold bg-foreground text-background px-2 py-1">{t("home.badge.review", "REVIEW")}</span>
             </div>
-            <h2 className="font-black text-4xl uppercase mb-2">{t("home.review.title", "Review")}</h2>
-            <p className="font-mono text-sm opacity-80 uppercase font-bold">{t("home.review.desc", "Execute daily focus routine.")}</p>
+            <h2 className="font-black text-4xl uppercase mb-3">{t("home.review.title", "Review")}</h2>
+            <p className="font-mono text-sm opacity-80 uppercase font-bold mb-4">{t("home.review.desc", "Execute daily focus routine.")}</p>
+            {remaining !== null && (
+              <div className="flex items-center gap-3 mt-auto pt-4 border-t-2 border-current/30">
+                <span className="font-mono text-2xl font-black">{remaining}</span>
+                <span className="font-mono text-xs font-bold uppercase opacity-80">{t("home.review.remaining", "남은 리뷰")}</span>
+                {streak !== null && streak > 0 && (
+                  <span className="ml-auto font-mono text-xs font-bold uppercase bg-current/10 px-2 py-1">{streak}d 🔥</span>
+                )}
+              </div>
+            )}
           </Link>
 
           <div className="flex flex-col gap-6">
