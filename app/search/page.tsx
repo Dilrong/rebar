@@ -13,6 +13,7 @@ import type { RecordRow, TagRow } from "@/lib/types"
 import { EmptyState } from "@/components/ui/empty-state"
 import { ErrorState } from "@/components/ui/error-state"
 import { LoadingState } from "@/components/ui/loading-state"
+import { Skeleton } from "@/components/ui/skeleton"
 import { stripMarkdown } from "@/lib/strip-markdown"
 
 type SearchResponse = {
@@ -134,7 +135,13 @@ export default function SearchPage() {
             </div>
           </section>
 
-          {result.isFetching ? <LoadingState label={t("search.scanning", "Scanning index...")} /> : null}
+          {result.isFetching ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <Skeleton key={i} className="h-48 md:h-72 w-full" />
+              ))}
+            </div>
+          ) : null}
 
           {result.error ? <ErrorState message={result.error.message} onRetry={() => result.refetch()} /> : null}
 
@@ -145,7 +152,7 @@ export default function SearchPage() {
                 href={`/records/${record.id}`}
                 onMouseEnter={() => prefetchRecord(record.id)}
                 onFocus={() => prefetchRecord(record.id)}
-                className="group flex h-64 flex-col border-4 border-foreground bg-card p-5 shadow-brutal hover:bg-foreground hover:text-background transition-colors md:h-72"
+                className="group flex h-48 flex-col border-4 border-foreground bg-card p-5 shadow-brutal hover:bg-foreground hover:text-background active:translate-x-1 active:translate-y-1 active:shadow-none transition-all md:h-72"
               >
                 <div className="flex gap-2 mb-3">
                   {record.favicon_url && (

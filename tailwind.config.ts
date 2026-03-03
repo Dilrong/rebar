@@ -75,10 +75,25 @@ const config = {
                     from: { opacity: "0", transform: "translateY(4px)" },
                     to: { opacity: "1", transform: "translateY(0)" },
                 },
+                "slide-in-right": {
+                    from: { transform: "translateX(100%)" },
+                    to: { transform: "translateX(0)" },
+                },
+                "slide-out-right": {
+                    from: { transform: "translateX(0)" },
+                    to: { transform: "translateX(100%)" },
+                },
+                "pulse-brutal": {
+                    "0%, 100%": { opacity: "1" },
+                    "50%": { opacity: "0.2" },
+                },
             },
             animation: {
                 "fade-in-up": "fade-in-up 0.4s ease-out forwards",
                 "slide-up-fade": "slide-up-fade 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
+                "slide-in-right": "slide-in-right 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+                "slide-out-right": "slide-out-right 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+                "pulse-brutal": "pulse-brutal 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite",
             },
         },
     },

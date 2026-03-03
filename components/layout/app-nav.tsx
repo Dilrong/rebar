@@ -360,7 +360,7 @@ export default function AppNav() {
 
       {quickOpen ? (
         <div
-          className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-4"
+          className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 backdrop-blur-sm p-4 transition-all"
           onClick={(event) => {
             if (event.target === event.currentTarget) {
               setQuickOpen(false)
@@ -377,7 +377,7 @@ export default function AppNav() {
           >
             <div className="mb-3 flex flex-col sm:flex-row items-start sm:items-center justify-between border-b-2 border-foreground pb-2 gap-2">
               <p id="quick-search-title" className="font-mono text-xs font-bold uppercase">QUICK SEARCH (⌘K / Ctrl+K)</p>
-              <button type="button" onClick={() => setQuickOpen(false)} className="min-h-[44px] flex items-center justify-center border-2 border-foreground px-4 py-2 font-mono text-xs font-bold uppercase w-full sm:w-auto hover:bg-foreground hover:text-background transition-colors">
+              <button type="button" onClick={() => setQuickOpen(false)} className="min-h-[44px] flex items-center justify-center border-2 border-foreground px-4 py-2 font-mono text-xs font-bold uppercase w-full sm:w-auto hover:bg-foreground hover:text-background active:translate-y-[2px] active:translate-x-[2px] active:shadow-none transition-all">
                 CLOSE
               </button>
             </div>
@@ -408,7 +408,7 @@ export default function AppNav() {
                   onClick={() => setQuickOpen(false)}
                   onMouseEnter={() => setQuickActiveIndex(index)}
                   className={cn(
-                    "block border-2 min-h-[44px] border-foreground px-3 py-2 hover:bg-foreground hover:text-background",
+                    "block border-2 min-h-[44px] border-foreground px-3 py-2 hover:bg-foreground hover:text-background active:translate-y-[2px] active:translate-x-[2px] active:shadow-none transition-all",
                     quickActiveIndex === index && "bg-foreground text-background"
                   )}
                 >

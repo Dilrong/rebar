@@ -14,6 +14,7 @@ import { getStateLabel } from "@/lib/i18n/state-label"
 import { EmptyState } from "@/components/ui/empty-state"
 import { ErrorState } from "@/components/ui/error-state"
 import { LoadingState } from "@/components/ui/loading-state"
+import { Skeleton } from "@/components/ui/skeleton"
 
 import type { RecordRow, TagRow } from "@/lib/types"
 import { stripMarkdown } from "@/lib/strip-markdown"
@@ -685,9 +686,11 @@ export default function LibraryPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {records.isLoading ? (
-              <div className="col-span-full">
-                <LoadingState label={t("library.fetching", "Fetching database records...")} />
-              </div>
+              <>
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <Skeleton key={i} className="h-48 md:h-72 w-full" />
+                ))}
+              </>
             ) : null}
 
             {!records.isLoading && (allRecords).map((record) => (
@@ -695,7 +698,7 @@ export default function LibraryPage() {
                 key={record.id}
                 onMouseEnter={() => prefetchRecord(record.id)}
                 onFocus={() => prefetchRecord(record.id)}
-                className="group flex h-[280px] flex-col border-4 border-foreground bg-card p-4 md:p-6 shadow-brutal hover:bg-foreground hover:text-background transition-colors md:h-72"
+                className="group flex h-48 flex-col border-4 border-foreground bg-card p-4 md:p-6 shadow-brutal hover:bg-foreground hover:text-background active:translate-x-1 active:translate-y-1 active:shadow-none transition-all md:h-72"
               >
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex gap-2">

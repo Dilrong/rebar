@@ -18,7 +18,7 @@ export function Toast({ message, actionLabel, onAction, onClose, tone = "default
     <div
       role="status"
       aria-live="polite"
-      className={`fixed bottom-4 right-4 z-50 max-w-sm border-2 p-3 shadow-brutal-sm ${toneClass}`}
+      className={`fixed bottom-4 right-4 z-50 max-w-sm border-4 p-4 shadow-brutal animate-slide-in-right ${toneClass}`}
     >
       <div className="flex items-center gap-2 font-mono text-xs font-bold uppercase">
         <span className="flex-1">{message}</span>
@@ -26,7 +26,7 @@ export function Toast({ message, actionLabel, onAction, onClose, tone = "default
           <button
             type="button"
             onClick={onAction}
-            className="border border-current px-2 py-1 font-mono text-[10px] font-bold uppercase"
+            className="border-2 border-current px-3 py-1 font-mono text-xs font-black uppercase active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-transform"
           >
             {actionLabel}
           </button>
@@ -34,7 +34,7 @@ export function Toast({ message, actionLabel, onAction, onClose, tone = "default
         <button
           type="button"
           onClick={onClose}
-          className="border border-current px-1.5 py-1 font-mono text-[10px] font-bold uppercase"
+          className="ml-2 border-2 border-current px-2 py-1 font-mono text-xs font-black uppercase active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-transform"
         >
           X
         </button>
