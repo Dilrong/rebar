@@ -15,7 +15,14 @@ export async function apiFetch<T>(input: string, init?: RequestInit): Promise<T>
   }
 
   const devUserId = process.env.NEXT_PUBLIC_DEV_USER_ID
-  if (devUserId && !headers.has("x-user-id") && !headers.has("Authorization")) {
+  if (
+    process.env.NODE_ENV === "development" &&
+    devUserId &&
+    !headers.has("x-user-id") &&
+    !headers.has("Authorization") &&
+    typeof window !== "undefined" &&
+    window.location.hostname === "localhost"
+  ) {
     headers.set("x-user-id", devUserId)
   }
 

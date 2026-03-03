@@ -113,7 +113,7 @@ export async function GET(request: NextRequest) {
       if (useTextSearch) {
         runnable = runnable.textSearch("fts", q, { type: "plain", config: "simple" })
       } else {
-        const escaped = q.replace(/[,%]/g, "")
+        const escaped = q.replace(/[\\%_]/g, "\\$&").replace(/[,]/g, "")
         runnable = runnable.or(`content.ilike.%${escaped}%,source_title.ilike.%${escaped}%`)
       }
     }

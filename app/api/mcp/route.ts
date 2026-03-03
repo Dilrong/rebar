@@ -141,7 +141,7 @@ export async function POST(request: Request) {
     query = query.textSearch("fts", p.data.q, { type: "plain", config: "simple" })
     let result = await query
     if (result.error && /fts|textSearch|column/i.test(result.error.message)) {
-      const escaped = p.data.q.replace(/[,%]/g, "")
+      const escaped = p.data.q.replace(/[\\%_]/g, "\\$&").replace(/[,]/g, "")
       result = await supabase
         .from("records")
         .select("id,kind,state,source_title,content,created_at")
