@@ -24,44 +24,36 @@ export async function GET(request: NextRequest) {
   const now = new Date().toISOString()
   const supabase = getSupabaseAdmin()
 
-  const pinned = await supabase
-    .from("records")
-    .select("*", { count: "exact" })
-    .eq("user_id", userId)
-    .eq("state", "PINNED")
-    .lte("due_at", now)
-    .order("due_at", { ascending: true })
-    .range(0, n - 1)
-
-  if (pinned.error) {
-    return fail(pinned.error.message, 500)
-  }
-
-  const pinnedData = pinned.data
-  const remaining = Math.max(0, n - pinnedData.length)
-
-  let activeData: unknown[] = []
-  let activeCount = 0
-  if (remaining > 0) {
-    const active = await supabase
+  const [pinned, active] = await Promise.all([
+    supabase
+      .from("records")
+      .select("*", { count: "exact" })
+      .eq("user_id", userId)
+      .eq("state", "PINNED")
+      .lte("due_at", now)
+      .order("due_at", { ascending: true })
+      .range(0, n - 1),
+    supabase
       .from("records")
       .select("*", { count: "exact" })
       .eq("user_id", userId)
       .eq("state", "ACTIVE")
       .lte("due_at", now)
       .order("due_at", { ascending: true })
-      .range(0, remaining - 1)
+      .range(0, n - 1)
+  ])
 
-    if (active.error) {
-      return fail(active.error.message, 500)
-    }
+  if (pinned.error) return fail(pinned.error.message, 500)
+  if (active.error) return fail(active.error.message, 500)
 
-    activeData = active.data
-    activeCount = active.count ?? 0
-  }
+  const pinnedData = pinned.data
+  const activeData = active.data
+
+  // Trim active to fill up to n total
+  const trimmedActive = activeData.slice(0, Math.max(0, n - pinnedData.length))
 
   return ok({
-    data: [...pinnedData, ...activeData],
-    total: (pinned.count ?? 0) + activeCount
+    data: [...pinnedData, ...trimmedActive],
+    total: (pinned.count ?? 0) + (active.count ?? 0)
   })
 }

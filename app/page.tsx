@@ -20,6 +20,7 @@ export default function HomePage() {
   const stats = useQuery({
     queryKey: ["review-stats-home"],
     queryFn: () => apiFetch<ReviewStatsResponse>("/api/review/stats"),
+    staleTime: 1000 * 60, // 1 minute
     retry: false
   })
 

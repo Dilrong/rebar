@@ -97,22 +97,13 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = getSupabaseAdmin()
+
   let filteredRecordIds: string[] | null = null
-
   if (tagIdParam) {
-    const tagged = await supabase
-      .from("record_tags")
-      .select("record_id")
-      .eq("tag_id", tagIdParam)
-
-    if (tagged.error) {
-      return fail(tagged.error.message, 500)
-    }
-
-    filteredRecordIds = tagged.data.map((row) => row.record_id)
-    if (filteredRecordIds.length === 0) {
-      return ok({ data: [], total: 0 })
-    }
+    const tagged = await supabase.from("record_tags").select("record_id").eq("tag_id", tagIdParam)
+    if (tagged.error) return fail(tagged.error.message, 500)
+    filteredRecordIds = tagged.data.map((r) => r.record_id)
+    if (filteredRecordIds.length === 0) return ok({ data: [], total: 0 })
   }
 
   let query = supabase

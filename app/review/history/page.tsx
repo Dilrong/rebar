@@ -54,7 +54,8 @@ export default function ReviewHistoryPage() {
   const history = useQuery({
     queryKey: ["review-history", page, action, from, to],
     queryFn: () =>
-      apiFetch<ReviewHistoryResponse>(`/api/review/history?${queryParams.toString()}`)
+      apiFetch<ReviewHistoryResponse>(`/api/review/history?${queryParams.toString()}`),
+    staleTime: 1000 * 60 * 2 // 2 minutes
   })
 
   const total = history.data?.total ?? 0

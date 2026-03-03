@@ -3,6 +3,17 @@ import { sha256 } from "@/lib/hash"
 import { RecordKindSchema } from "@/lib/schemas"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
 
+/** Resolve a favicon URL from a page URL using Google's favicon service. */
+function resolveFaviconUrl(url: string | null): string | null {
+  if (!url) return null
+  try {
+    const { hostname } = new URL(url)
+    return `https://www.google.com/s2/favicons?domain=${hostname}&sz=64`
+  } catch {
+    return null
+  }
+}
+
 export const ExternalTagSchema = z.union([z.string().min(1), z.object({ name: z.string().min(1) })])
 
 export const ExternalItemSchema = z
@@ -73,6 +84,7 @@ export async function processIngest(userId: string, payload: IngestPayload) {
       kind: z.infer<typeof RecordKindSchema>
       url: string | null
       source_title: string | null
+      favicon_url: string | null
       tagNames: Set<string>
     }
   >()
@@ -96,6 +108,7 @@ export async function processIngest(userId: string, payload: IngestPayload) {
         kind: resolveKind(item, defaultKind),
         url: resolveUrl(item),
         source_title: resolveSourceTitle(item),
+        favicon_url: resolveFaviconUrl(resolveUrl(item)),
         tagNames: new Set(mergedTags)
       })
       continue
@@ -173,6 +186,7 @@ export async function processIngest(userId: string, payload: IngestPayload) {
     content_hash: row.content_hash,
     url: row.url,
     source_title: row.source_title,
+    favicon_url: row.favicon_url,
     state: "INBOX" as const,
     interval_days: 1,
     due_at: null,

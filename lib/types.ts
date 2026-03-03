@@ -8,6 +8,7 @@ export type RecordRow = {
   content_hash: string
   url: string | null
   source_title: string | null
+  favicon_url: string | null
   state: RecordState
   interval_days: number
   due_at: string | null

@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useMemo, useState } from "react"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Search } from "lucide-react"
 import AuthGate from "@/components/auth/auth-gate"
 import AppNav from "@/components/layout/app-nav"
@@ -13,6 +13,7 @@ import type { RecordRow, TagRow } from "@/lib/types"
 import { EmptyState } from "@/components/ui/empty-state"
 import { ErrorState } from "@/components/ui/error-state"
 import { LoadingState } from "@/components/ui/loading-state"
+import { stripMarkdown } from "@/lib/strip-markdown"
 
 type SearchResponse = {
   data: RecordRow[]
@@ -32,7 +33,8 @@ export default function SearchPage() {
 
   const tags = useQuery({
     queryKey: ["tags"],
-    queryFn: () => apiFetch<TagsResponse>("/api/tags")
+    queryFn: () => apiFetch<TagsResponse>("/api/tags"),
+    staleTime: 1000 * 60 * 10 // 10 minutes
   })
 
   const queryString = useMemo(() => {
@@ -48,8 +50,18 @@ export default function SearchPage() {
   const result = useQuery({
     queryKey: ["search", queryString],
     queryFn: () => apiFetch<SearchResponse>(`/api/search?${queryString}`),
-    enabled: queryString.length > 0
+    enabled: queryString.length > 0,
+    staleTime: 1000 * 30 // 30 seconds
   })
+
+  const qc = useQueryClient()
+  function prefetchRecord(id: string) {
+    qc.prefetchQuery({
+      queryKey: ["record-detail", id],
+      queryFn: () => apiFetch<{ record: RecordRow }>(`/api/records/${id}`),
+      staleTime: 1000 * 60 * 5
+    })
+  }
 
   return (
     <div className="min-h-screen p-6 bg-background font-sans selection:bg-accent selection:text-white">
@@ -131,9 +143,21 @@ export default function SearchPage() {
               <Link
                 key={record.id}
                 href={`/records/${record.id}`}
+                onMouseEnter={() => prefetchRecord(record.id)}
+                onFocus={() => prefetchRecord(record.id)}
                 className="group flex h-64 flex-col border-4 border-foreground bg-card p-5 shadow-brutal hover:bg-foreground hover:text-background transition-colors md:h-72"
               >
                 <div className="flex gap-2 mb-3">
+                  {record.favicon_url && (
+                    <img
+                      src={record.favicon_url}
+                      alt=""
+                      width={16}
+                      height={16}
+                      className="w-4 h-4 mt-0.5 flex-shrink-0 object-contain"
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = "none" }}
+                    />
+                  )}
                   <span className="font-mono text-[10px] font-bold border-2 border-current px-1.5 py-0.5 uppercase">
                     {record.kind}
                   </span>
@@ -141,7 +165,9 @@ export default function SearchPage() {
                     {getStateLabel(record.state, t)}
                   </span>
                 </div>
-                <p className="font-bold text-lg leading-tight line-clamp-5 flex-1">{record.content}</p>
+                <p className="font-bold text-lg leading-tight line-clamp-5 flex-1">
+                  {stripMarkdown(record.content)}
+                </p>
                 {record.source_title ? (
                   <p className="mt-3 font-mono text-[10px] uppercase font-bold text-muted-foreground group-hover:text-background/70 truncate">
                     REF: {record.source_title}

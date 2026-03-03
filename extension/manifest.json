@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "REBAR Clipper",
-  "description": "Capture highlights and article content to REBAR.",
-  "version": "0.1.0",
+  "description": "Click to instantly save any article to REBAR.",
+  "version": "0.2.0",
   "permissions": [
     "storage",
     "activeTab",
@@ -14,8 +14,7 @@
     "<all_urls>"
   ],
   "action": {
-    "default_title": "REBAR Clipper",
-    "default_popup": "popup.html",
+    "default_title": "Save to REBAR",
     "default_icon": {
       "16": "icon16.png",
       "48": "icon48.png",

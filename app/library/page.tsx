@@ -16,6 +16,7 @@ import { ErrorState } from "@/components/ui/error-state"
 import { LoadingState } from "@/components/ui/loading-state"
 
 import type { RecordRow, TagRow } from "@/lib/types"
+import { stripMarkdown } from "@/lib/strip-markdown"
 
 type RecordsResponse = {
   data: RecordRow[]
@@ -79,6 +80,16 @@ export default function LibraryPage() {
     setCursor(null)
   }, [queryString])
 
+  const qc = useQueryClient()
+
+  function prefetchRecord(id: string) {
+    qc.prefetchQuery({
+      queryKey: ["record-detail", id],
+      queryFn: () => apiFetch<{ record: RecordRow }>(`/api/records/${id}`),
+      staleTime: 1000 * 60 * 5
+    })
+  }
+
 
 
   const records = useQuery({
@@ -88,12 +99,14 @@ export default function LibraryPage() {
       setAllRecords(data.data)
       setCursor(data.next_cursor ?? null)
       return data
-    }
+    },
+    staleTime: 1000 * 60 * 5 // 5 minutes
   })
 
   const tags = useQuery({
     queryKey: ["tags"],
-    queryFn: () => apiFetch<TagsResponse>("/api/tags")
+    queryFn: () => apiFetch<TagsResponse>("/api/tags"),
+    staleTime: 1000 * 60 * 10 // 10 minutes
   })
 
   const selectedTagName = (tags.data?.data ?? []).find((tag) => tag.id === tagId)?.name ?? null
@@ -680,6 +693,8 @@ export default function LibraryPage() {
             {!records.isLoading && (allRecords).map((record) => (
               <div
                 key={record.id}
+                onMouseEnter={() => prefetchRecord(record.id)}
+                onFocus={() => prefetchRecord(record.id)}
                 className="group flex h-[280px] flex-col border-4 border-foreground bg-card p-4 md:p-6 shadow-brutal hover:bg-foreground hover:text-background transition-colors md:h-72"
               >
                 <div className="flex justify-between items-start mb-4">
@@ -724,11 +739,23 @@ export default function LibraryPage() {
                 </div>
 
                 <Link href={`/records/${record.id}`} className="flex-1 overflow-hidden flex flex-col">
-                  <p className="font-bold text-base md:text-lg leading-tight line-clamp-5 flex-1 mb-4">{record.content}</p>
+                  <p className="font-bold text-base md:text-lg leading-tight line-clamp-5 flex-1 mb-4">
+                    {stripMarkdown(record.content)}
+                  </p>
 
                   {record.source_title && (
-                    <div className="mt-auto font-mono text-[10px] uppercase font-bold text-muted-foreground group-hover:text-background/70 truncate border-t-2 border-border/50 group-hover:border-background/30 pt-2">
-                      REF: {record.source_title}
+                    <div className="mt-auto flex items-center gap-1.5 font-mono text-[10px] uppercase font-bold text-muted-foreground group-hover:text-background/70 truncate border-t-2 border-border/50 group-hover:border-background/30 pt-2">
+                      {record.favicon_url && (
+                        <img
+                          src={record.favicon_url}
+                          alt=""
+                          width={12}
+                          height={12}
+                          className="w-3 h-3 flex-shrink-0 object-contain"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = "none" }}
+                        />
+                      )}
+                      {record.source_title}
                     </div>
                   )}
                 </Link>

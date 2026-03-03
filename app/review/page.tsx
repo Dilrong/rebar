@@ -7,6 +7,7 @@ import AuthGate from "@/components/auth/auth-gate"
 import AppNav from "@/components/layout/app-nav"
 import { useI18n } from "@/components/i18n/i18n-provider"
 import { apiFetch } from "@/lib/client-http"
+import { MarkdownContent } from "@/components/ui/markdown-content"
 import { getStateLabel } from "@/lib/i18n/state-label"
 import type { RecordRow } from "@/lib/types"
 import { Check, RefreshCcw } from "lucide-react"
@@ -37,12 +38,14 @@ export default function ReviewPage() {
 
   const stats = useQuery({
     queryKey: ["review-stats"],
-    queryFn: () => apiFetch<ReviewStatsResponse>("/api/review/stats")
+    queryFn: () => apiFetch<ReviewStatsResponse>("/api/review/stats"),
+    staleTime: 1000 * 60 * 2 // 2 minutes
   })
 
   const today = useQuery({
     queryKey: ["review-today"],
-    queryFn: () => apiFetch<ReviewTodayResponse>("/api/review/today?n=20")
+    queryFn: () => apiFetch<ReviewTodayResponse>("/api/review/today?n=20"),
+    staleTime: 1000 * 30 // 30 seconds
   })
 
   const mutation = useMutation({
@@ -132,9 +135,12 @@ export default function ReviewPage() {
                   )}
                 </div>
 
-                <blockquote className="font-semibold text-2xl md:text-3xl text-foreground leading-[1.5] whitespace-pre-wrap">
-                  {first.content}
-                </blockquote>
+                <div className="flex-1 flex flex-col overflow-y-auto">
+                  <MarkdownContent
+                    content={first.content}
+                    className="text-lg md:text-2xl leading-[1.6]"
+                  />
+                </div>
               </div>
 
               {/* Sticky bottom wrapper for all screen sizes */}

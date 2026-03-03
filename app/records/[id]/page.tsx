@@ -15,6 +15,7 @@ import Link from "next/link"
 import { LoadingSpinner, LoadingDots } from "@/components/ui/loading"
 import { Toast } from "@/components/ui/toast"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { MarkdownContent } from "@/components/ui/markdown-content"
 
 type DetailResponse = {
   record: RecordRow
@@ -50,12 +51,14 @@ export default function RecordDetailPage() {
   const detail = useQuery({
     queryKey: ["record-detail", id],
     queryFn: () => apiFetch<DetailResponse>(`/api/records/${id}`),
-    enabled: Boolean(id)
+    enabled: Boolean(id),
+    staleTime: 1000 * 60 * 5 // 5 minutes
   })
 
   const tags = useQuery({
     queryKey: ["tags"],
-    queryFn: () => apiFetch<TagsResponse>("/api/tags")
+    queryFn: () => apiFetch<TagsResponse>("/api/tags"),
+    staleTime: 1000 * 60 * 10 // 10 minutes
   })
 
   const form = useForm<AnnotationInput>({
@@ -268,9 +271,10 @@ export default function RecordDetailPage() {
                   )}
 
                   <div className="relative">
-                    <div className="font-semibold text-xl md:text-2xl text-foreground leading-[1.6] whitespace-pre-wrap">
-                      {detail.data.record.content}
-                    </div>
+                    <MarkdownContent
+                      content={detail.data.record.content}
+                      className="text-xl md:text-2xl leading-[1.6]"
+                    />
                   </div>
 
                   {detail.data.record.url && (

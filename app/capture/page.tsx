@@ -338,7 +338,8 @@ export default function CapturePage() {
 
   const tags = useQuery({
     queryKey: ["tags"],
-    queryFn: () => apiFetch<TagsResponse>("/api/tags")
+    queryFn: () => apiFetch<TagsResponse>("/api/tags"),
+    staleTime: 1000 * 60 * 10 // 10 minutes
   })
 
   const selectedTagIds = form.watch("tag_ids") ?? []
@@ -418,7 +419,8 @@ export default function CapturePage() {
 
   const ingestJobs = useQuery({
     queryKey: ["ingest-jobs", "pending"],
-    queryFn: () => apiFetch<IngestJobsResponse>("/api/ingest-jobs?status=PENDING")
+    queryFn: () => apiFetch<IngestJobsResponse>("/api/ingest-jobs?status=PENDING"),
+    staleTime: 1000 * 30 // 30 seconds
   })
 
   const enqueueRetryMutation = useMutation({
