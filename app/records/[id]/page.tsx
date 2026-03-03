@@ -55,6 +55,8 @@ export default function RecordDetailPage() {
   const [lastStateBeforeDelete, setLastStateBeforeDelete] = useState<RecordRow["state"]>("INBOX")
   const [redirectTimer, setRedirectTimer] = useState<number | null>(null)
   const [selectionPopup, setSelectionPopup] = useState<SelectionPopup>(null)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
+  const [newTagName, setNewTagName] = useState("")
   const articleRef = useRef<HTMLDivElement>(null)
 
   const detail = useQuery({
@@ -153,6 +155,22 @@ export default function RecordDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["record-detail", id] })
       queryClient.invalidateQueries({ queryKey: ["records"] })
+    }
+  })
+
+  const createTag = useMutation({
+    mutationFn: (name: string) =>
+      apiFetch<{ tag: TagRow }>("/api/tags", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name })
+      }),
+    onSuccess: (res) => {
+      setNewTagName("")
+      queryClient.invalidateQueries({ queryKey: ["tags"] })
+      // Automatically toggle the new tag on
+      const nextTags = [...Array.from(selectedTagIds), res.tag.id]
+      updateTags.mutate(nextTags)
     }
   })
 
@@ -266,6 +284,13 @@ export default function RecordDetailPage() {
             <Link href="/library" className="inline-flex items-center text-sm font-black uppercase text-foreground hover:bg-foreground hover:text-background border-2 border-transparent hover:border-foreground px-2 py-1 transition-colors self-start">
               <ArrowLeftSquare className="w-5 h-5 mr-2" strokeWidth={2.5} /> {t("record.back", "BACK")}
             </Link>
+
+            <button
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className="inline-flex items-center font-mono text-sm font-bold text-foreground bg-muted hover:bg-foreground hover:text-background border-2 border-foreground px-3 py-1 transition-colors uppercase shadow-brutal-sm"
+            >
+              {isSidebarOpen ? "CLOSE SIDEBAR" : "OPEN SIDEBAR"}
+            </button>
           </div>
 
           {detail.isLoading && (
@@ -277,7 +302,7 @@ export default function RecordDetailPage() {
 
           {detail.data && (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-              <div className="lg:col-span-8 flex flex-col gap-8">
+              <div className={`flex flex-col gap-8 ${isSidebarOpen ? "lg:col-span-8" : "lg:col-span-12"}`}>
                 <article className="border-4 border-foreground bg-card p-6 md:p-10 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.1)] relative">
                   <div className="flex flex-wrap gap-2 mb-8 border-b-4 border-foreground pb-4">
                     <span className="font-mono text-xs font-bold bg-foreground text-background px-2 py-0.5 uppercase">ID:{detail.data.record.id.substring(0, 8)}</span>
@@ -329,151 +354,181 @@ export default function RecordDetailPage() {
                       ))}
                     </div>
                   )}
-                </article>
-              </div>
 
-              <section className="lg:col-span-4 flex flex-col gap-6">
-                <div className="border-4 border-foreground bg-card p-5 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.1)]">
-                  <h3 className="font-black text-xl uppercase text-foreground mb-4 flex items-center justify-between border-b-4 border-foreground pb-2">
-                    <span className="flex items-center gap-2"><ArrowLeftSquare className="w-6 h-6 rotate-180" strokeWidth={3} /> {t("record.manageRecord", "MANAGE")}</span>
-                    {detail.data.record.state !== "ARCHIVED" && (
+                  {detail.data.record.state !== "ARCHIVED" && (
+                    <div className="mt-16 flex justify-center border-t-4 border-dashed border-border pt-12">
                       <button
                         type="button"
                         onClick={quickArchive}
                         disabled={updateRecord.isPending}
-                        className="bg-accent text-white font-mono text-[10px] font-bold px-2 py-1 uppercase shadow-brutal-sm hover:scale-105 transition-transform"
+                        className="bg-background text-foreground hover:bg-accent hover:text-white font-black text-xl px-10 py-5 uppercase shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] border-4 border-foreground transition-all flex items-center justify-center gap-3 w-full md:w-auto"
                       >
-                        {t("record.quickArchive", "ARCHIVE")}
-                      </button>
-                    )}
-                  </h3>
-                  <div className="space-y-3">
-                    <input
-                      value={editSourceTitle}
-                      onChange={(event) => setEditSourceTitle(event.target.value)}
-                      placeholder="SOURCE TITLE"
-                      className="min-h-[44px] w-full border-2 border-foreground bg-background p-2 font-mono text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
-                    />
-                    <input
-                      value={editUrl}
-                      onChange={(event) => setEditUrl(event.target.value)}
-                      placeholder="https://..."
-                      className="min-h-[44px] w-full border-2 border-foreground bg-background p-2 font-mono text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
-                    />
-                    <select
-                      value={editState}
-                      onChange={(event) => setEditState(event.target.value as RecordRow["state"])}
-                      className="min-h-[44px] w-full border-2 border-foreground bg-background p-2 font-mono text-xs font-bold uppercase text-foreground focus:outline-none focus:ring-2 focus:ring-accent appearance-none cursor-pointer rounded-none"
-                    >
-                      <option value="INBOX">{getStateLabel("INBOX", t)}</option>
-                      <option value="ACTIVE">{getStateLabel("ACTIVE", t)}</option>
-                      <option value="PINNED">{getStateLabel("PINNED", t)}</option>
-                      <option value="ARCHIVED">{getStateLabel("ARCHIVED", t)}</option>
-                      <option value="TRASHED">{getStateLabel("TRASHED", t)}</option>
-                    </select>
-                    <div className="flex gap-2 pt-2">
-                      <button
-                        type="button"
-                        onClick={requestSaveRecord}
-                        disabled={updateRecord.isPending}
-                        className="min-h-[44px] flex-1 bg-foreground text-background font-black text-xs uppercase py-2 hover:bg-accent hover:text-white transition-colors disabled:opacity-50"
-                      >
-                        {updateRecord.isPending ? "..." : t("record.update", "UPDATE")}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={requestDeleteRecord}
-                        disabled={deleteRecord.isPending}
-                        className="min-h-[44px] flex-1 bg-destructive text-white font-black text-xs uppercase py-2 hover:bg-red-600 transition-colors disabled:opacity-50"
-                      >
-                        {deleteRecord.isPending ? "..." : t("record.delete", "DELETE")}
+                        {updateRecord.isPending ? "ARCHIVING..." : (
+                          <><span>{t("record.quickArchive", "ARCHIVE DOCUMENT")}</span> <ArrowLeftSquare className="w-6 h-6 rotate-180" strokeWidth={3} /></>
+                        )}
                       </button>
                     </div>
-                  </div>
-                </div>
+                  )}
+                </article>
+              </div>
 
-                <div className="border-4 border-foreground bg-card p-5 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                  <h3 className="font-black text-xl uppercase text-foreground mb-4 flex items-center gap-2 border-b-4 border-foreground pb-2">
-                    <Hash className="w-6 h-6" strokeWidth={3} /> {t("record.tagsEdit", "TAGS")}
-                  </h3>
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {(tags.data?.data ?? []).length === 0 && (
-                      <span className="font-mono text-xs text-muted-foreground uppercase">{t("record.noTagsAvail", "NO TAGS AVAILABLE")}</span>
-                    )}
-                    {(tags.data?.data ?? [])
-                      .filter((tag: TagRow) => selectedTagIds.has(tag.id))
-                      .map((tag: TagRow) => (
-                        <div
-                          key={tag.id}
-                          className="flex items-center border-2 border-foreground bg-foreground text-background font-mono text-xs font-bold uppercase transition-transform hover:scale-105"
-                        >
-                          <span className="px-2 py-1">#{tag.name}</span>
-                          <button
-                            type="button"
-                            onClick={() => toggleTag(tag.id)}
-                            disabled={updateTags.isPending}
-                            className="px-2 py-1 border-l-2 border-background/20 hover:bg-destructive hover:text-white transition-colors"
-                            aria-label="Remove tag"
-                          >
-                            X
-                          </button>
-                        </div>
-                      ))}
-                  </div>
-
-                  {/* Select for unassigned tags */}
-                  {(() => {
-                    const unassignedTags = (tags.data?.data ?? []).filter((tag: TagRow) => !selectedTagIds.has(tag.id))
-                    if (unassignedTags.length === 0) return null
-
-                    return (
+              {isSidebarOpen && (
+                <section className="lg:col-span-4 flex flex-col gap-6">
+                  <div className="border-4 border-foreground bg-card p-5 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.1)]">
+                    <h3 className="font-black text-xl uppercase text-foreground mb-4 flex items-center justify-between border-b-4 border-foreground pb-2">
+                      <span className="flex items-center gap-2"><ArrowLeftSquare className="w-6 h-6 rotate-180" strokeWidth={3} /> {t("record.manageRecord", "MANAGE")}</span>
+                    </h3>
+                    <div className="space-y-3">
+                      <input
+                        value={editSourceTitle}
+                        onChange={(event) => setEditSourceTitle(event.target.value)}
+                        placeholder="SOURCE TITLE"
+                        className="min-h-[44px] w-full border-2 border-foreground bg-background p-2 font-mono text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+                      />
+                      <input
+                        value={editUrl}
+                        onChange={(event) => setEditUrl(event.target.value)}
+                        placeholder="https://..."
+                        className="min-h-[44px] w-full border-2 border-foreground bg-background p-2 font-mono text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+                      />
                       <select
-                        onChange={(e) => {
-                          if (e.target.value) toggleTag(e.target.value)
-                          e.target.value = "" // Reset after selection
-                        }}
-                        disabled={updateTags.isPending}
-                        className="w-full bg-background border-2 border-dashed border-foreground/50 text-foreground font-mono text-xs font-bold p-2 focus:outline-none focus:border-accent appearance-none rounded-none cursor-pointer uppercase"
-                        defaultValue=""
+                        value={editState}
+                        onChange={(event) => setEditState(event.target.value as RecordRow["state"])}
+                        className="min-h-[44px] w-full border-2 border-foreground bg-background p-2 font-mono text-xs font-bold uppercase text-foreground focus:outline-none focus:ring-2 focus:ring-accent appearance-none cursor-pointer rounded-none"
                       >
-                        <option value="" disabled>+ {t("record.addTag", "ADD TAG...")}</option>
-                        {unassignedTags.map((tag: TagRow) => (
-                          <option key={tag.id} value={tag.id}>{tag.name}</option>
-                        ))}
+                        <option value="INBOX">{getStateLabel("INBOX", t)}</option>
+                        <option value="ACTIVE">{getStateLabel("ACTIVE", t)}</option>
+                        <option value="PINNED">{getStateLabel("PINNED", t)}</option>
+                        <option value="ARCHIVED">{getStateLabel("ARCHIVED", t)}</option>
+                        <option value="TRASHED">{getStateLabel("TRASHED", t)}</option>
                       </select>
-                    )
-                  })()}
-
-                  {updateTags.error ? (
-                    <p className="font-mono text-xs text-destructive mt-3">{updateTags.error.message}</p>
-                  ) : null}
-                </div>
-
-                <div className="border-4 border-foreground bg-card p-5 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.1)]">
-
-                  {updateRecord.error ? <p className="font-mono text-xs text-destructive">{updateRecord.error.message}</p> : null}
-                  {deleteRecord.error ? <p className="font-mono text-xs text-destructive">{deleteRecord.error.message}</p> : null}
-
-                  <div className="flex flex-col gap-4">
-                    <h2 className="font-black text-2xl text-foreground uppercase pt-4 px-2">{t("record.logHistory", "LOG.HISTORY")}</h2>
-
-                    {detail.data.annotations.length === 0 && (
-                      <p className="font-mono text-sm font-bold text-muted-foreground uppercase border-2 border-dashed border-border p-4 text-center">{t("record.noLogs", "NO LOGS FOUND.")}</p>
-                    )}
-
-                    <div className="space-y-4">
-                      {detail.data.annotations.map(ann => (
-                        <div key={ann.id} className="border-2 border-foreground bg-background p-4 relative shadow-[2px_2px_0px_0px_theme(colors.accent)]">
-                          <span className="inline-block bg-accent text-white font-mono text-[10px] font-bold px-1.5 py-0.5 uppercase mb-2">
-                            {ann.kind}
-                          </span>
-                          <p className="text-foreground font-medium text-sm whitespace-pre-wrap">{ann.body}</p>
-                        </div>
-                      ))}
+                      <div className="flex gap-2 pt-2">
+                        <button
+                          type="button"
+                          onClick={requestSaveRecord}
+                          disabled={updateRecord.isPending}
+                          className="min-h-[44px] flex-1 bg-foreground text-background font-black text-xs uppercase py-2 hover:bg-accent hover:text-white transition-colors disabled:opacity-50"
+                        >
+                          {updateRecord.isPending ? "..." : t("record.update", "UPDATE")}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={requestDeleteRecord}
+                          disabled={deleteRecord.isPending}
+                          className="min-h-[44px] flex-1 bg-destructive text-white font-black text-xs uppercase py-2 hover:bg-red-600 transition-colors disabled:opacity-50"
+                        >
+                          {deleteRecord.isPending ? "..." : t("record.delete", "DELETE")}
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </section>
+
+                  <div className="border-4 border-foreground bg-card p-5 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                    <h3 className="font-black text-xl uppercase text-foreground mb-4 flex items-center gap-2 border-b-4 border-foreground pb-2">
+                      <Hash className="w-6 h-6" strokeWidth={3} /> {t("record.tagsEdit", "TAGS")}
+                    </h3>
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {(tags.data?.data ?? []).length === 0 && (
+                        <span className="font-mono text-xs text-muted-foreground uppercase">{t("record.noTagsAvail", "NO TAGS AVAILABLE")}</span>
+                      )}
+                      {(tags.data?.data ?? [])
+                        .filter((tag: TagRow) => selectedTagIds.has(tag.id))
+                        .map((tag: TagRow) => (
+                          <div
+                            key={tag.id}
+                            className="flex items-center border-2 border-foreground bg-foreground text-background font-mono text-xs font-bold uppercase transition-transform hover:scale-105"
+                          >
+                            <span className="px-2 py-1">#{tag.name}</span>
+                            <button
+                              type="button"
+                              onClick={() => toggleTag(tag.id)}
+                              disabled={updateTags.isPending}
+                              className="px-2 py-1 border-l-2 border-background/20 hover:bg-destructive hover:text-white transition-colors"
+                              aria-label="Remove tag"
+                            >
+                              X
+                            </button>
+                          </div>
+                        ))}
+                    </div>
+
+                    {/* Select for unassigned tags */}
+                    {(() => {
+                      const unassignedTags = (tags.data?.data ?? []).filter((tag: TagRow) => !selectedTagIds.has(tag.id))
+                      if (unassignedTags.length === 0) return null
+
+                      return (
+                        <select
+                          onChange={(e) => {
+                            if (e.target.value) toggleTag(e.target.value)
+                            e.target.value = "" // Reset after selection
+                          }}
+                          disabled={updateTags.isPending}
+                          className="w-full bg-background border-2 border-dashed border-foreground/50 text-foreground font-mono text-xs font-bold p-2 focus:outline-none focus:border-accent appearance-none rounded-none cursor-pointer uppercase"
+                          defaultValue=""
+                        >
+                          <option value="" disabled>+ {t("record.addTag", "ADD TAG...")}</option>
+                          {unassignedTags.map((tag: TagRow) => (
+                            <option key={tag.id} value={tag.id}>{tag.name}</option>
+                          ))}
+                        </select>
+                      )
+                    })()}
+
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault()
+                        if (newTagName.trim()) createTag.mutate(newTagName.trim())
+                      }}
+                      className="mt-4 flex gap-0"
+                    >
+                      <input
+                        type="text"
+                        value={newTagName}
+                        onChange={(e) => setNewTagName(e.target.value)}
+                        placeholder="+ NEW TAG"
+                        className="flex-1 bg-background border-2 border-r-0 border-foreground font-mono text-xs font-bold p-2 focus:outline-none focus:border-accent uppercase min-w-0 placeholder:text-muted-foreground/50"
+                      />
+                      <button
+                        type="submit"
+                        disabled={!newTagName.trim() || createTag.isPending}
+                        className="bg-foreground text-background font-mono text-xs font-bold px-3 py-2 uppercase hover:bg-accent hover:text-white disabled:opacity-50 border-2 border-foreground"
+                      >
+                        {createTag.isPending ? "..." : "ADD"}
+                      </button>
+                    </form>
+
+                    {updateTags.error ? (
+                      <p className="font-mono text-xs text-destructive mt-3">{updateTags.error.message}</p>
+                    ) : null}
+                  </div>
+
+                  <div className="border-4 border-foreground bg-card p-5 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.1)]">
+
+                    {updateRecord.error ? <p className="font-mono text-xs text-destructive">{updateRecord.error.message}</p> : null}
+                    {deleteRecord.error ? <p className="font-mono text-xs text-destructive">{deleteRecord.error.message}</p> : null}
+
+                    <div className="flex flex-col gap-4">
+                      <h2 className="font-black text-2xl text-foreground uppercase pt-4 px-2">{t("record.logHistory", "LOG.HISTORY")}</h2>
+
+                      {detail.data.annotations.length === 0 && (
+                        <p className="font-mono text-sm font-bold text-muted-foreground uppercase border-2 border-dashed border-border p-4 text-center">{t("record.noLogs", "NO LOGS FOUND.")}</p>
+                      )}
+
+                      <div className="space-y-4">
+                        {detail.data.annotations.map(ann => (
+                          <div key={ann.id} className="border-2 border-foreground bg-background p-4 relative shadow-[2px_2px_0px_0px_theme(colors.accent)]">
+                            <span className="inline-block bg-accent text-white font-mono text-[10px] font-bold px-1.5 py-0.5 uppercase mb-2">
+                              {ann.kind}
+                            </span>
+                            <p className="text-foreground font-medium text-sm whitespace-pre-wrap">{ann.body}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              )}
             </div>
           )}
           {detail.error ? (

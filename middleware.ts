@@ -16,9 +16,20 @@ const ALLOWED_ORIGINS: string[] = (() => {
   return origins
 })()
 
-function isAllowedOrigin(origin: string | null): boolean {
-  if (!origin) return true // same-origin
+function isAllowedOrigin(request: NextRequest, origin: string | null): boolean {
+  if (!origin) return true // same-origin or curl
   if (origin.startsWith("chrome-extension://")) return true
+
+  try {
+    const originUrl = new URL(origin)
+    const host = request.headers.get("host")
+    if (host && originUrl.host === host) {
+      return true
+    }
+  } catch {
+    // ignore invalid URL
+  }
+
   return ALLOWED_ORIGINS.some((allowed) => origin === allowed)
 }
 
@@ -27,7 +38,7 @@ export async function middleware(request: NextRequest) {
 
   // ── CORS Preflight ──
   if (request.method === "OPTIONS") {
-    if (!isAllowedOrigin(origin)) {
+    if (!isAllowedOrigin(request, origin)) {
       return new NextResponse(null, { status: 403 })
     }
     return new NextResponse(null, {
@@ -43,7 +54,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // ── Origin check for mutating requests ──
-  if (origin && !isAllowedOrigin(origin) && request.method !== "GET") {
+  if (origin && !isAllowedOrigin(request, origin) && request.method !== "GET") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
@@ -78,7 +89,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // ── Attach CORS headers on response ──
-  if (origin && isAllowedOrigin(origin)) {
+  if (origin && isAllowedOrigin(request, origin)) {
     supabaseResponse.headers.set("Access-Control-Allow-Origin", origin)
     supabaseResponse.headers.set("Access-Control-Allow-Credentials", "true")
   }
