@@ -24,6 +24,7 @@ export type AnnotationRow = {
   user_id: string
   kind: "highlight" | "comment" | "correction"
   body: string
+  anchor: string | null
   created_at: string
 }
 

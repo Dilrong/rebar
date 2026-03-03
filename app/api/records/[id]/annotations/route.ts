@@ -9,7 +9,8 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin"
 const ParamsSchema = z.object({ id: z.string().uuid() })
 const CreateAnnotationSchema = z.object({
   kind: z.enum(["highlight", "comment", "correction"]),
-  body: z.string().min(1)
+  body: z.string().min(1),
+  anchor: z.string().optional()
 })
 
 export async function GET(
@@ -103,7 +104,8 @@ export async function POST(
       record_id: parsedParams.data.id,
       user_id: userId,
       kind: parsedBody.data.kind,
-      body: parsedBody.data.body
+      body: parsedBody.data.body,
+      anchor: parsedBody.data.anchor ?? null
     })
     .select("*")
     .single()

@@ -3,7 +3,7 @@
 import { useParams, useRouter } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useForm } from "react-hook-form"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState, useCallback } from "react"
 import AuthGate from "@/components/auth/auth-gate"
 import AppNav from "@/components/layout/app-nav"
 import { useI18n } from "@/components/i18n/i18n-provider"
@@ -30,7 +30,14 @@ type TagsResponse = {
 type AnnotationInput = {
   kind: "highlight" | "comment" | "correction"
   body: string
+  anchor?: string
 }
+
+type SelectionPopup = {
+  x: number
+  y: number
+  text: string
+} | null
 
 export default function RecordDetailPage() {
   const { t } = useI18n()
@@ -47,6 +54,8 @@ export default function RecordDetailPage() {
   const [pendingTrashConfirm, setPendingTrashConfirm] = useState(false)
   const [lastStateBeforeDelete, setLastStateBeforeDelete] = useState<RecordRow["state"]>("INBOX")
   const [redirectTimer, setRedirectTimer] = useState<number | null>(null)
+  const [selectionPopup, setSelectionPopup] = useState<SelectionPopup>(null)
+  const articleRef = useRef<HTMLDivElement>(null)
 
   const detail = useQuery({
     queryKey: ["record-detail", id],
@@ -77,6 +86,62 @@ export default function RecordDetailPage() {
       queryClient.invalidateQueries({ queryKey: ["record-detail", id] })
     }
   })
+
+  const addHighlight = useMutation({
+    mutationFn: (anchor: string) =>
+      apiFetch(`/api/records/${id}/annotations`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind: "highlight", body: anchor, anchor })
+      }),
+    onSuccess: () => {
+      setSelectionPopup(null)
+      window.getSelection()?.removeAllRanges()
+      queryClient.invalidateQueries({ queryKey: ["record-detail", id] })
+    }
+  })
+
+  const deleteAnnotation = useMutation({
+    mutationFn: (annotationId: string) =>
+      apiFetch(`/api/records/${id}/annotations/${annotationId}`, { method: "DELETE" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["record-detail", id] })
+    }
+  })
+
+  // Text selection handler for highlight toolbar
+  const handleTextSelect = useCallback(() => {
+    const sel = window.getSelection()
+    if (!sel || sel.isCollapsed || !articleRef.current) {
+      setSelectionPopup(null)
+      return
+    }
+    const text = sel.toString().trim()
+    if (text.length < 3) { setSelectionPopup(null); return }
+
+    // Only allow selection inside the article
+    const range = sel.getRangeAt(0)
+    if (!articleRef.current.contains(range.commonAncestorContainer)) {
+      setSelectionPopup(null)
+      return
+    }
+
+    const rect = range.getBoundingClientRect()
+    setSelectionPopup({
+      x: rect.left + rect.width / 2,
+      y: rect.top - 8,
+      text
+    })
+  }, [])
+
+  useEffect(() => {
+    document.addEventListener("mouseup", handleTextSelect)
+    document.addEventListener("touchend", handleTextSelect)
+    return () => {
+      document.removeEventListener("mouseup", handleTextSelect)
+      document.removeEventListener("touchend", handleTextSelect)
+    }
+  }, [handleTextSelect])
 
   const updateTags = useMutation({
     mutationFn: (tagIds: string[]) =>
@@ -270,10 +335,20 @@ export default function RecordDetailPage() {
                     </h1>
                   )}
 
-                  <div className="relative">
+                  <div ref={articleRef} className="relative">
                     <MarkdownContent
                       content={detail.data.record.content}
                       className="text-xl md:text-2xl leading-[1.6]"
+                      highlights={
+                        (detail.data.annotations ?? [])
+                          .filter(a => a.kind === "highlight" && a.anchor)
+                          .map(a => ({ id: a.id, anchor: a.anchor! }))
+                      }
+                      onHighlightClick={(hlId) => {
+                        if (window.confirm(t("record.removeHighlight", "Remove this highlight?"))) {
+                          deleteAnnotation.mutate(hlId)
+                        }
+                      }}
                     />
                   </div>
 
@@ -435,6 +510,29 @@ export default function RecordDetailPage() {
           onAction={undoDelete}
           onClose={() => setShowDeleteToast(false)}
         />
+      ) : null}
+      {selectionPopup ? (
+        <div
+          style={{
+            position: "fixed",
+            left: `${selectionPopup.x}px`,
+            top: `${selectionPopup.y}px`,
+            transform: "translate(-50%, -100%)",
+            zIndex: 9999
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => addHighlight.mutate(selectionPopup.text)}
+            disabled={addHighlight.isPending}
+            className="flex items-center gap-2 border-4 border-foreground bg-yellow-400 text-black px-4 py-2 font-mono text-xs font-black uppercase shadow-brutal-sm hover:bg-yellow-300 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all whitespace-nowrap"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <path d="m9 11-6 6v3h9l3-3" /><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4" />
+            </svg>
+            {addHighlight.isPending ? "..." : t("record.highlight", "HIGHLIGHT")}
+          </button>
+        </div>
       ) : null}
     </div>
   )
