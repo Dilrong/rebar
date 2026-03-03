@@ -12,7 +12,6 @@ import { getStateLabel } from "@/lib/i18n/state-label"
 import type { RecordRow, TagRow } from "@/lib/types"
 import { EmptyState } from "@/components/ui/empty-state"
 import { ErrorState } from "@/components/ui/error-state"
-import { LoadingState } from "@/components/ui/loading-state"
 import { Skeleton } from "@/components/ui/skeleton"
 import { stripMarkdown } from "@/lib/strip-markdown"
 
