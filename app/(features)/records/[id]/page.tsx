@@ -3,7 +3,7 @@
 import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useForm } from "react-hook-form"
-import { useEffect, useRef, useState, useCallback } from "react"
+import { useEffect, useRef, useState, useCallback, useMemo } from "react"
 import AuthGate from "@shared/auth/auth-gate"
 import AppNav from "@shared/layout/app-nav"
 import { useI18n } from "@app-shared/i18n/i18n-provider"
@@ -48,6 +48,8 @@ type SelectionPopup = {
   y: number
   text: string
 } | null
+
+const MAX_HIGHLIGHT_ANCHOR_CHARS = 500
 
 function resolveFromPath(value: string | null): string | null {
   if (!value) {
@@ -151,15 +153,26 @@ export default function RecordDetailPage() {
   // Text selection handler for highlight toolbar
   const handleTextSelect = useCallback(() => {
     const sel = window.getSelection()
-    if (!sel || sel.isCollapsed || !articleRef.current) {
+    if (!sel || sel.isCollapsed || sel.rangeCount === 0 || !articleRef.current) {
       setSelectionPopup(null)
       return
     }
+
     const text = sel.toString().trim()
-    if (text.length < 3) { setSelectionPopup(null); return }
+    if (text.length < 3 || text.length > MAX_HIGHLIGHT_ANCHOR_CHARS) {
+      setSelectionPopup(null)
+      return
+    }
 
     // Only allow selection inside the article
-    const range = sel.getRangeAt(0)
+    let range: Range
+    try {
+      range = sel.getRangeAt(0)
+    } catch {
+      setSelectionPopup(null)
+      return
+    }
+
     if (!articleRef.current.contains(range.commonAncestorContainer)) {
       setSelectionPopup(null)
       return
@@ -333,8 +346,24 @@ export default function RecordDetailPage() {
   })
 
   const selectedTagIds = new Set((detail.data?.tags ?? []).map((tag) => tag.id))
+  const markdownHighlights = useMemo(
+    () =>
+      (detail.data?.annotations ?? [])
+        .filter((annotation) => annotation.kind === "highlight" && annotation.anchor)
+        .map((annotation) => ({ id: annotation.id, anchor: annotation.anchor! })),
+    [detail.data?.annotations]
+  )
   const isRecordMutating = updateRecord.isPending || deleteRecord.isPending
   const isTagMutating = updateTags.isPending || createTag.isPending
+
+  const handleHighlightClick = useCallback(
+    (highlightId: string) => {
+      if (window.confirm(t("record.removeHighlight", "Remove this highlight?"))) {
+        deleteAnnotation.mutate(highlightId)
+      }
+    },
+    [deleteAnnotation.mutate, t]
+  )
 
   const toggleTag = (tagId: string) => {
     const current = detail.data?.tags.map((tag) => tag.id) ?? []
@@ -484,16 +513,8 @@ export default function RecordDetailPage() {
                     <MarkdownContent
                       content={detail.data.record.content}
                       className="text-xl md:text-2xl leading-[1.6]"
-                      highlights={
-                        (detail.data.annotations ?? [])
-                          .filter(a => a.kind === "highlight" && a.anchor)
-                          .map(a => ({ id: a.id, anchor: a.anchor! }))
-                      }
-                      onHighlightClick={(hlId) => {
-                        if (window.confirm(t("record.removeHighlight", "Remove this highlight?"))) {
-                          deleteAnnotation.mutate(hlId)
-                        }
-                      }}
+                      highlights={markdownHighlights}
+                      onHighlightClick={handleHighlightClick}
                     />
                   </div>
 

@@ -24,40 +24,54 @@ type Props = {
  */
 export function MarkdownContent({ content, className = "", highlights, onHighlightClick }: Props) {
     const containerRef = useRef<HTMLDivElement>(null)
+    const onHighlightClickRef = useRef<Props["onHighlightClick"]>(onHighlightClick)
 
     // Heuristic: if content has Markdown syntax, render it; else plain text
     const hasMarkdown = /^#{1,6}\s|^\*\s|\*\*|`|^\-\s|\[.+\]\(.+\)|^>\s|^---/m.test(content)
 
+    useEffect(() => {
+        onHighlightClickRef.current = onHighlightClick
+    }, [onHighlightClick])
+
     // Apply highlight marks after render
     useEffect(() => {
         const container = containerRef.current
-        if (!container || !highlights || highlights.length === 0) return
+        if (!container) return
 
         // Clear previous marks
-        container.querySelectorAll("mark[data-rebar-hl]").forEach((el) => {
-            const parent = el.parentNode
-            if (!parent) return
-            while (el.firstChild) parent.insertBefore(el.firstChild, el)
-            parent.removeChild(el)
-        })
+        clearHighlightMarks(container)
+
+        if (!highlights || highlights.length === 0) return
 
         // Apply highlights by walking text nodes
         for (const hl of highlights) {
-            if (!hl.anchor || hl.anchor.length < 2) continue
-            applyHighlightToContainer(container, hl)
+            const anchor = hl.anchor.trim()
+            if (anchor.length < 2 || anchor.length > 500) continue
+            applyHighlightToContainer(container, { ...hl, anchor })
         }
+    }, [highlights, content])
 
-        // Click handler delegation
+    // Click handler delegation
+    useEffect(() => {
+        const container = containerRef.current
+        if (!container) return
+
         function handleClick(e: Event) {
-            const mark = (e.target as HTMLElement).closest("mark[data-rebar-hl]") as HTMLElement | null
-            if (mark && onHighlightClick) {
-                onHighlightClick(mark.getAttribute("data-rebar-hl") || "")
+            const target = e.target
+            if (!(target instanceof HTMLElement)) return
+
+            const mark = target.closest("mark[data-rebar-hl]") as HTMLElement | null
+            if (!mark) return
+
+            const highlightId = mark.getAttribute("data-rebar-hl")
+            if (highlightId) {
+                onHighlightClickRef.current?.(highlightId)
             }
         }
 
         container.addEventListener("click", handleClick)
         return () => container.removeEventListener("click", handleClick)
-    }, [highlights, content, onHighlightClick])
+    }, [content])
 
     if (!hasMarkdown) {
         return (
@@ -92,6 +106,19 @@ export function MarkdownContent({ content, className = "", highlights, onHighlig
 
 // ─── Highlight text matching ───────────────────────────────────
 
+function clearHighlightMarks(container: HTMLElement) {
+    container.querySelectorAll("mark[data-rebar-hl]").forEach((el) => {
+        const parent = el.parentNode
+        if (!parent) return
+
+        while (el.firstChild) {
+            parent.insertBefore(el.firstChild, el)
+        }
+
+        parent.removeChild(el)
+    })
+}
+
 function applyHighlightToContainer(container: HTMLElement, hl: Highlight) {
     const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null)
     const textNodes: Text[] = []
@@ -120,12 +147,20 @@ function applyHighlightToContainer(container: HTMLElement, hl: Highlight) {
     for (const nr of nodeRanges) {
         if (nr.end <= matchIdx || nr.start >= matchEnd) continue
 
+        const nodeText = nr.node.textContent
+        if (!nodeText) continue
+
         const localStart = Math.max(0, matchIdx - nr.start)
-        const localEnd = Math.min(nr.node.textContent!.length, matchEnd - nr.start)
+        const localEnd = Math.min(nodeText.length, matchEnd - nr.start)
+        if (localStart >= localEnd) continue
 
         const range = document.createRange()
-        range.setStart(nr.node, localStart)
-        range.setEnd(nr.node, localEnd)
+        try {
+            range.setStart(nr.node, localStart)
+            range.setEnd(nr.node, localEnd)
+        } catch {
+            continue
+        }
 
         const mark = document.createElement("mark")
         mark.setAttribute("data-rebar-hl", hl.id)
@@ -136,9 +171,11 @@ function applyHighlightToContainer(container: HTMLElement, hl: Highlight) {
             cursor: pointer;
             transition: background 0.15s;
         `
-        mark.addEventListener("mouseenter", () => { mark.style.background = "rgba(250, 204, 21, 0.65)" })
-        mark.addEventListener("mouseleave", () => { mark.style.background = "rgba(250, 204, 21, 0.4)" })
 
-        range.surroundContents(mark)
+        try {
+            range.surroundContents(mark)
+        } catch {
+            continue
+        }
     }
 }
