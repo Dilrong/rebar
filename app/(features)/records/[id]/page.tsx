@@ -10,9 +10,9 @@ import { useI18n } from "@app-shared/i18n/i18n-provider"
 import { apiFetch } from "@/lib/client-http"
 import { getStateLabel } from "@/lib/i18n/state-label"
 import type { AnnotationRow, RecordRow, TagRow } from "@/lib/types"
-import { Link as LinkIcon, Hash, ArrowLeftSquare, PlusSquare } from "lucide-react"
+import { Link as LinkIcon, Hash, ArrowLeftSquare } from "lucide-react"
 import Link from "next/link"
-import { LoadingSpinner, LoadingDots } from "@shared/ui/loading"
+import { LoadingSpinner } from "@shared/ui/loading"
 import { Toast } from "@shared/ui/toast"
 import { ConfirmDialog } from "../_components/confirm-dialog"
 import { MarkdownContent } from "@shared/ui/markdown-content"
@@ -25,6 +25,17 @@ type DetailResponse = {
 
 type TagsResponse = {
   data: TagRow[]
+}
+
+type AssistResponse = {
+  data: {
+    summary: string[]
+    questions: string[]
+    todos: string[]
+    signals: {
+      topKeywords: string[]
+    }
+  }
 }
 
 type AnnotationInput = {
@@ -57,6 +68,8 @@ export default function RecordDetailPage() {
   const [selectionPopup, setSelectionPopup] = useState<SelectionPopup>(null)
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const [newTagName, setNewTagName] = useState("")
+  const [checkedAssistTodos, setCheckedAssistTodos] = useState<string[]>([])
+  const [showAssistCopiedToast, setShowAssistCopiedToast] = useState(false)
   const articleRef = useRef<HTMLDivElement>(null)
 
   const detail = useQuery({
@@ -108,6 +121,16 @@ export default function RecordDetailPage() {
       apiFetch(`/api/records/${id}/annotations/${annotationId}`, { method: "DELETE" }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["record-detail", id] })
+    }
+  })
+
+  const assist = useMutation({
+    mutationFn: () =>
+      apiFetch<AssistResponse>(`/api/records/${id}/assist`, {
+        method: "POST"
+      }),
+    onSuccess: () => {
+      setCheckedAssistTodos([])
     }
   })
 
@@ -274,6 +297,29 @@ export default function RecordDetailPage() {
     })
   }
 
+  const toggleAssistTodo = (todo: string) => {
+    setCheckedAssistTodos((current) =>
+      current.includes(todo)
+        ? current.filter((item) => item !== todo)
+        : [...current, todo]
+    )
+  }
+
+  const copyAssistTodos = async () => {
+    const todos = assist.data?.data.todos ?? []
+    if (todos.length === 0) {
+      return
+    }
+
+    const markdown = todos
+      .map((todo) => `- [${checkedAssistTodos.includes(todo) ? "x" : " "}] ${todo}`)
+      .join("\n")
+
+    await navigator.clipboard.writeText(markdown)
+    setShowAssistCopiedToast(true)
+    window.setTimeout(() => setShowAssistCopiedToast(false), 2000)
+  }
+
   return (
     <div className="min-h-screen p-6 bg-background font-sans selection:bg-accent selection:text-white">
       <AuthGate>
@@ -374,6 +420,97 @@ export default function RecordDetailPage() {
 
               {isSidebarOpen && (
                 <section className="lg:col-span-4 flex flex-col gap-6">
+                  <div className="border-4 border-foreground bg-card p-5 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.1)]">
+                    <h3 className="font-black text-xl uppercase text-foreground mb-4 border-b-4 border-foreground pb-2">
+                      {t("record.assist.title", "AI EXECUTION")}
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={() => assist.mutate()}
+                      disabled={assist.isPending}
+                      className="min-h-[44px] w-full border-2 border-foreground bg-background px-3 py-2 font-mono text-xs font-bold uppercase hover:bg-foreground hover:text-background disabled:opacity-60"
+                    >
+                      {assist.isPending
+                        ? t("record.assist.running", "GENERATING...")
+                        : t("record.assist.run", "GENERATE SUMMARY + TODO")}
+                    </button>
+
+                    {assist.error ? (
+                      <p className="mt-3 font-mono text-xs text-destructive">{assist.error.message}</p>
+                    ) : null}
+
+                    {assist.data ? (
+                      <div className="mt-4 space-y-4">
+                        <div>
+                          <p className="mb-2 font-mono text-[10px] font-bold uppercase text-muted-foreground">
+                            {t("record.assist.summary", "SUMMARY")}
+                          </p>
+                          <div className="space-y-2">
+                            {assist.data.data.summary.map((item) => (
+                              <p key={item} className="border-2 border-foreground bg-background p-2 font-mono text-xs font-bold">
+                                {item}
+                              </p>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div>
+                          <p className="mb-2 font-mono text-[10px] font-bold uppercase text-muted-foreground">
+                            {t("record.assist.questions", "KEY QUESTIONS")}
+                          </p>
+                          <div className="space-y-2">
+                            {assist.data.data.questions.map((item) => (
+                              <p key={item} className="border border-foreground bg-background p-2 font-mono text-xs">
+                                {item}
+                              </p>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="mb-2 flex items-center justify-between gap-2">
+                            <p className="font-mono text-[10px] font-bold uppercase text-muted-foreground">
+                              {t("record.assist.todos", "ACTION TODOS")}
+                            </p>
+                            <button
+                              type="button"
+                              onClick={copyAssistTodos}
+                              className="min-h-[36px] border border-foreground px-2 py-1 font-mono text-[10px] font-bold uppercase hover:bg-foreground hover:text-background"
+                            >
+                              {t("record.assist.copyTodos", "COPY")}
+                            </button>
+                          </div>
+                          <div className="space-y-2">
+                            {assist.data.data.todos.map((todo) => {
+                              const checked = checkedAssistTodos.includes(todo)
+                              return (
+                                <button
+                                  key={todo}
+                                  type="button"
+                                  onClick={() => toggleAssistTodo(todo)}
+                                  className={`min-h-[44px] w-full border-2 px-3 py-2 text-left font-mono text-xs font-bold transition-colors ${
+                                    checked
+                                      ? "border-foreground bg-foreground text-background"
+                                      : "border-foreground bg-background text-foreground hover:bg-muted"
+                                  }`}
+                                >
+                                  <span className="mr-2">{checked ? "[x]" : "[ ]"}</span>
+                                  {todo}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        </div>
+
+                        {assist.data.data.signals.topKeywords.length > 0 ? (
+                          <p className="font-mono text-[10px] font-bold uppercase text-muted-foreground">
+                            {t("record.assist.keywords", "KEYWORDS")}: {assist.data.data.signals.topKeywords.join(", ")}
+                          </p>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </div>
+
                   <div className="border-4 border-foreground bg-card p-5 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.1)]">
                     <h3 className="font-black text-xl uppercase text-foreground mb-4 flex items-center justify-between border-b-4 border-foreground pb-2">
                       <span className="flex items-center gap-2"><ArrowLeftSquare className="w-6 h-6 rotate-180" strokeWidth={3} /> {t("record.manageRecord", "MANAGE")}</span>
@@ -580,6 +717,13 @@ export default function RecordDetailPage() {
           actionLabel={t("toast.undo", "Undo")}
           onAction={undoDelete}
           onClose={() => setShowDeleteToast(false)}
+        />
+      ) : null}
+      {showAssistCopiedToast ? (
+        <Toast
+          message={t("record.assist.copied", "Copied action todos")}
+          tone="success"
+          onClose={() => setShowAssistCopiedToast(false)}
         />
       ) : null}
       {selectionPopup ? (

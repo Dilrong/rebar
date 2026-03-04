@@ -3,14 +3,34 @@
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useTheme } from "next-themes"
-import { Search, Square, Plus, BookOpen, CheckSquare, History } from "lucide-react"
+import { Search, Square, Plus, BookOpen, CheckSquare, BriefcaseBusiness } from "lucide-react"
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react"
 import { useI18n } from "@app-shared/i18n/i18n-provider"
 import { cn } from "@/lib/utils"
 import { getSupabaseBrowser } from "@/lib/supabase-browser"
 import { getStartPagePreference } from "@feature-lib/settings/preferences"
+import { useIsFetching, useQuery } from "@tanstack/react-query"
+import { apiFetch } from "@/lib/client-http"
 
-const NAV_LINKS = ["capture", "review", "library", "search"] as const
+const NAV_LINKS = ["capture", "review", "library", "search", "projects"] as const
+
+type SyncHealthResponse = {
+  authenticated: boolean
+}
+
+function formatSyncAge(updatedAt: number | null): string {
+  if (!updatedAt) {
+    return "--"
+  }
+
+  const diffSec = Math.max(0, Math.floor((Date.now() - updatedAt) / 1000))
+  if (diffSec < 60) {
+    return `${diffSec}s`
+  }
+
+  const diffMin = Math.floor(diffSec / 60)
+  return `${diffMin}m`
+}
 
 export default function AppNav() {
   const pathname = usePathname()
@@ -26,8 +46,30 @@ export default function AppNav() {
   const [quickQuery, setQuickQuery] = useState("")
   const [quickResults, setQuickResults] = useState<Array<{ id: string; kind: string; content: string }>>([])
   const [quickActiveIndex, setQuickActiveIndex] = useState(-1)
+  const [lastSyncAt, setLastSyncAt] = useState<number | null>(null)
   const quickDialogRef = useRef<HTMLDivElement | null>(null)
   const quickInputRef = useRef<HTMLInputElement | null>(null)
+  const fetchingCount = useIsFetching()
+
+  const syncHealth = useQuery({
+    queryKey: ["sync-health"],
+    queryFn: () => apiFetch<SyncHealthResponse>("/api/auth/check"),
+    staleTime: 1000 * 30,
+    refetchInterval: 1000 * 60,
+    retry: 1
+  })
+
+  useEffect(() => {
+    if (syncHealth.dataUpdatedAt > 0) {
+      setLastSyncAt(syncHealth.dataUpdatedAt)
+    }
+  }, [syncHealth.dataUpdatedAt])
+
+  const syncStatusLabel = syncHealth.isError
+    ? t("nav.syncError", "SYNC ERR")
+    : fetchingCount > 0
+      ? t("nav.syncing", "SYNCING...")
+      : `${t("nav.synced", "SYNCED")} ${formatSyncAge(lastSyncAt)}`
 
   useEffect(() => {
     setMounted(true)
@@ -205,6 +247,22 @@ export default function AppNav() {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => syncHealth.refetch()}
+            disabled={syncHealth.isFetching}
+            className={cn(
+              "min-h-[44px] flex items-center justify-center border-2 px-3 py-2 font-mono text-[10px] font-bold uppercase transition-colors",
+              syncHealth.isError
+                ? "border-destructive text-destructive"
+                : fetchingCount > 0
+                  ? "border-accent text-accent"
+                  : "border-foreground text-foreground hover:bg-foreground hover:text-background"
+            )}
+            title={t("nav.syncHint", "Click to refresh sync status")}
+          >
+            {syncStatusLabel}
+          </button>
           {authEmail ? (
             <>
               <Link
@@ -269,6 +327,22 @@ export default function AppNav() {
           REBAR_
         </Link>
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => syncHealth.refetch()}
+            disabled={syncHealth.isFetching}
+            className={cn(
+              "min-h-[44px] flex items-center justify-center border-2 px-2 py-2 font-mono text-[9px] font-bold uppercase",
+              syncHealth.isError
+                ? "border-destructive text-destructive"
+                : fetchingCount > 0
+                  ? "border-accent text-accent"
+                  : "border-foreground text-foreground"
+            )}
+            title={t("nav.syncHint", "Click to refresh sync status")}
+          >
+            {syncStatusLabel}
+          </button>
           {authEmail ? (
             <Link
               href="/settings"
@@ -352,6 +426,17 @@ export default function AppNav() {
             <Search className="h-6 w-6 stroke-[2.5]" />
             <span className="font-mono text-[9px] font-bold uppercase mt-1">SEARCH</span>
           </button>
+
+          <Link
+            href="/projects"
+            className={cn(
+              "flex flex-col items-center justify-center p-2 min-w-[64px] transition-colors",
+              pathname.includes("/projects") ? "text-accent" : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <BriefcaseBusiness className="h-6 w-6 stroke-[2.5]" />
+            <span className="font-mono text-[9px] font-bold uppercase mt-1">PROJ</span>
+          </Link>
 
         </div>
       </div>

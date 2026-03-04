@@ -1,14 +1,15 @@
 "use client"
 
 import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Database, Download, Play, Plus, Search, Tag, Trash2 } from "lucide-react"
+import { Database, Download, Plus, Tag, Trash2 } from "lucide-react"
 import AuthGate from "@shared/auth/auth-gate"
 import AppNav from "@shared/layout/app-nav"
 import { apiFetch } from "@/lib/client-http"
 import { getSupabaseBrowser } from "@/lib/supabase-browser"
-import { LoadingSpinner, LoadingDots } from "@shared/ui/loading"
+import { LoadingDots } from "@shared/ui/loading"
 import { useI18n } from "@app-shared/i18n/i18n-provider"
 import { getStateLabel } from "@/lib/i18n/state-label"
 import { EmptyState } from "@shared/ui/empty-state"
@@ -28,11 +29,19 @@ type TagsResponse = {
   data: TagRow[]
 }
 
+type InboxDecisionPayload = {
+  id: string
+  decisionType: "ARCHIVE" | "ACT" | "DEFER"
+  actionType?: "EXPERIMENT" | "SHARE" | "TODO"
+  deferReason?: "NEED_INFO" | "LOW_CONFIDENCE" | "NO_TIME"
+}
+
 const STATE_TABS = ["INBOX", "ACTIVE", "PINNED", "ARCHIVED"] as const
 type StateFilter = "ALL" | (typeof STATE_TABS)[number]
 
 export default function LibraryPage() {
   const { t } = useI18n()
+  const searchParams = useSearchParams()
   const queryClient = useQueryClient()
   const [state, setState] = useState<StateFilter>("ALL")
   const [kind, setKind] = useState("")
@@ -54,6 +63,39 @@ export default function LibraryPage() {
   const [allRecords, setAllRecords] = useState<RecordRow[]>([])
   const [editingTagId, setEditingTagId] = useState<string | null>(null)
   const [editingTagName, setEditingTagName] = useState("")
+
+  useEffect(() => {
+    const queryState = searchParams.get("state")
+    const queryKind = searchParams.get("kind")
+    const queryText = searchParams.get("q")
+    const queryTag = searchParams.get("tag_id")
+    const querySort = searchParams.get("sort")
+    const queryOrder = searchParams.get("order")
+
+    if (queryState === "ALL" || queryState === "INBOX" || queryState === "ACTIVE" || queryState === "PINNED" || queryState === "ARCHIVED") {
+      setState(queryState)
+    }
+
+    if (queryKind === "quote" || queryKind === "note" || queryKind === "link" || queryKind === "ai") {
+      setKind(queryKind)
+    }
+
+    if (queryText) {
+      setQ(queryText)
+    }
+
+    if (queryTag) {
+      setTagId(queryTag)
+    }
+
+    if (querySort === "created_at" || querySort === "review_count" || querySort === "due_at") {
+      setSort(querySort)
+    }
+
+    if (queryOrder === "asc" || queryOrder === "desc") {
+      setOrder(queryOrder)
+    }
+  }, [searchParams])
 
   const queryString = useMemo(() => {
     const params = new URLSearchParams()
@@ -120,6 +162,20 @@ export default function LibraryPage() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["records"] })
+    }
+  })
+
+  const inboxDecision = useMutation({
+    mutationFn: ({ id, ...payload }: InboxDecisionPayload) =>
+      apiFetch<{ record: RecordRow }>(`/api/review/${id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["records"] })
+      queryClient.invalidateQueries({ queryKey: ["review-stats"] })
+      queryClient.invalidateQueries({ queryKey: ["review-today"] })
     }
   })
 
@@ -573,6 +629,15 @@ export default function LibraryPage() {
             </div>
           </section>
 
+          {state === "INBOX" ? (
+            <section className="mb-6 border-4 border-foreground bg-card p-4">
+              <p className="font-mono text-xs font-bold uppercase text-foreground">{t("library.inboxFlow", "INBOX QUICK LOOP")}</p>
+              <p className="mt-2 font-mono text-[10px] font-bold uppercase text-muted-foreground">
+                {t("library.inboxFlowHint", "카드에서 바로 활성화/할일/보관 처리")}
+              </p>
+            </section>
+          ) : null}
+
           {selectedIds.length > 0 ? (
             <section className="mb-8 border-4 border-foreground bg-card p-4">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -720,24 +785,58 @@ export default function LibraryPage() {
                     </span>
                   </div>
 
-                  {record.state === "INBOX" && (
-                    <button
-                      onClick={(event) => {
-                        event.preventDefault()
-                        activate.mutate(record.id)
-                      }}
-                      className="text-accent group-hover:text-white p-2 md:p-0 mt-[-8px] md:mt-0"
-                      title="ACTIVATE"
-                      type="button"
-                      disabled={activate.isPending}
-                    >
-                      {activate.isPending && activate.variables === record.id ? (
-                        <LoadingSpinner className="w-6 h-6" />
-                      ) : (
-                        <Play className="w-6 h-6 md:w-5 md:h-5" strokeWidth={3} />
-                      )}
-                    </button>
-                  )}
+                  {record.state === "INBOX" ? (
+                    <div className="flex flex-wrap items-center justify-end gap-1">
+                      <button
+                        onClick={(event) => {
+                          event.preventDefault()
+                          activate.mutate(record.id)
+                        }}
+                        className="min-h-[44px] border-2 border-accent px-2 py-1 font-mono text-[10px] font-bold uppercase text-accent transition-colors hover:bg-accent hover:text-white group-hover:border-white group-hover:text-white"
+                        title={t("library.inboxAction.activate", "ACTIVATE")}
+                        type="button"
+                        disabled={activate.isPending || inboxDecision.isPending}
+                      >
+                        {activate.isPending && activate.variables === record.id ? <LoadingDots /> : t("library.inboxAction.activate", "ACTIVATE")}
+                      </button>
+                      <button
+                        onClick={(event) => {
+                          event.preventDefault()
+                          inboxDecision.mutate({ id: record.id, decisionType: "ACT", actionType: "TODO" })
+                        }}
+                        className="min-h-[44px] border-2 border-foreground px-2 py-1 font-mono text-[10px] font-bold uppercase transition-colors hover:bg-foreground hover:text-background group-hover:border-white group-hover:text-white"
+                        title={t("library.inboxAction.todo", "TODO")}
+                        type="button"
+                        disabled={activate.isPending || inboxDecision.isPending}
+                      >
+                        {inboxDecision.isPending &&
+                        inboxDecision.variables?.id === record.id &&
+                        inboxDecision.variables?.decisionType === "ACT" ? (
+                          <LoadingDots />
+                        ) : (
+                          t("library.inboxAction.todo", "TODO")
+                        )}
+                      </button>
+                      <button
+                        onClick={(event) => {
+                          event.preventDefault()
+                          inboxDecision.mutate({ id: record.id, decisionType: "ARCHIVE" })
+                        }}
+                        className="min-h-[44px] border-2 border-foreground px-2 py-1 font-mono text-[10px] font-bold uppercase transition-colors hover:bg-foreground hover:text-background group-hover:border-white group-hover:text-white"
+                        title={t("library.inboxAction.archive", "ARCHIVE")}
+                        type="button"
+                        disabled={activate.isPending || inboxDecision.isPending}
+                      >
+                        {inboxDecision.isPending &&
+                        inboxDecision.variables?.id === record.id &&
+                        inboxDecision.variables?.decisionType === "ARCHIVE" ? (
+                          <LoadingDots />
+                        ) : (
+                          t("library.inboxAction.archive", "ARCHIVE")
+                        )}
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
 
                 <Link href={`/records/${record.id}`} className="flex-1 overflow-hidden flex flex-col">
@@ -786,6 +885,7 @@ export default function LibraryPage() {
           ) : null}
 
           {records.error ? <ErrorState message={records.error.message} onRetry={() => records.refetch()} /> : null}
+          {inboxDecision.error ? <ErrorState message={inboxDecision.error.message} onRetry={() => inboxDecision.reset()} /> : null}
           {exportError ? (
             <ErrorState message={`${t("library.exportError", "EXPORT ERR")}: ${exportError}`} />
           ) : null}

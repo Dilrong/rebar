@@ -1,7 +1,8 @@
 "use client"
 
 import Link from "next/link"
-import { useMemo, useState } from "react"
+import { useSearchParams } from "next/navigation"
+import { useEffect, useMemo, useState } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Search } from "lucide-react"
 import AuthGate from "@shared/auth/auth-gate"
@@ -15,8 +16,14 @@ import { ErrorState } from "@shared/ui/error-state"
 import { Skeleton } from "@shared/ui/skeleton"
 import { stripMarkdown } from "@feature-lib/content/strip-markdown"
 
+type SearchResultRow = RecordRow & {
+  semantic_score?: number
+  semantic_matches?: string[]
+}
+
 type SearchResponse = {
-  data: RecordRow[]
+  data: SearchResultRow[]
+  semantic?: boolean
 }
 
 type TagsResponse = {
@@ -25,11 +32,41 @@ type TagsResponse = {
 
 export default function SearchPage() {
   const { t } = useI18n()
+  const searchParams = useSearchParams()
   const [q, setQ] = useState("")
   const [state, setState] = useState("")
   const [tagId, setTagId] = useState("")
   const [fromDate, setFromDate] = useState("")
   const [toDate, setToDate] = useState("")
+  const [semantic, setSemantic] = useState(false)
+
+  useEffect(() => {
+    const queryQ = searchParams.get("q")
+    const queryState = searchParams.get("state")
+    const queryTag = searchParams.get("tag_id")
+    const queryFrom = searchParams.get("from")
+    const queryTo = searchParams.get("to")
+    const querySemantic = searchParams.get("semantic")
+
+    if (queryQ) {
+      setQ(queryQ)
+    }
+    if (queryState) {
+      setState(queryState)
+    }
+    if (queryTag) {
+      setTagId(queryTag)
+    }
+    if (queryFrom) {
+      setFromDate(queryFrom)
+    }
+    if (queryTo) {
+      setToDate(queryTo)
+    }
+    if (querySemantic === "1" || querySemantic?.toLowerCase() === "true") {
+      setSemantic(true)
+    }
+  }, [searchParams])
 
   const tags = useQuery({
     queryKey: ["tags"],
@@ -44,8 +81,9 @@ export default function SearchPage() {
     if (tagId) params.set("tag_id", tagId)
     if (fromDate) params.set("from", fromDate)
     if (toDate) params.set("to", toDate)
+    if (semantic) params.set("semantic", "1")
     return params.toString()
-  }, [q, state, tagId, fromDate, toDate])
+  }, [q, state, tagId, fromDate, toDate, semantic])
 
   const result = useQuery({
     queryKey: ["search", queryString],
@@ -132,6 +170,24 @@ export default function SearchPage() {
                 </div>
               </div>
             </div>
+            <div className="mt-3 flex flex-wrap items-center gap-2 border-t-2 border-foreground pt-3">
+              <button
+                type="button"
+                onClick={() => setSemantic((prev) => !prev)}
+                className={`min-h-[44px] border-2 px-3 py-2 font-mono text-xs font-bold uppercase transition-colors ${
+                  semantic
+                    ? "border-accent bg-accent text-white"
+                    : "border-foreground bg-background text-foreground hover:bg-foreground hover:text-background"
+                }`}
+              >
+                {semantic ? t("search.semanticOn", "SEMANTIC ON") : t("search.semanticOff", "SEMANTIC OFF")}
+              </button>
+              {semantic ? (
+                <p className="font-mono text-[10px] font-bold uppercase text-muted-foreground">
+                  {t("search.semanticHint", "의미 기반 유사도 우선으로 결과를 정렬합니다")}
+                </p>
+              ) : null}
+            </div>
           </section>
 
           {result.isFetching ? (
@@ -171,9 +227,19 @@ export default function SearchPage() {
                     {getStateLabel(record.state, t)}
                   </span>
                 </div>
+                {semantic && typeof record.semantic_score === "number" ? (
+                  <p className="mb-2 font-mono text-[10px] font-bold uppercase text-accent">
+                    {t("search.semanticScore", "SEMANTIC SCORE")}: {record.semantic_score.toFixed(2)}
+                  </p>
+                ) : null}
                 <p className="font-bold text-lg leading-tight line-clamp-5 flex-1">
                   {stripMarkdown(record.content)}
                 </p>
+                {semantic && record.semantic_matches && record.semantic_matches.length > 0 ? (
+                  <p className="mt-2 font-mono text-[10px] font-bold uppercase text-muted-foreground line-clamp-1">
+                    {t("search.semanticMatches", "MATCHES")}: {record.semantic_matches.join(", ")}
+                  </p>
+                ) : null}
                 {record.source_title ? (
                   <p className="mt-3 font-mono text-[10px] uppercase font-bold text-muted-foreground group-hover:text-background/70 truncate">
                     REF: {record.source_title}

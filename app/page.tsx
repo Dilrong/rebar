@@ -5,6 +5,7 @@ import { Terminal, Database, CheckSquare } from "lucide-react"
 import { useI18n } from "@app-shared/i18n/i18n-provider"
 import { useQuery } from "@tanstack/react-query"
 import { apiFetch } from "@/lib/client-http"
+import { useEffect, useMemo, useState } from "react"
 
 type ReviewStatsResponse = {
   today_reviewed: number
@@ -14,8 +15,27 @@ type ReviewStatsResponse = {
   total_records: number
 }
 
+type ReviewHistoryResponse = {
+  data: Array<{ id: string }>
+}
+
+type RecordsResponse = {
+  total: number
+}
+
+const ONBOARDING_DISMISS_KEY = "rebar.onboarding.dismissed"
+
 export default function HomePage() {
   const { t } = useI18n()
+  const [onboardingDismissed, setOnboardingDismissed] = useState(false)
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return
+    }
+
+    setOnboardingDismissed(window.localStorage.getItem(ONBOARDING_DISMISS_KEY) === "1")
+  }, [])
 
   const stats = useQuery({
     queryKey: ["review-stats-home"],
@@ -24,8 +44,58 @@ export default function HomePage() {
     retry: false
   })
 
+  const reviewHistory = useQuery({
+    queryKey: ["review-history-onboarding"],
+    queryFn: () => apiFetch<ReviewHistoryResponse>("/api/review/history?limit=1"),
+    staleTime: 1000 * 60,
+    retry: false,
+    enabled: stats.isSuccess && (stats.data?.total_records ?? 0) > 0
+  })
+
+  const inbox = useQuery({
+    queryKey: ["inbox-count-onboarding"],
+    queryFn: () => apiFetch<RecordsResponse>("/api/records?state=INBOX&limit=1"),
+    staleTime: 1000 * 30,
+    retry: false,
+    enabled: stats.isSuccess && (stats.data?.total_records ?? 0) > 0
+  })
+
   const remaining = stats.data?.today_remaining ?? null
   const streak = stats.data?.streak_days ?? null
+
+  const onboarding = useMemo(() => {
+    const hasCapture = (stats.data?.total_records ?? 0) > 0
+    const hasReview = (reviewHistory.data?.data.length ?? 0) > 0
+    const inboxRemaining = inbox.data?.total
+    const inboxClear = hasCapture && inboxRemaining === 0
+
+    const steps = [
+      { key: "capture", done: hasCapture, label: t("home.onboarding.stepCapture", "첫 캡처 1건 저장") },
+      { key: "review", done: hasReview, label: t("home.onboarding.stepReview", "첫 리뷰 1회 처리") },
+      {
+        key: "inbox",
+        done: inboxClear,
+        label: t("home.onboarding.stepInbox", "INBOX 0개 만들기")
+      }
+    ]
+
+    const doneCount = steps.filter((step) => step.done).length
+    const show = stats.isSuccess && !onboardingDismissed && doneCount < steps.length
+
+    return {
+      show,
+      steps,
+      doneCount,
+      total: steps.length
+    }
+  }, [inbox.data?.total, onboardingDismissed, reviewHistory.data?.data.length, stats.data?.total_records, stats.isSuccess, t])
+
+  const dismissOnboarding = () => {
+    setOnboardingDismissed(true)
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(ONBOARDING_DISMISS_KEY, "1")
+    }
+  }
 
   return (
     <div className="min-h-screen flex flex-col p-6 bg-background font-sans">
@@ -39,6 +109,62 @@ export default function HomePage() {
             {t("home.subtitle", "SSOT // SYSTEM.READY")}
           </p>
         </header>
+
+        {onboarding.show ? (
+          <section className="border-4 border-foreground bg-card p-5 md:p-6 shadow-brutal">
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="font-black text-2xl uppercase">{t("home.onboarding.title", "2-MIN ONBOARDING")}</p>
+                <p className="font-mono text-[11px] font-bold uppercase text-muted-foreground">
+                  {t("home.onboarding.desc", "캡처 → 리뷰 → 인박스 정리까지 한 번에 완료")}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={dismissOnboarding}
+                className="min-h-[44px] border-2 border-foreground bg-background px-3 py-2 font-mono text-xs font-bold uppercase hover:bg-foreground hover:text-background"
+              >
+                {t("home.onboarding.dismiss", "닫기")}
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
+              {onboarding.steps.map((step) => (
+                <div
+                  key={step.key}
+                  className={`min-h-[44px] border-2 px-3 py-2 font-mono text-xs font-bold uppercase ${
+                    step.done
+                      ? "border-foreground bg-foreground text-background"
+                      : "border-foreground bg-background text-foreground"
+                  }`}
+                >
+                  <span className="mr-2">{step.done ? "[x]" : "[ ]"}</span>
+                  {step.label}
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-4 flex flex-col gap-3 border-t-2 border-foreground pt-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="font-mono text-xs font-bold uppercase text-muted-foreground">
+                {t("home.onboarding.progress", "진행률")}: {onboarding.doneCount}/{onboarding.total}
+              </p>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Link
+                  href="/capture"
+                  className="min-h-[44px] border-2 border-foreground bg-background px-4 py-2 font-mono text-xs font-bold uppercase hover:bg-foreground hover:text-background"
+                >
+                  {t("home.onboarding.goCapture", "캡처 열기")}
+                </Link>
+                <Link
+                  href="/review"
+                  className="min-h-[44px] border-2 border-foreground bg-accent px-4 py-2 font-mono text-xs font-bold uppercase text-white hover:bg-foreground"
+                >
+                  {t("home.onboarding.goReview", "리뷰 열기")}
+                </Link>
+              </div>
+            </div>
+          </section>
+        ) : null}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-12">
 
