@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { calcNextInterval, MAX_INTERVAL_DAYS } from "@/lib/review"
+import { calcNextInterval, MAX_INTERVAL_DAYS } from "@feature-lib/review/review"
 
 describe("calcNextInterval", () => {
   it("returns 1 when action is resurface", () => {

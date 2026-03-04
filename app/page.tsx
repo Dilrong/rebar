@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { Terminal, Database, CheckSquare } from "lucide-react"
-import { useI18n } from "@/components/i18n/i18n-provider"
+import { useI18n } from "@app-shared/i18n/i18n-provider"
 import { useQuery } from "@tanstack/react-query"
 import { apiFetch } from "@/lib/client-http"
 

@@ -21,6 +21,15 @@
     "paths": {
       "@/*": [
         "./*"
+      ],
+      "@shared/*": [
+        "./app/(features)/_shared/*"
+      ],
+      "@app-shared/*": [
+        "./app/_shared/*"
+      ],
+      "@feature-lib/*": [
+        "./lib/features/*"
       ]
     },
     "plugins": [
@@ -37,6 +46,7 @@
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    ".next/dev/types/**"
   ]
 }

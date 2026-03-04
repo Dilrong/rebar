@@ -58,7 +58,7 @@ vi.mock("@/lib/supabase-admin", () => ({
   getSupabaseAdmin: () => createSupabaseMock()
 }))
 
-import { processIngest, resolveContent, resolveKind } from "@/lib/ingest"
+import { processIngest, resolveContent, resolveKind } from "@feature-lib/capture/ingest"
 import { sha256 } from "@/lib/hash"
 
 describe("resolveContent", () => {

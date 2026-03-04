@@ -1,4 +1,4 @@
-import { PageLoading } from "@/components/ui/loading"
+import { PageLoading } from "@shared/ui/loading"
 
 export default function Loading() {
   return <PageLoading />

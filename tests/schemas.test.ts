@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { CreateRecordSchema, ReviewRecordSchema, isValidStateTransition, type RecordState } from "@/lib/schemas"
+import { CreateRecordSchema, ReviewRecordSchema, TriageDecisionSchema, isValidStateTransition, type RecordState } from "@/lib/schemas"
 
 describe("isValidStateTransition", () => {
   it("allows all defined valid transitions", () => {
@@ -66,6 +66,28 @@ describe("ReviewRecordSchema", () => {
 
   it("accepts snooze_days with resurface action", () => {
     const parsed = ReviewRecordSchema.safeParse({ action: "resurface", snooze_days: 3 })
+    expect(parsed.success).toBe(true)
+  })
+})
+
+describe("TriageDecisionSchema", () => {
+  it("accepts ARCHIVE without extra fields", () => {
+    const parsed = TriageDecisionSchema.safeParse({ decisionType: "ARCHIVE" })
+    expect(parsed.success).toBe(true)
+  })
+
+  it("requires actionType for ACT", () => {
+    const parsed = TriageDecisionSchema.safeParse({ decisionType: "ACT" })
+    expect(parsed.success).toBe(false)
+  })
+
+  it("requires deferReason for DEFER", () => {
+    const parsed = TriageDecisionSchema.safeParse({ decisionType: "DEFER" })
+    expect(parsed.success).toBe(false)
+  })
+
+  it("accepts DEFER with reason", () => {
+    const parsed = TriageDecisionSchema.safeParse({ decisionType: "DEFER", deferReason: "NO_TIME" })
     expect(parsed.success).toBe(true)
   })
 })

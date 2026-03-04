@@ -19,7 +19,7 @@ vi.mock("@/lib/supabase-admin", () => ({
   })
 }))
 
-import { GET } from "@/app/api/records/route"
+import { routeGetRecords as GET } from "./helpers/routes"
 
 describe("GET /api/records", () => {
   beforeEach(() => {

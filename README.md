@@ -31,7 +31,57 @@ pnpm dev
 
 ## Architecture
 
-상세 아키텍처는 `docs/rebar-architecture.md` 참고.
+상세 아키텍처는 `docs/architecture.md` 참고.
+
+## Project Structure
+
+Feature-first 구조로 정리되어 있으며, URL은 유지하면서 내부 폴더만 기능 단위로 그룹화했다.
+
+```text
+app/
+  (features)/
+    _shared/                 # feature 공용 UI/Auth/Layout
+    capture/
+    review/
+    library/
+    records/
+    search/
+    settings/
+    share/
+  (auth)/
+    signup/
+  _shared/
+    i18n/                    # app 전역 provider
+  api/
+    (capture)/capture/*
+    (records)/records/*
+    (review)/review/*
+    (tags)/tags/*
+    (search)/search/*
+    (export)/export/*
+    (jobs)/ingest-jobs/*
+    (ops)/cron/*
+    (auth)/auth/*
+    (mcp)/mcp/*
+
+lib/
+  features/
+    capture/ingest.ts
+    review/review.ts
+    settings/preferences.ts
+    content/strip-markdown.ts
+  ...shared core libs (auth, http, rate-limit, schemas, supabase-*)
+```
+
+### Development Rules
+
+- Feature UI/Auth/Layout 공용 컴포넌트: `@shared/*` (`app/(features)/_shared/*`)
+- App 전역 Provider/공통 컨텍스트: `@app-shared/*` (`app/_shared/*`)
+- Feature 로직 라이브러리: `@feature-lib/*` (`lib/features/*`)
+- Feature 내부 `_components`는 절대경로 대신 상대경로 import 사용
+- `@/components/*`, `@/app/_shared/*`, `@/app/(features)/_shared/*`, `@/lib/features/*` 직접 경로 import 금지 (eslint 규칙 적용)
+- `app/(features)/{feature}` 내부에서 다른 feature UI(`@/app/(features)/other/*`) 직접 import 금지
+- `app/(features)/{feature}` 내부에서 feature lib는 **같은 feature 경로와 `@feature-lib/content/*`만 허용** (그 외 cross-feature lib 금지)
 
 **핵심 플로우**:
 ```
@@ -129,14 +179,13 @@ Preview shows total rows, importable rows, and Readwise format detection.
 ## Chrome Extension (MVP)
 
 - Path: `extension/`
-- Guide: `docs/chrome-extension.md`
+- Guide: `docs/architecture.md` (Extension Integration Architecture 섹션)
 - Supports: highlight/article clipping with direct save via authenticated session
 
 Extension does not require API key/user ID input. It sends clips to `/api/capture/share` and relies on your normal REBAR login session.
 
 ## Docs
 
-- `docs/rebar-architecture.md` — Full architecture + roadmap
-- `docs/improvements.md` — 구체적 개선 사항 (버그, 성능, 보안, UX)
-- `docs/design_system.md` — Industrial Brutalism design specs
-- `docs/chrome-extension.md` — Extension setup guide
+- `docs/project_context.md` — 프로젝트 목적, 원칙, 범위, 우선순위
+- `docs/architecture.md` — 시스템/데이터/API/인증 아키텍처
+- `docs/session_context.md` — 최근 반영 내역, 리스크, 다음 액션

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest"
-import { POST } from "@/app/api/cron/records/cleanup/route"
+import { routePostCronCleanup as POST } from "./helpers/routes"
 
 const PREV_ENV = { ...process.env }
 

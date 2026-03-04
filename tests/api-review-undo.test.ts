@@ -46,7 +46,7 @@ vi.mock("@/lib/supabase-admin", () => ({
   })
 }))
 
-import { POST } from "@/app/api/review/[id]/undo/route"
+import { routePostReviewUndo as POST } from "./helpers/routes"
 
 describe("POST /api/review/:id/undo", () => {
   beforeEach(() => {

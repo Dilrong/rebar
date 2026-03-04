@@ -38,7 +38,7 @@ vi.mock("@/lib/supabase-admin", () => ({
   })
 }))
 
-import { POST } from "@/app/api/records/bulk/tags/route"
+import { routePostRecordsBulkTags as POST } from "./helpers/routes"
 
 describe("POST /api/records/bulk/tags", () => {
   beforeEach(() => {

@@ -31,7 +31,7 @@ vi.mock("@/lib/supabase-admin", () => ({
   })
 }))
 
-import { GET, POST } from "@/app/api/tags/route"
+import { routeGetTags as GET, routePostTags as POST } from "./helpers/routes"
 
 describe("/api/tags", () => {
   beforeEach(() => {

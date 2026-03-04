@@ -7,7 +7,7 @@ vi.mock("@/lib/cron", () => ({
   verifyCronRequest: (headers: Headers) => verifyCronRequestMock(headers)
 }))
 
-vi.mock("@/lib/ingest", () => ({
+vi.mock("@feature-lib/capture/ingest", () => ({
   IngestPayloadSchema: {
     safeParse: (payload: unknown) => ({ success: true, data: payload })
   },
@@ -62,7 +62,7 @@ vi.mock("@/lib/supabase-admin", () => {
   }
 })
 
-import { POST } from "@/app/api/cron/run/route"
+import { routePostCronRun as POST } from "./helpers/routes"
 
 describe("POST /api/cron/run", () => {
   beforeEach(() => {

@@ -12,6 +12,10 @@ export const RecordStateSchema = z.enum([
 
 export const ReviewActionSchema = z.enum(["reviewed", "resurface"])
 
+export const TriageDecisionTypeSchema = z.enum(["ARCHIVE", "ACT", "DEFER"])
+export const TriageActionTypeSchema = z.enum(["EXPERIMENT", "SHARE", "TODO"])
+export const TriageDeferReasonSchema = z.enum(["NEED_INFO", "LOW_CONFIDENCE", "NO_TIME"])
+
 export const CreateRecordSchema = z
   .object({
     kind: RecordKindSchema,
@@ -55,12 +59,65 @@ export const ReviewRecordSchema = z.object({
   }
 })
 
+export const TriageDecisionSchema = z
+  .object({
+    decisionType: TriageDecisionTypeSchema,
+    actionType: TriageActionTypeSchema.optional(),
+    deferReason: TriageDeferReasonSchema.optional(),
+    snooze_days: z.number().int().min(1).max(30).optional()
+  })
+  .superRefine((value, ctx) => {
+    if (value.decisionType === "ACT" && !value.actionType) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["actionType"],
+        message: "actionType is required when decisionType is ACT"
+      })
+    }
+
+    if (value.decisionType !== "ACT" && value.actionType) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["actionType"],
+        message: "actionType is only valid when decisionType is ACT"
+      })
+    }
+
+    if (value.decisionType === "DEFER" && !value.deferReason) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["deferReason"],
+        message: "deferReason is required when decisionType is DEFER"
+      })
+    }
+
+    if (value.decisionType !== "DEFER" && value.deferReason) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["deferReason"],
+        message: "deferReason is only valid when decisionType is DEFER"
+      })
+    }
+
+    if (value.snooze_days && value.decisionType !== "DEFER") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["snooze_days"],
+        message: "snooze_days is only valid when decisionType is DEFER"
+      })
+    }
+  })
+
 export type RecordKind = z.infer<typeof RecordKindSchema>
 export type RecordState = z.infer<typeof RecordStateSchema>
 export type ReviewAction = z.infer<typeof ReviewActionSchema>
+export type TriageDecisionType = z.infer<typeof TriageDecisionTypeSchema>
+export type TriageActionType = z.infer<typeof TriageActionTypeSchema>
+export type TriageDeferReason = z.infer<typeof TriageDeferReasonSchema>
 export type CreateRecordInput = z.infer<typeof CreateRecordSchema>
 export type UpdateRecordInput = z.infer<typeof UpdateRecordSchema>
 export type ReviewRecordInput = z.infer<typeof ReviewRecordSchema>
+export type TriageDecisionInput = z.infer<typeof TriageDecisionSchema>
 
 const AllowedTransitions: Readonly<Record<RecordState, readonly RecordState[]>> = {
   INBOX: ["ACTIVE", "TRASHED"],

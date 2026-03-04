@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "lint": "eslint . --ext .ts,.tsx --max-warnings=0",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
@@ -31,7 +32,9 @@
     "@types/node": "20.17.19",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
+    "@typescript-eslint/parser": "^8.56.1",
     "autoprefixer": "10.4.20",
+    "eslint": "^10.0.2",
     "postcss": "8.5.3",
     "tailwindcss": "3.4.17",
     "typescript": "5.7.3",

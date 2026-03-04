@@ -50,4 +50,7 @@ export type ReviewLogRow = {
   prev_due_at: string | null
   prev_review_count: number | null
   prev_last_reviewed_at: string | null
+  decision_type: "ARCHIVE" | "ACT" | "DEFER" | null
+  action_type: "EXPERIMENT" | "SHARE" | "TODO" | null
+  defer_reason: "NEED_INFO" | "LOW_CONFIDENCE" | "NO_TIME" | null
 }
