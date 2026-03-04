@@ -12,7 +12,7 @@ export default function ProjectsPage() {
   return (
     <div className="min-h-screen p-6 bg-background font-sans selection:bg-accent selection:text-white">
       <AuthGate>
-        <main className="max-w-4xl mx-auto animate-fade-in-up pb-24">
+        <main className="max-w-5xl mx-auto animate-fade-in-up pb-24">
           <AppNav />
 
           <section className="mt-8 border-4 border-foreground bg-card p-6 md:p-8 shadow-brutal">

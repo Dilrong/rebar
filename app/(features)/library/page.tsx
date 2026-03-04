@@ -430,7 +430,7 @@ export default function LibraryPage() {
   return (
     <div className="min-h-screen p-6 bg-background font-sans selection:bg-accent selection:text-white">
       <AuthGate>
-        <main className="max-w-6xl mx-auto animate-fade-in-up pb-24">
+        <main className="max-w-5xl mx-auto animate-fade-in-up pb-24">
           <AppNav />
 
           <header className="mb-6 md:mb-8 flex flex-col md:flex-row md:items-end justify-between border-b-[3px] md:border-b-4 border-foreground pb-3 md:pb-4 gap-3 md:gap-4">

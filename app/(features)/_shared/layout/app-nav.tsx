@@ -12,7 +12,7 @@ import { getStartPagePreference } from "@feature-lib/settings/preferences"
 import { useQuery } from "@tanstack/react-query"
 import { apiFetch } from "@/lib/client-http"
 
-const NAV_LINKS = ["capture", "review", "library", "search"] as const
+const NAV_LINKS = ["capture", "review", "library"] as const
 
 type SyncHealthResponse = {
   authenticated: boolean
@@ -41,7 +41,6 @@ export default function AppNav() {
   const [mounted, setMounted] = useState(false)
   const [authEmail, setAuthEmail] = useState<string | null>(null)
   const [authError, setAuthError] = useState<string | null>(null)
-  const [pending, setPending] = useState(false)
   const [homeHref, setHomeHref] = useState("/")
   const [quickOpen, setQuickOpen] = useState(false)
   const [quickQuery, setQuickQuery] = useState("")
@@ -205,22 +204,6 @@ export default function AppNav() {
     setHomeHref(getStartPagePreference())
   }, [])
 
-  const handleSignOut = async () => {
-    setPending(true)
-    setAuthError(null)
-    try {
-      const supabase = getSupabaseBrowser()
-      const { error } = await supabase.auth.signOut()
-
-      if (error) {
-        setAuthError(error.message)
-      }
-    } catch (error) {
-      setAuthError(error instanceof Error ? error.message : "Logout failed")
-    } finally {
-      setPending(false)
-    }
-  }
 
   const handleQuickInputKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
     if (!quickResults.length) {
@@ -307,24 +290,13 @@ export default function AppNav() {
           </button>
 
           {authEmail ? (
-            <>
-              <Link
-                href="/settings"
-                title={authEmail}
-                className="min-h-[40px] min-w-[40px] flex items-center justify-center border-2 border-transparent text-muted-foreground hover:border-foreground hover:text-foreground hover:shadow-brutal-sm hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all"
-              >
-                <User className="h-5 w-5" strokeWidth={2.5} />
-              </Link>
-              <button
-                type="button"
-                onClick={handleSignOut}
-                disabled={pending}
-                className="min-h-[40px] min-w-[40px] flex items-center justify-center border-2 border-transparent text-muted-foreground hover:border-foreground hover:text-foreground hover:shadow-brutal-sm hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all"
-                title={t("nav.logout")}
-              >
-                <LogOut className="h-5 w-5" strokeWidth={2.5} />
-              </button>
-            </>
+            <Link
+              href="/settings"
+              title={authEmail}
+              className="min-h-[40px] min-w-[40px] flex items-center justify-center border-2 border-transparent text-muted-foreground hover:border-foreground hover:text-foreground hover:shadow-brutal-sm hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all"
+            >
+              <User className="h-5 w-5" strokeWidth={2.5} />
+            </Link>
           ) : (
             <Link
               href="/signup"

@@ -20,6 +20,22 @@ export default function SettingsPage() {
   const [startPage, setStartPage] = useState<StartPage>("/library")
   const [origin, setOrigin] = useState("http://localhost:3000")
   const [copied, setCopied] = useState(false)
+  const [pendingLogout, setPendingLogout] = useState(false)
+  const [authError, setAuthError] = useState<string | null>(null)
+
+  const handleSignOut = async () => {
+    setPendingLogout(true)
+    setAuthError(null)
+    try {
+      const supabase = getSupabaseBrowser()
+      const { error } = await supabase.auth.signOut()
+      if (error) setAuthError(error.message)
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : "Logout failed")
+    } finally {
+      setPendingLogout(false)
+    }
+  }
 
   useEffect(() => {
     const supabase = getSupabaseBrowser()
@@ -52,14 +68,14 @@ export default function SettingsPage() {
 
   return (
     <AuthGate>
-      <ProtectedPageShell mainClassName="max-w-3xl">
+      <ProtectedPageShell mainClassName="max-w-5xl">
         <header className="mb-8 border-b-4 border-foreground pb-4">
           <h1 className="font-black text-5xl uppercase text-foreground leading-none">{t("settings.title", "SETTINGS")}</h1>
         </header>
 
         <section className="mb-6 border-4 border-foreground bg-card p-5">
           <h2 className="mb-4 border-b-2 border-foreground pb-2 font-black text-2xl uppercase">{t("settings.account", "ACCOUNT")}</h2>
-          <div className="space-y-2 font-mono text-sm">
+          <div className="space-y-2 font-mono text-sm mb-4">
             <p>
               <span className="font-bold">{t("settings.email", "Email")}: </span>
               {account.email ?? "-"}
@@ -69,6 +85,15 @@ export default function SettingsPage() {
               {account.createdAt ? new Date(account.createdAt).toLocaleString() : "-"}
             </p>
           </div>
+          {authError && <p className="mb-2 font-mono text-xs font-bold text-destructive">{authError}</p>}
+          <button
+            type="button"
+            onClick={handleSignOut}
+            disabled={pendingLogout}
+            className="border-2 border-destructive bg-background px-4 py-2 font-mono text-xs font-bold uppercase text-destructive hover:bg-destructive hover:text-white transition-colors"
+          >
+            {pendingLogout ? "LOGGING OUT..." : t("nav.logout", "LOGOUT")}
+          </button>
         </section>
 
         <section className="border-4 border-foreground bg-card p-5">

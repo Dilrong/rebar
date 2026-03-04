@@ -100,6 +100,21 @@ export async function GET(request: NextRequest) {
 
   let filteredRecordIds: string[] | null = null
   if (tagIdParam) {
+    const ownedTag = await supabase
+      .from("tags")
+      .select("id")
+      .eq("id", tagIdParam)
+      .eq("user_id", userId)
+      .maybeSingle()
+
+    if (ownedTag.error) {
+      return fail(ownedTag.error.message, 500)
+    }
+
+    if (!ownedTag.data) {
+      return ok({ data: [], total: 0 })
+    }
+
     const tagged = await supabase.from("record_tags").select("record_id").eq("tag_id", tagIdParam)
     if (tagged.error) return fail(tagged.error.message, 500)
     filteredRecordIds = tagged.data.map((r) => r.record_id)
@@ -139,7 +154,7 @@ export async function GET(request: NextRequest) {
       if (useTextSearch) {
         runnable = runnable.textSearch("fts", qParam, { type: "plain", config: "simple" })
       } else {
-        const escaped = qParam.replace(/,/g, "")
+        const escaped = qParam.replace(/[\\%_]/g, "\\$&").replace(/,/g, "")
         runnable = runnable.or(`content.ilike.%${escaped}%,source_title.ilike.%${escaped}%`)
       }
     }

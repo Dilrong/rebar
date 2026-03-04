@@ -99,7 +99,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen flex flex-col p-4 md:p-6 bg-background font-sans">
-      <main className="max-w-4xl w-full mx-auto mt-8 md:mt-24 space-y-8 md:space-y-12 animate-fade-in-up">
+      <main className="max-w-5xl w-full mx-auto mt-8 md:mt-24 space-y-8 md:space-y-12 animate-fade-in-up">
 
         <header className="space-y-4 md:space-y-6 border-l-4 md:border-l-8 border-accent pl-4 md:pl-6 py-2">
           <h1 className="font-black text-5xl sm:text-6xl md:text-8xl tracking-tighter uppercase text-foreground leading-[0.9] break-words">
@@ -133,8 +133,8 @@ export default function HomePage() {
                 <div
                   key={step.key}
                   className={`min-h-[44px] border-2 px-3 py-2 font-mono text-xs font-bold uppercase ${step.done
-                      ? "border-foreground bg-foreground text-background"
-                      : "border-foreground bg-background text-foreground"
+                    ? "border-foreground bg-foreground text-background"
+                    : "border-foreground bg-background text-foreground"
                     }`}
                 >
                   <span className="mr-2">{step.done ? "[x]" : "[ ]"}</span>

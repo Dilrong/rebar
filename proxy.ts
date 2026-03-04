@@ -1,44 +1,14 @@
 import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
-
-const ALLOWED_ORIGINS: string[] = (() => {
-  const origins: string[] = []
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-
-  if (siteUrl) origins.push(siteUrl.replace(/\/+$/, ""))
-  if (supabaseUrl) origins.push(supabaseUrl.replace(/\/+$/, ""))
-
-  if (process.env.NODE_ENV === "development") {
-    origins.push("http://localhost:3000")
-  }
-
-  return origins
-})()
-
-function isAllowedOrigin(request: NextRequest, origin: string | null): boolean {
-  if (!origin) return true // same-origin or curl
-  if (origin.startsWith("chrome-extension://")) return true
-
-  try {
-    const originUrl = new URL(origin)
-    const host = request.headers.get("host")
-    if (host && originUrl.host === host) {
-      return true
-    }
-  } catch {
-    // ignore invalid URL
-  }
-
-  return ALLOWED_ORIGINS.some((allowed) => origin === allowed)
-}
+import { isAllowedOrigin } from "@/lib/security/origin"
 
 export async function proxy(request: NextRequest) {
   const origin = request.headers.get("origin")
+  const host = request.headers.get("host")
 
   // ── CORS Preflight ──
   if (request.method === "OPTIONS") {
-    if (!isAllowedOrigin(request, origin)) {
+    if (!isAllowedOrigin(origin, host)) {
       return new NextResponse(null, { status: 403 })
     }
     return new NextResponse(null, {
@@ -54,7 +24,7 @@ export async function proxy(request: NextRequest) {
   }
 
   // ── Origin check for mutating requests ──
-  if (origin && !isAllowedOrigin(request, origin) && request.method !== "GET") {
+  if (origin && !isAllowedOrigin(origin, host) && request.method !== "GET") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
@@ -89,7 +59,7 @@ export async function proxy(request: NextRequest) {
   }
 
   // ── Attach CORS headers on response ──
-  if (origin && isAllowedOrigin(request, origin)) {
+  if (origin && isAllowedOrigin(origin, host)) {
     supabaseResponse.headers.set("Access-Control-Allow-Origin", origin)
     supabaseResponse.headers.set("Access-Control-Allow-Credentials", "true")
   }

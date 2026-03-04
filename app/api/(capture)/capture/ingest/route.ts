@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     return rateLimited(limitResult.retryAfterSec)
   }
 
-  const userId = await getUserId(request.headers)
+  const userId = await getUserId(request.headers, { allowIngestKey: true })
   if (!userId) {
     return fail("Unauthorized", 401)
   }

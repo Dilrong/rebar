@@ -177,6 +177,21 @@ export async function GET(request: NextRequest) {
   let filteredRecordIds: string[] | null = null
 
   if (tagId) {
+    const ownedTag = await supabase
+      .from("tags")
+      .select("id")
+      .eq("id", tagId)
+      .eq("user_id", userId)
+      .maybeSingle()
+
+    if (ownedTag.error) {
+      return fail(ownedTag.error.message, 500)
+    }
+
+    if (!ownedTag.data) {
+      return ok({ data: [] })
+    }
+
     const tagged = await supabase
       .from("record_tags")
       .select("record_id")

@@ -1,38 +1,21 @@
 import { timingSafeEqual } from "node:crypto"
 import { z } from "zod"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
+import { isAllowedOrigin } from "@/lib/security/origin"
 
 const UserIdSchema = z.string().uuid()
 
-const ALLOWED_ORIGINS: string[] = (() => {
-  const origins: string[] = []
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-
-  if (siteUrl) origins.push(siteUrl.replace(/\/+$/, ""))
-  if (supabaseUrl) origins.push(supabaseUrl.replace(/\/+$/, ""))
-
-  // Development origins
-  if (process.env.NODE_ENV === "development") {
-    origins.push("http://localhost:3000")
-  }
-
-  return origins
-})()
-
 export function isValidOrigin(headers: Headers): boolean {
   const origin = headers.get("origin")
-
-  // No Origin header — same-origin request or non-browser client (API key etc.)
-  if (!origin) return true
-
-  // chrome-extension:// origins are always allowed (our extension)
-  if (origin.startsWith("chrome-extension://")) return true
-
-  return ALLOWED_ORIGINS.some((allowed) => origin === allowed)
+  const host = headers.get("host")
+  return isAllowedOrigin(origin, host)
 }
 
-export async function getUserId(headers: Headers): Promise<string | null> {
+type GetUserIdOptions = {
+  allowIngestKey?: boolean
+}
+
+export async function getUserId(headers: Headers, options: GetUserIdOptions = {}): Promise<string | null> {
   const authHeader = headers.get("authorization") ?? ""
 
   // Path 1: Bearer token (web app, explicit token)
@@ -56,7 +39,7 @@ export async function getUserId(headers: Headers): Promise<string | null> {
   const expectedKey = process.env.REBAR_INGEST_API_KEY
   const headerUserId = headers.get("x-user-id")
 
-  if (ingestKey && expectedKey && headerUserId) {
+  if (options.allowIngestKey && ingestKey && expectedKey && headerUserId) {
     const parsedHeaderUserId = UserIdSchema.safeParse(headerUserId)
     if (!parsedHeaderUserId.success) {
       return null

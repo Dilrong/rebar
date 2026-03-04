@@ -53,8 +53,19 @@ describe("getUserId", () => {
       "x-user-id": "33333333-3333-3333-3333-333333333333"
     })
 
-    const userId = await getUserId(headers)
+    const userId = await getUserId(headers, { allowIngestKey: true })
     expect(userId).toBe("33333333-3333-3333-3333-333333333333")
+  })
+
+  it("does not accept ingest key auth unless explicitly enabled", async () => {
+    process.env.REBAR_INGEST_API_KEY = "ingest-key"
+    const headers = new Headers({
+      "x-rebar-ingest-key": "ingest-key",
+      "x-user-id": "33333333-3333-3333-3333-333333333333"
+    })
+
+    const userId = await getUserId(headers)
+    expect(userId).toBeNull()
   })
 
   it("rejects invalid ingest key", async () => {
@@ -64,7 +75,7 @@ describe("getUserId", () => {
       "x-user-id": "33333333-3333-3333-3333-333333333333"
     })
 
-    const userId = await getUserId(headers)
+    const userId = await getUserId(headers, { allowIngestKey: true })
     expect(userId).toBeNull()
   })
 

@@ -315,7 +315,7 @@ export default function ReviewPage() {
   return (
     <div className="min-h-screen p-6 bg-background flex flex-col font-sans">
       <AuthGate>
-        <main className="max-w-3xl w-full mx-auto flex-1 flex flex-col animate-fade-in-up">
+        <main className="max-w-5xl w-full mx-auto flex-1 flex flex-col animate-fade-in-up">
           <AppNav />
 
           <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between border-4 border-foreground bg-card p-4 shadow-brutal gap-4">

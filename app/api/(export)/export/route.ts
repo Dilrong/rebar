@@ -87,6 +87,28 @@ export async function GET(request: NextRequest) {
   const supabase = getSupabaseAdmin()
   let recordIdsByTag: string[] | null = null
   if (tagIdParam) {
+    const ownedTag = await supabase
+      .from("tags")
+      .select("id")
+      .eq("id", tagIdParam)
+      .eq("user_id", userId)
+      .maybeSingle()
+
+    if (ownedTag.error) {
+      return fail(ownedTag.error.message, 500)
+    }
+
+    if (!ownedTag.data) {
+      const emptyContent = `# Rebar Export — ${new Date().toISOString().slice(0, 10)}\n`
+      return new Response(emptyContent, {
+        status: 200,
+        headers: {
+          "Content-Type": "text/markdown; charset=utf-8",
+          "Content-Disposition": `attachment; filename="rebar-export-${new Date().toISOString().slice(0, 10)}.md"`
+        }
+      })
+    }
+
     const links = await supabase
       .from("record_tags")
       .select("record_id")
@@ -198,27 +220,4 @@ export async function GET(request: NextRequest) {
     const obsidianNotes = records
       .map((record) => {
         const names = tagMap.get(record.id) ?? []
-        const frontmatter = toObsidianFrontmatter(record, names)
-        return `${frontmatter}${record.content}\n`
-      })
-      .join("\n")
-
-    const obsidianFilename = `rebar-obsidian-export-${today}.md`
-    return new Response(obsidianNotes, {
-      status: 200,
-      headers: {
-        "Content-Type": "text/markdown; charset=utf-8",
-        "Content-Disposition": `attachment; filename="${obsidianFilename}"`
-      }
-    })
-  }
-
-  const filename = `rebar-export-${today}.md`
-  return new Response(markdownContent, {
-    status: 200,
-    headers: {
-      "Content-Type": "text/markdown; charset=utf-8",
-      "Content-Disposition": `attachment; filename="${filename}"`
-    }
-  })
-}
+        const frontmatter = toObsidianFrontmatter(record,

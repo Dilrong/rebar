@@ -9,3 +9,4 @@ export { GET as routeGetReviewStats } from "@/app/api/(review)/review/stats/rout
 export { POST as routePostCronRun } from "@/app/api/(ops)/cron/run/route"
 export { POST as routePostCronCleanup } from "@/app/api/(ops)/cron/records/cleanup/route"
 export { GET as routeGetTags, POST as routePostTags } from "@/app/api/(tags)/tags/route"
+export { POST as routePostCaptureExtract } from "@/app/api/(capture)/capture/extract/route"

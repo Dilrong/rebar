@@ -588,7 +588,7 @@ export default function CapturePage() {
   return (
     <div className="min-h-screen flex flex-col p-6 bg-background font-sans selection:bg-accent selection:text-white">
       <AuthGate>
-        <main className="max-w-3xl w-full mx-auto animate-fade-in-up pb-24">
+        <main className="max-w-5xl w-full mx-auto animate-fade-in-up pb-24">
           <AppNav />
 
           <div className="border-[3px] md:border-4 border-foreground bg-card p-4 md:p-10 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.1)] md:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] md:dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.1)]">

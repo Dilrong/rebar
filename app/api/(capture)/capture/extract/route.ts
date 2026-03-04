@@ -1,4 +1,6 @@
 import { NextRequest } from "next/server"
+import { lookup } from "node:dns/promises"
+import { isIP } from "node:net"
 import { z } from "zod"
 import { getUserId } from "@/lib/auth"
 import { fail, ok, rateLimited } from "@/lib/http"
@@ -7,6 +9,70 @@ import { checkRateLimitDistributed, resolveClientKey } from "@/lib/rate-limit"
 const BodySchema = z.object({
   url: z.string().url()
 })
+
+function isPrivateIpv4(address: string): boolean {
+  const parts = address.split(".").map((part) => Number(part))
+  if (parts.length !== 4 || parts.some((part) => Number.isNaN(part) || part < 0 || part > 255)) {
+    return false
+  }
+
+  if (parts[0] === 10) return true
+  if (parts[0] === 127) return true
+  if (parts[0] === 0) return true
+  if (parts[0] === 169 && parts[1] === 254) return true
+  if (parts[0] === 192 && parts[1] === 168) return true
+  if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true
+
+  return false
+}
+
+function isPrivateIpv6(address: string): boolean {
+  const lowered = address.toLowerCase()
+  return lowered === "::1" || lowered.startsWith("fc") || lowered.startsWith("fd") || lowered.startsWith("fe80:")
+}
+
+function isPrivateIp(address: string): boolean {
+  const version = isIP(address)
+  if (version === 4) {
+    return isPrivateIpv4(address)
+  }
+  if (version === 6) {
+    return isPrivateIpv6(address)
+  }
+
+  return false
+}
+
+function isBlockedHostname(hostname: string): boolean {
+  const lowered = hostname.toLowerCase()
+
+  if (lowered === "localhost" || lowered.endsWith(".localhost")) {
+    return true
+  }
+
+  if (lowered.endsWith(".local") || lowered.endsWith(".internal")) {
+    return true
+  }
+
+  if (lowered === "metadata.google.internal" || lowered === "metadata") {
+    return true
+  }
+
+  return isPrivateIp(lowered)
+}
+
+async function resolvesToPrivateAddress(hostname: string): Promise<boolean> {
+  if (isBlockedHostname(hostname)) {
+    return true
+  }
+
+  try {
+    const records = await lookup(hostname, { all: true, verbatim: true })
+    return records.some((record) => isPrivateIp(record.address))
+  } catch {
+    return false
+  }
+}
 
 function pickMetaContent(html: string, name: string): string | null {
   const regex = new RegExp(
@@ -112,9 +178,19 @@ export async function POST(request: NextRequest) {
     return fail(parsed.error.issues[0]?.message ?? "Invalid payload", 400)
   }
 
+  const targetUrl = new URL(parsed.data.url)
+
+  if (targetUrl.protocol !== "http:" && targetUrl.protocol !== "https:") {
+    return fail("Only http/https URLs are allowed", 400)
+  }
+
+  if (await resolvesToPrivateAddress(targetUrl.hostname)) {
+    return fail("URL host is not allowed", 400)
+  }
+
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 10000)
-  const response = await fetch(parsed.data.url, {
+  const response = await fetch(targetUrl.toString(), {
     method: "GET",
     redirect: "follow",
     signal: controller.signal
@@ -126,7 +202,6 @@ export async function POST(request: NextRequest) {
   }
 
   const html = await response.text()
-  const targetUrl = new URL(parsed.data.url)
   const hostname = targetUrl.hostname.toLowerCase()
   const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i)
   const titleFromTag = decodeEntities(titleMatch?.[1]?.trim() ?? "")
