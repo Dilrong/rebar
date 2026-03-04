@@ -52,7 +52,7 @@ type UndoBufferEntry = {
 }
 
 const actionButtonClass =
-  "min-h-[44px] border-2 border-foreground px-2 font-mono text-xs font-bold uppercase transition-colors hover:bg-foreground hover:text-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+  "min-h-[44px] border-4 border-foreground px-2 font-mono text-xs font-bold uppercase transition-transform active:translate-y-[2px] active:translate-x-[2px] hover:bg-foreground hover:text-background focus-visible:outline-none focus-visible:ring-0 shadow-brutal-sm"
 
 export default function ReviewPage() {
   const { t } = useI18n()
@@ -325,7 +325,7 @@ export default function ReviewPage() {
             <div className="flex flex-wrap items-center gap-2">
               <Link
                 href="/review/history"
-                className="min-h-[44px] flex items-center justify-center font-mono text-xs font-bold uppercase border-2 border-foreground px-4 py-3 bg-background hover:bg-foreground hover:text-background shadow-brutal-sm transition-colors"
+                className="min-h-[44px] flex items-center justify-center font-mono text-xs font-bold uppercase border-4 border-foreground px-4 py-3 bg-background hover:bg-foreground hover:text-background shadow-brutal-sm transition-transform active:translate-y-[2px] active:translate-x-[2px]"
               >
                 {t("review.history", "HISTORY")}
               </Link>
@@ -384,7 +384,7 @@ export default function ReviewPage() {
                     onClick={() => mutation.mutate({ id: first.id, decisionType: "ARCHIVE" })}
                     disabled={mutation.isPending}
                     aria-label="보관"
-                    className="min-h-[64px] border-4 border-foreground bg-accent px-4 py-3 text-left text-white transition-colors hover:bg-foreground disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    className="min-h-[64px] border-4 border-foreground bg-accent px-4 py-3 text-left text-white transition-transform active:translate-y-[4px] active:translate-x-[4px] disabled:opacity-50 focus-visible:outline-none focus-visible:ring-0 shadow-brutal active:shadow-none hover:bg-foreground"
                   >
                     <span className="flex items-center gap-2 font-black text-base uppercase">
                       {mutation.isPending && mutation.variables?.decisionType === "ARCHIVE" ? <LoadingDots /> : <Archive className="h-5 w-5" />}
@@ -399,7 +399,7 @@ export default function ReviewPage() {
                     disabled={mutation.isPending}
                     aria-label={t("review.triage.act", "실행")}
                     aria-expanded={actExpanded}
-                    className="min-h-[64px] border-4 border-foreground bg-background px-4 py-3 text-left transition-colors hover:bg-muted disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    className={`min-h-[64px] border-4 border-foreground px-4 py-3 text-left transition-transform active:translate-y-[4px] active:translate-x-[4px] disabled:opacity-50 focus-visible:outline-none focus-visible:ring-0 shadow-brutal active:shadow-none ${actExpanded ? "bg-foreground text-background shadow-none translate-x-[4px] translate-y-[4px]" : "bg-background text-foreground hover:bg-foreground/10"}`}
                   >
                     <span className="flex items-center gap-2 font-black text-base uppercase">
                       <PlayCircle className="h-5 w-5" /> {t("review.triage.act", "실행")}
@@ -413,7 +413,7 @@ export default function ReviewPage() {
                     disabled={mutation.isPending}
                     aria-label={t("review.triage.defer", "보류")}
                     aria-expanded={deferExpanded}
-                    className="min-h-[64px] border-4 border-foreground bg-background px-4 py-3 text-left transition-colors hover:bg-muted disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    className={`min-h-[64px] border-4 border-foreground px-4 py-3 text-left transition-transform active:translate-y-[4px] active:translate-x-[4px] disabled:opacity-50 focus-visible:outline-none focus-visible:ring-0 shadow-brutal active:shadow-none ${deferExpanded ? "bg-foreground text-background shadow-none translate-x-[4px] translate-y-[4px]" : "bg-background text-foreground hover:bg-foreground/10"}`}
                   >
                     <span className="flex items-center gap-2 font-black text-base uppercase">
                       <PauseCircle className="h-5 w-5" /> {t("review.triage.defer", "보류")}
@@ -423,7 +423,7 @@ export default function ReviewPage() {
                 </div>
 
                 {actExpanded ? (
-                  <div className="mt-3 border-2 border-foreground bg-card p-3">
+                  <div className="mt-3 border-4 border-foreground bg-card p-3 shadow-brutal-sm">
                     <p className="font-mono text-xs font-bold uppercase text-muted-foreground">{t("review.triage.actSelect", "실행 타입 선택")}</p>
                     <div className="mt-2 grid grid-cols-3 gap-2">
                       <button
@@ -455,7 +455,7 @@ export default function ReviewPage() {
                 ) : null}
 
                 {deferExpanded ? (
-                  <div className="mt-3 border-2 border-foreground bg-card p-3">
+                  <div className="mt-3 border-4 border-foreground bg-card p-3 shadow-brutal-sm">
                     <p className="font-mono text-xs font-bold uppercase text-muted-foreground">{t("review.triage.deferSelect", "보류 이유 선택")}</p>
                     <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-3">
                       <button
@@ -492,7 +492,7 @@ export default function ReviewPage() {
                   <ErrorState message={mutation.error.message} />
                   <button
                     type="button"
-                    className="inline-flex min-h-[44px] items-center gap-2 border-2 border-foreground px-3 py-2 font-mono text-xs font-bold uppercase hover:bg-foreground hover:text-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    className="inline-flex min-h-[44px] items-center gap-2 border-4 border-foreground px-3 py-2 font-mono text-xs font-bold uppercase hover:bg-foreground hover:text-background focus-visible:outline-none focus-visible:ring-0 transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm"
                     onClick={() => {
                       mutation.reset()
                       today.refetch()

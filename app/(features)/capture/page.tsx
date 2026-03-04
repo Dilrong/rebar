@@ -602,11 +602,11 @@ export default function CapturePage() {
             </header>
 
             <section className="mb-6 border-b-4 border-foreground pb-0">
-              <div className="flex overflow-x-auto overflow-y-hidden flex-nowrap border-2 border-foreground bg-background hide-scrollbar">
+              <div className="flex overflow-x-auto overflow-y-hidden flex-nowrap border-4 border-foreground bg-background hide-scrollbar shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.1)] mb-4">
                 <button
                   type="button"
                   onClick={() => setImportMode("manual")}
-                  className={`min-h-[44px] flex-none px-4 py-2 text-center font-mono text-xs font-bold uppercase transition-colors border-r-2 border-foreground ${importMode === "manual" ? "bg-foreground text-background" : "text-foreground hover:bg-muted"
+                  className={`min-h-[44px] flex-none px-4 py-2 text-center font-mono text-xs font-bold uppercase transition-transform active:translate-y-[2px] active:translate-x-[2px] border-r-4 border-foreground ${importMode === "manual" ? "bg-foreground text-background" : "text-foreground hover:bg-foreground/10"
                     }`}
                 >
                   {t("capture.modeManual", "MANUAL")}
@@ -614,7 +614,7 @@ export default function CapturePage() {
                 <button
                   type="button"
                   onClick={() => setImportMode("url")}
-                  className={`min-h-[44px] flex-none px-4 py-2 text-center font-mono text-xs font-bold uppercase transition-colors border-r-2 border-foreground ${importMode === "url" ? "bg-foreground text-background" : "text-foreground hover:bg-muted"
+                  className={`min-h-[44px] flex-none px-4 py-2 text-center font-mono text-xs font-bold uppercase transition-transform active:translate-y-[2px] active:translate-x-[2px] border-r-4 border-foreground ${importMode === "url" ? "bg-foreground text-background" : "text-foreground hover:bg-foreground/10"
                     }`}
                 >
                   {t("capture.modeUrl", "URL")}
@@ -622,7 +622,7 @@ export default function CapturePage() {
                 <button
                   type="button"
                   onClick={() => setImportMode("batch")}
-                  className={`min-h-[44px] flex-none px-4 py-2 text-center font-mono text-xs font-bold uppercase transition-colors border-r-2 border-foreground ${importMode === "batch" ? "bg-foreground text-background" : "text-foreground hover:bg-muted"
+                  className={`min-h-[44px] flex-none px-4 py-2 text-center font-mono text-xs font-bold uppercase transition-transform active:translate-y-[2px] active:translate-x-[2px] border-r-4 border-foreground ${importMode === "batch" ? "bg-foreground text-background" : "text-foreground hover:bg-foreground/10"
                     }`}
                 >
                   {t("capture.modeBatch", "BATCH")}
@@ -630,7 +630,7 @@ export default function CapturePage() {
                 <button
                   type="button"
                   onClick={() => setImportMode("csv")}
-                  className={`min-h-[44px] flex-none px-4 py-2 text-center font-mono text-xs font-bold uppercase transition-colors border-r-2 border-foreground ${importMode === "csv" ? "bg-foreground text-background" : "text-foreground hover:bg-muted"
+                  className={`min-h-[44px] flex-none px-4 py-2 text-center font-mono text-xs font-bold uppercase transition-transform active:translate-y-[2px] active:translate-x-[2px] border-r-4 border-foreground ${importMode === "csv" ? "bg-foreground text-background" : "text-foreground hover:bg-foreground/10"
                     }`}
                 >
                   {t("capture.modeCsv", "CSV")}
@@ -638,7 +638,7 @@ export default function CapturePage() {
                 <button
                   type="button"
                   onClick={() => setImportMode("ocr")}
-                  className={`min-h-[44px] flex-none px-4 py-2 text-center font-mono text-xs font-bold uppercase transition-colors border-r-0 ${importMode === "ocr" ? "bg-foreground text-background" : "text-foreground hover:bg-muted"
+                  className={`min-h-[44px] flex-none px-4 py-2 text-center font-mono text-xs font-bold uppercase transition-transform active:translate-y-[2px] active:translate-x-[2px] ${importMode === "ocr" ? "bg-foreground text-background" : "text-foreground hover:bg-foreground/10"
                     }`}
                 >
                   {t("capture.modeOcr", "OCR")}
@@ -654,13 +654,13 @@ export default function CapturePage() {
                     value={externalUrl}
                     onChange={(event) => setExternalUrl(event.target.value)}
                     placeholder="https://..."
-                    className="min-h-[44px] w-full bg-background border-2 border-foreground text-foreground px-4 py-3 font-mono text-sm"
+                    className="min-h-[44px] w-full bg-background border-4 border-foreground text-foreground px-4 py-3 font-mono text-sm focus:outline-none focus:ring-0 shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] placeholder:text-muted-foreground/50 rounded-none transition-none"
                   />
                   <button
                     type="button"
                     onClick={() => extractMutation.mutate(externalUrl)}
                     disabled={!externalUrl || extractMutation.isPending}
-                    className="min-h-[44px] px-4 py-3 border-2 border-foreground font-mono text-xs font-bold uppercase bg-background text-foreground min-w-[100px] flex items-center justify-center hover:bg-foreground hover:text-background transition-colors"
+                    className="min-h-[44px] px-4 py-3 border-4 border-foreground font-mono text-xs font-bold uppercase bg-background text-foreground min-w-[100px] flex items-center justify-center hover:bg-foreground hover:text-background transition-all active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm"
                   >
                     {extractMutation.isPending ? <LoadingDots /> : t("capture.import", "IMPORT")}
                   </button>
@@ -683,14 +683,14 @@ export default function CapturePage() {
                   <div className="flex flex-wrap items-center gap-2">
                     <Link
                       href="/api/capture/ingest"
-                      className="min-h-[44px] flex items-center justify-center border border-foreground px-4 py-2 font-mono text-[10px] font-bold uppercase hover:bg-foreground hover:text-background transition-colors"
+                      className="min-h-[44px] flex items-center justify-center border-4 border-foreground px-4 py-2 font-mono text-[10px] font-bold uppercase hover:bg-foreground hover:text-background transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm"
                       target="_blank"
                     >
                       API
                     </Link>
                     <Link
                       href="/api/capture/guide"
-                      className="min-h-[44px] flex items-center justify-center border border-foreground px-4 py-2 font-mono text-[10px] font-bold uppercase hover:bg-foreground hover:text-background transition-colors"
+                      className="min-h-[44px] flex items-center justify-center border-4 border-foreground px-4 py-2 font-mono text-[10px] font-bold uppercase hover:bg-foreground hover:text-background transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm"
                       target="_blank"
                     >
                       {t("capture.guide", "GUIDE")}
@@ -705,7 +705,7 @@ export default function CapturePage() {
                     "capture.ingestPlaceholder",
                     '[{"content":"...","title":"...","url":"https://...","tags":["book","idea"]}]'
                   )}
-                  className="w-full bg-background border-2 border-foreground text-foreground p-3 font-mono text-xs"
+                  className="w-full bg-background border-4 border-foreground text-foreground p-3 font-mono text-xs focus:outline-none focus:ring-0 shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] rounded-none resize-y transition-none"
                 />
                 <div className="mt-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                   <p className="font-mono text-[10px] font-bold text-muted-foreground">
@@ -715,7 +715,7 @@ export default function CapturePage() {
                     type="button"
                     onClick={handleIngestSubmit}
                     disabled={!externalJson.trim() || ingestMutation.isPending}
-                    className="min-h-[44px] flex items-center justify-center border-2 border-foreground bg-background px-4 py-2 font-mono text-xs font-bold uppercase disabled:opacity-60 hover:bg-foreground hover:text-background transition-colors w-full sm:w-auto"
+                    className="min-h-[44px] flex items-center justify-center border-4 border-foreground bg-background px-4 py-2 font-mono text-xs font-bold uppercase disabled:opacity-60 hover:bg-foreground hover:text-background transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm w-full sm:w-auto"
                   >
                     {ingestMutation.isPending ? t("capture.ingesting", "IMPORTING...") : t("capture.ingestRun", "BATCH IMPORT")}
                   </button>
@@ -740,7 +740,7 @@ content-type: application/json
                     <p className="mb-3 font-mono text-[10px] font-bold uppercase">{t("capture.shareTitle", "SHARE WEBHOOK (KAKAO/TELEGRAM)")}</p>
                     <Link
                       href="/share"
-                      className="min-h-[44px] mb-4 inline-flex items-center justify-center border border-foreground px-4 py-2 font-mono text-[10px] font-bold uppercase hover:bg-foreground hover:text-background transition-colors"
+                      className="min-h-[44px] mb-4 inline-flex items-center justify-center border-4 border-foreground px-4 py-2 font-mono text-[10px] font-bold uppercase hover:bg-foreground hover:text-background transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm"
                     >
                       {t("capture.sharePage", "OPEN MOBILE SHARE PAGE")}
                     </Link>
@@ -762,7 +762,7 @@ content-type: application/json
                         type="button"
                         onClick={() => retryAllMutation.mutate()}
                         disabled={(ingestJobs.data?.total ?? 0) === 0 || retryAllMutation.isPending}
-                        className="min-h-[44px] flex items-center justify-center border-2 border-foreground bg-foreground px-4 py-2 font-mono text-[10px] font-bold uppercase text-background disabled:opacity-60 transition-colors"
+                        className="min-h-[44px] flex items-center justify-center border-4 border-foreground bg-foreground px-4 py-2 font-mono text-[10px] font-bold uppercase text-background disabled:opacity-60 transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm"
                       >
                         {t("capture.retryRun", "RETRY ALL")}
                       </button>
@@ -770,7 +770,7 @@ content-type: application/json
                         type="button"
                         onClick={() => clearRetryMutation.mutate()}
                         disabled={(ingestJobs.data?.total ?? 0) === 0 || clearRetryMutation.isPending}
-                        className="min-h-[44px] flex items-center justify-center border-2 border-foreground bg-background px-4 py-2 font-mono text-[10px] font-bold uppercase disabled:opacity-60 hover:bg-foreground hover:text-background transition-colors"
+                        className="min-h-[44px] flex items-center justify-center border-4 border-foreground bg-background px-4 py-2 font-mono text-[10px] font-bold uppercase disabled:opacity-60 hover:bg-foreground hover:text-background transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm"
                       >
                         {t("capture.retryClear", "CLEAR")}
                       </button>
@@ -801,7 +801,7 @@ content-type: application/json
                   type="file"
                   accept=".csv,text/csv"
                   onChange={handleCsvFileChange}
-                  className="min-h-[44px] w-full bg-background border-2 border-foreground text-foreground p-3 font-mono text-xs"
+                  className="min-h-[44px] w-full bg-background border-4 border-foreground text-foreground p-3 font-mono text-xs rounded-none shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] focus:outline-none focus:ring-0 cursor-pointer"
                 />
                 {csvFileName ? (
                   <p className="mt-3 font-mono text-xs text-foreground">
@@ -837,7 +837,7 @@ content-type: application/json
                     type="button"
                     onClick={handleCsvSubmit}
                     disabled={!csvText.trim() || ingestMutation.isPending}
-                    className="min-h-[44px] w-full sm:w-auto flex items-center justify-center border-2 border-foreground bg-background px-4 py-2 font-mono text-xs font-bold uppercase disabled:opacity-60 hover:bg-foreground hover:text-background transition-colors"
+                    className="min-h-[44px] w-full sm:w-auto flex items-center justify-center border-4 border-foreground bg-background px-4 py-2 font-mono text-xs font-bold uppercase disabled:opacity-60 hover:bg-foreground hover:text-background transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm"
                   >
                     {ingestMutation.isPending ? t("capture.csvImporting", "IMPORTING...") : t("capture.csvRun", "IMPORT CSV")}
                   </button>
@@ -866,7 +866,7 @@ content-type: application/json
                   type="file"
                   accept="image/*"
                   onChange={handleOcrFileChange}
-                  className="min-h-[44px] w-full bg-background border-2 border-foreground text-foreground p-3 font-mono text-xs"
+                  className="min-h-[44px] w-full bg-background border-4 border-foreground text-foreground p-3 font-mono text-xs rounded-none shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] focus:outline-none focus:ring-0 cursor-pointer"
                 />
                 {ocrFileName ? (
                   <p className="mt-3 font-mono text-xs text-foreground">{t("capture.ocrSelected", "Selected image")}: {ocrFileName}</p>
@@ -879,7 +879,7 @@ content-type: application/json
                     type="button"
                     onClick={handleOcrSubmit}
                     disabled={!ocrFile || ocrMutation.isPending}
-                    className="min-h-[44px] w-full sm:w-auto flex items-center justify-center border-2 border-foreground bg-background px-4 py-2 font-mono text-xs font-bold uppercase disabled:opacity-60 hover:bg-foreground hover:text-background transition-colors"
+                    className="min-h-[44px] w-full sm:w-auto flex items-center justify-center border-4 border-foreground bg-background px-4 py-2 font-mono text-xs font-bold uppercase disabled:opacity-60 hover:bg-foreground hover:text-background transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm"
                   >
                     {ocrMutation.isPending ? t("capture.ocrRunning", "READING...") : t("capture.ocrRun", "EXTRACT TEXT")}
                   </button>
@@ -896,7 +896,7 @@ content-type: application/json
                   <div className="relative">
                     <select
                       {...form.register("kind")}
-                      className="min-h-[44px] w-full bg-background border-4 border-foreground text-foreground p-4 focus:outline-none focus:ring-4 focus:ring-accent transition-none appearance-none cursor-pointer font-bold uppercase rounded-none"
+                      className="min-h-[44px] w-full bg-background border-4 border-foreground text-foreground p-4 focus:outline-none focus:ring-0 shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] transition-none appearance-none cursor-pointer font-bold uppercase rounded-none"
                     >
                       <option value="quote">{t("capture.kind.quote", "Quote / Highlight")}</option>
                       <option value="note">{t("capture.kind.note", "Personal Note")}</option>
@@ -914,7 +914,7 @@ content-type: application/json
                   <textarea
                     rows={6}
                     placeholder={t("capture.contentPlaceholder", "Paste your content")}
-                    className="w-full bg-background border-4 border-foreground text-foreground text-lg md:text-xl p-4 focus:outline-none focus:ring-4 focus:ring-accent transition-none resize-y placeholder:text-muted-foreground/50 rounded-none"
+                    className="w-full bg-background border-4 border-foreground text-foreground text-lg md:text-xl p-4 focus:outline-none focus:ring-0 shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] transition-none resize-y placeholder:text-muted-foreground/50 rounded-none"
                     {...form.register("content")}
                     autoFocus
                   />
@@ -925,7 +925,7 @@ content-type: application/json
                     <label className="font-mono text-sm font-bold uppercase text-foreground">{`>> ${t("capture.metaUrl", "META.URL")}`}</label>
                     <input
                       placeholder="https://..."
-                      className="min-h-[44px] w-full bg-background border-2 border-foreground text-foreground p-3 focus:outline-none focus:ring-2 focus:ring-accent transition-none placeholder:text-muted-foreground/40 font-mono text-sm rounded-none"
+                      className="min-h-[44px] w-full bg-background border-4 border-foreground text-foreground p-3 focus:outline-none focus:ring-0 shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] transition-none placeholder:text-muted-foreground/40 font-mono text-sm rounded-none"
                       {...form.register("url")}
                     />
                   </div>
@@ -934,7 +934,7 @@ content-type: application/json
                     <label className="font-mono text-sm font-bold uppercase text-foreground">{`>> ${t("capture.metaRef", "META.REF")}`}</label>
                     <input
                       placeholder="SOURCE IDENTIFIER"
-                      className="min-h-[44px] w-full bg-background border-2 border-foreground text-foreground p-3 focus:outline-none focus:ring-2 focus:ring-accent transition-none placeholder:text-muted-foreground/40 font-mono text-sm uppercase rounded-none"
+                      className="min-h-[44px] w-full bg-background border-4 border-foreground text-foreground p-3 focus:outline-none focus:ring-0 shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] transition-none placeholder:text-muted-foreground/40 font-mono text-sm uppercase rounded-none"
                       {...form.register("source_title")}
                     />
                   </div>
@@ -956,7 +956,7 @@ content-type: application/json
                               : [...current, tag.id]
                             form.setValue("tag_ids", next)
                           }}
-                          className={`min-h-[44px] px-4 py-2 border-2 font-mono text-xs font-bold uppercase flex items-center justify-center hover:bg-foreground hover:text-background transition-colors ${checked
+                          className={`min-h-[44px] px-4 py-2 border-4 font-mono text-xs font-bold uppercase flex items-center justify-center transition-transform active:translate-y-[2px] active:translate-x-[2px] hover:bg-foreground hover:text-background shadow-brutal-sm ${checked
                             ? "border-foreground bg-foreground text-background"
                             : "border-foreground bg-background text-foreground"
                             }`}
@@ -993,13 +993,13 @@ content-type: application/json
                           type="button"
                           onClick={handleMergeDuplicate}
                           disabled={mutation.isPending}
-                          className="min-h-[44px] flex items-center justify-center border-2 border-foreground bg-foreground px-4 py-2 font-mono text-xs font-bold uppercase text-background transition-colors hover:bg-background hover:text-foreground opacity-90"
+                          className="min-h-[44px] flex items-center justify-center border-4 border-foreground bg-foreground px-4 py-2 font-mono text-xs font-bold uppercase text-background transition-transform active:translate-y-[2px] active:translate-x-[2px] hover:bg-background hover:text-foreground hover:shadow-brutal-sm shadow-brutal"
                         >
                           {t("capture.mergeDuplicate", "중복 병합 저장")}
                         </button>
                         <Link
                           href={`/records/${duplicateRecordId}?from=${encodeURIComponent("/capture")}`}
-                          className="min-h-[44px] flex items-center justify-center border-2 border-foreground bg-background px-4 py-2 font-mono text-xs font-bold uppercase text-foreground transition-colors hover:bg-foreground hover:text-background"
+                          className="min-h-[44px] flex items-center justify-center border-4 border-foreground bg-background px-4 py-2 font-mono text-xs font-bold uppercase text-foreground transition-transform active:translate-y-[2px] active:translate-x-[2px] hover:bg-foreground hover:text-background hover:shadow-brutal"
                         >
                           {t("capture.openExisting", "기존 항목 보기")}
                         </Link>
@@ -1017,7 +1017,7 @@ content-type: application/json
                   <button
                     type="submit"
                     disabled={mutation.isPending}
-                    className="w-full mt-4 bg-foreground text-background font-black text-xl uppercase py-5 border-4 border-transparent hover:bg-accent hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed rounded-none"
+                    className="w-full mt-4 bg-foreground text-background font-black text-xl uppercase py-5 border-4 border-foreground hover:bg-accent hover:border-accent hover:text-white transition-transform active:translate-y-[4px] active:translate-x-[4px] disabled:opacity-50 disabled:cursor-not-allowed rounded-none shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.1)] active:shadow-none"
                   >
                     {mutation.isPending ? (
                       <div className="flex items-center justify-center gap-3">

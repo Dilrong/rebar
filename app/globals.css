@@ -88,11 +88,11 @@
 @layer utilities {
   .glass {
     /* Brutalist solid card */
-    @apply bg-background border-2 border-border shadow-brutal-sm;
+    @apply bg-background border-4 border-foreground shadow-brutal-sm;
   }
 
   .focus-ring {
-    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-none;
+    @apply focus:outline-none focus:ring-0 focus:shadow-[inset_4px_4px_0px_0px_rgba(0, 0, 0, 1)] dark:focus:shadow-[inset_4px_4px_0px_0px_rgba(255, 255, 255, 0.1)] transition-none;
   }
 
   /* Hide scrollbar but keep functionality */

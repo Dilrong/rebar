@@ -90,7 +90,7 @@ export default function SettingsPage() {
             type="button"
             onClick={handleSignOut}
             disabled={pendingLogout}
-            className="border-2 border-destructive bg-background px-4 py-2 font-mono text-xs font-bold uppercase text-destructive hover:bg-destructive hover:text-white transition-colors"
+            className="border-4 border-destructive bg-background px-4 py-2 font-mono text-xs font-bold uppercase text-destructive hover:bg-destructive hover:text-white transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm"
           >
             {pendingLogout ? "LOGGING OUT..." : t("nav.logout", "LOGOUT")}
           </button>
@@ -104,8 +104,8 @@ export default function SettingsPage() {
               onClick={() => setLocale("ko")}
               className={
                 locale === "ko"
-                  ? "min-h-[44px] border-2 border-foreground bg-foreground px-4 py-2 font-mono text-xs font-bold text-background"
-                  : "min-h-[44px] border-2 border-foreground bg-background px-4 py-2 font-mono text-xs font-bold text-foreground"
+                  ? "min-h-[44px] border-4 border-foreground bg-foreground px-4 py-2 font-mono text-xs font-bold text-background transition-transform active:translate-y-[2px] active:translate-x-[2px]"
+                  : "min-h-[44px] border-4 border-foreground bg-background px-4 py-2 font-mono text-xs font-bold text-foreground hover:bg-foreground hover:text-background transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm"
               }
             >
               한국어
@@ -115,8 +115,8 @@ export default function SettingsPage() {
               onClick={() => setLocale("en")}
               className={
                 locale === "en"
-                  ? "min-h-[44px] border-2 border-foreground bg-foreground px-4 py-2 font-mono text-xs font-bold text-background"
-                  : "min-h-[44px] border-2 border-foreground bg-background px-4 py-2 font-mono text-xs font-bold text-foreground"
+                  ? "min-h-[44px] border-4 border-foreground bg-foreground px-4 py-2 font-mono text-xs font-bold text-background transition-transform active:translate-y-[2px] active:translate-x-[2px]"
+                  : "min-h-[44px] border-4 border-foreground bg-background px-4 py-2 font-mono text-xs font-bold text-foreground hover:bg-foreground hover:text-background transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm"
               }
             >
               English
@@ -136,7 +136,7 @@ export default function SettingsPage() {
               setStartPage(next)
               setStartPagePreference(next)
             }}
-            className="w-full border-2 border-foreground bg-background p-3 font-mono text-xs font-bold uppercase text-foreground"
+            className="w-full min-h-[44px] border-4 border-foreground bg-background p-3 font-mono text-xs font-bold uppercase text-foreground focus:outline-none focus:ring-0 shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] rounded-none"
           >
             <option value="/review">{t("settings.start.review", "Review")}</option>
             <option value="/capture">{t("settings.start.capture", "Capture")}</option>
@@ -154,7 +154,7 @@ export default function SettingsPage() {
           <Link
             href="/api/capture/guide"
             target="_blank"
-            className="mb-3 inline-block border-2 border-foreground bg-background px-2 py-1 font-mono text-[10px] font-bold uppercase text-foreground"
+            className="mb-3 inline-block border-2 border-foreground bg-background px-3 py-1 font-mono text-xs font-bold uppercase text-foreground hover:bg-foreground hover:text-background transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm"
           >
             {t("settings.agent.guide", "OPEN JSON GUIDE")}
           </Link>
@@ -168,7 +168,7 @@ export default function SettingsPage() {
               setCopied(true)
               window.setTimeout(() => setCopied(false), 1500)
             }}
-            className="mt-3 border-2 border-foreground bg-foreground px-3 py-2 font-mono text-xs font-bold uppercase text-background"
+            className="mt-3 min-h-[44px] border-4 border-foreground bg-foreground px-4 py-2 font-mono text-xs font-bold uppercase text-background hover:bg-background hover:text-foreground transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm"
           >
             {copied ? t("settings.agent.copied", "COPIED") : t("settings.agent.copy", "COPY CURL")}
           </button>

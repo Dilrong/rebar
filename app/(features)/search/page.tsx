@@ -127,12 +127,12 @@ export default function SearchPage() {
                 value={q}
                 onChange={(event) => setQ(event.target.value)}
                 placeholder={t("search.placeholder", "content / source title")}
-                className="min-h-[44px] w-full bg-background border-2 border-foreground text-foreground text-lg p-3 lg:col-span-2"
+                className="min-h-[44px] w-full bg-background border-4 border-foreground text-foreground text-lg p-3 lg:col-span-2 focus:outline-none focus:ring-0 shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] rounded-none"
               />
               <select
                 value={state}
                 onChange={(event) => setState(event.target.value)}
-                className="w-full bg-background border-2 border-foreground text-foreground p-3 font-mono text-xs"
+                className="w-full min-h-[44px] bg-background border-4 border-foreground text-foreground p-3 font-mono text-xs focus:outline-none focus:ring-0 shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] rounded-none"
               >
                 <option value="">{t("search.allStates", "All states")}</option>
                 <option value="INBOX">{getStateLabel("INBOX", t)}</option>
@@ -144,7 +144,7 @@ export default function SearchPage() {
               <select
                 value={tagId}
                 onChange={(event) => setTagId(event.target.value)}
-                className="w-full bg-background border-2 border-foreground text-foreground p-3 font-mono text-xs"
+                className="w-full min-h-[44px] bg-background border-4 border-foreground text-foreground p-3 font-mono text-xs focus:outline-none focus:ring-0 shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] rounded-none"
               >
                 <option value="">{t("search.allTags", "All tags")}</option>
                 {(tags.data?.data ?? []).map((tag) => (
@@ -161,7 +161,7 @@ export default function SearchPage() {
                     type="date"
                     value={fromDate}
                     onChange={(event) => setFromDate(event.target.value)}
-                    className="min-h-[44px] w-full bg-background border-2 border-foreground text-foreground p-3 font-mono text-xs"
+                    className="min-h-[44px] w-full bg-background border-4 border-foreground text-foreground p-3 font-mono text-xs focus:outline-none focus:ring-0 shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] rounded-none"
                   />
                 </div>
                 <div className="w-full">
@@ -173,7 +173,7 @@ export default function SearchPage() {
                     type="date"
                     value={toDate}
                     onChange={(event) => setToDate(event.target.value)}
-                    className="min-h-[44px] w-full bg-background border-2 border-foreground text-foreground p-3 font-mono text-xs"
+                    className="min-h-[44px] w-full bg-background border-4 border-foreground text-foreground p-3 font-mono text-xs focus:outline-none focus:ring-0 shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] rounded-none"
                   />
                 </div>
               </div>
@@ -182,8 +182,8 @@ export default function SearchPage() {
               <button
                 type="button"
                 onClick={() => setSemantic((prev) => !prev)}
-                className={`min-h-[44px] border-2 px-3 py-2 font-mono text-xs font-bold uppercase transition-colors ${semantic
-                  ? "border-accent bg-accent text-white"
+                className={`min-h-[44px] border-4 px-3 py-2 font-mono text-xs font-bold uppercase transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm ${semantic
+                  ? "border-foreground bg-foreground text-background"
                   : "border-foreground bg-background text-foreground hover:bg-foreground hover:text-background"
                   }`}
               >
@@ -233,15 +233,15 @@ export default function SearchPage() {
                       onError={(e) => { (e.target as HTMLImageElement).style.display = "none" }}
                     />
                   )}
-                  <span className="font-mono text-[10px] font-bold border-2 border-current px-1.5 py-0.5 uppercase">
+                  <span className="font-mono text-[10px] font-bold border-2 border-current px-1.5 py-0.5 uppercase group-hover:border-background">
                     {record.kind}
                   </span>
-                  <span className="font-mono text-[10px] font-bold border-2 border-current px-1.5 py-0.5 uppercase">
+                  <span className="font-mono text-[10px] font-bold border-2 border-current px-1.5 py-0.5 uppercase group-hover:border-background">
                     {getStateLabel(record.state, t)}
                   </span>
                 </div>
                 {semantic && typeof record.semantic_score === "number" ? (
-                  <p className="mb-2 font-mono text-[10px] font-bold uppercase text-accent">
+                  <p className="mb-2 font-mono text-[10px] font-bold uppercase text-accent group-hover:text-background/80">
                     {t("search.semanticScore", "SEMANTIC SCORE")}: {record.semantic_score.toFixed(2)}
                   </p>
                 ) : null}
@@ -249,7 +249,7 @@ export default function SearchPage() {
                   {stripMarkdown(record.content)}
                 </p>
                 {semantic && record.semantic_matches && record.semantic_matches.length > 0 ? (
-                  <p className="mt-2 font-mono text-[10px] font-bold uppercase text-muted-foreground line-clamp-1">
+                  <p className="mt-2 font-mono text-[10px] font-bold uppercase text-muted-foreground line-clamp-1 group-hover:text-background/70">
                     {t("search.semanticMatches", "MATCHES")}: {record.semantic_matches.join(", ")}
                   </p>
                 ) : null}

@@ -458,7 +458,7 @@ export default function LibraryPage() {
                     }
                   }}
                   disabled={exportPending}
-                  className="min-h-[44px] inline-flex items-center gap-2 border-2 border-foreground bg-background px-4 py-3 font-mono text-xs font-bold uppercase hover:bg-foreground hover:text-background disabled:opacity-60 shadow-brutal-sm transition-colors"
+                  className="min-h-[44px] inline-flex items-center gap-2 border-4 border-foreground bg-background px-4 py-3 font-mono text-xs font-bold uppercase hover:bg-foreground hover:text-background disabled:opacity-60 shadow-brutal-sm transition-transform active:translate-y-[2px] active:translate-x-[2px]"
                   aria-haspopup="menu"
                   aria-expanded={exportMenuOpen}
                   aria-controls="library-export-menu"
@@ -503,7 +503,7 @@ export default function LibraryPage() {
               </div>
               <Link
                 href="/capture"
-                className="max-md:hidden min-h-[44px] inline-flex items-center justify-center gap-2 font-mono text-xs font-bold uppercase border-2 border-foreground px-4 py-3 bg-background hover:bg-foreground hover:text-background shadow-brutal-sm transition-colors"
+                className="max-md:hidden min-h-[44px] inline-flex items-center justify-center gap-2 font-mono text-xs font-bold uppercase border-4 border-foreground px-4 py-3 bg-background hover:bg-foreground hover:text-background shadow-brutal-sm transition-transform active:translate-y-[2px] active:translate-x-[2px]"
               >
                 <Plus className="w-4 h-4" />
                 {t("library.newRecord", "NEW RECORD")}
@@ -517,7 +517,7 @@ export default function LibraryPage() {
                 key="ALL"
                 type="button"
                 onClick={() => setState("ALL")}
-                className={`min-h-[44px] px-4 py-2 border-2 border-foreground font-mono text-xs font-bold uppercase flex items-center justify-center ${state === "ALL" ? "bg-foreground text-background" : "bg-background text-foreground"
+                className={`min-h-[44px] px-4 py-2 border-4 border-foreground font-mono text-xs font-bold uppercase flex items-center justify-center transition-transform active:translate-y-[2px] active:translate-x-[2px] ${state === "ALL" ? "bg-foreground text-background shadow-brutal" : "bg-background text-foreground hover:bg-foreground/10"
                   }`}
               >
                 {t("library.allView", "전체보기")}
@@ -527,7 +527,7 @@ export default function LibraryPage() {
                   key={tab}
                   type="button"
                   onClick={() => setState(tab)}
-                  className={`min-h-[44px] px-4 py-2 border-2 border-foreground font-mono text-xs font-bold uppercase flex items-center justify-center ${state === tab ? "bg-foreground text-background" : "bg-background text-foreground"
+                  className={`min-h-[44px] px-4 py-2 border-4 border-foreground font-mono text-xs font-bold uppercase flex items-center justify-center transition-transform active:translate-y-[2px] active:translate-x-[2px] ${state === tab ? "bg-foreground text-background shadow-brutal" : "bg-background text-foreground hover:bg-foreground/10"
                     }`}
                 >
                   {getStateLabel(tab, t)}
@@ -541,13 +541,13 @@ export default function LibraryPage() {
                 value={q}
                 onChange={(event) => setQ(event.target.value)}
                 placeholder={t("library.searchPlaceholder", "Search content/title")}
-                className="min-h-[44px] bg-background border-2 border-foreground text-foreground px-4 py-3 font-mono text-sm w-full md:w-auto shadow-brutal-sm flex-1"
+                className="min-h-[44px] bg-background border-4 border-foreground text-foreground px-4 py-3 font-mono text-sm w-full md:w-auto shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] focus:outline-none focus:ring-0 flex-1 rounded-none transition-none"
               />
               <div className="grid grid-cols-2 lg:flex lg:flex-row gap-3">
                 <select
                   value={kind}
                   onChange={(event) => setKind(event.target.value)}
-                  className="min-h-[44px] bg-background border-2 border-foreground text-foreground px-4 py-2 font-mono text-sm w-full md:w-auto"
+                  className="min-h-[44px] bg-background border-4 border-foreground text-foreground px-4 py-2 font-mono text-sm w-full md:w-auto shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] focus:outline-none focus:ring-0 rounded-none transition-none"
                 >
                   <option value="">{t("library.allKinds", "All kinds")}</option>
                   <option value="quote">quote</option>
@@ -558,7 +558,7 @@ export default function LibraryPage() {
                 <select
                   value={tagId}
                   onChange={(event) => setTagId(event.target.value)}
-                  className="min-h-[44px] bg-background border-2 border-foreground text-foreground px-4 py-2 font-mono text-sm w-full md:w-auto"
+                  className="min-h-[44px] bg-background border-4 border-foreground text-foreground px-4 py-2 font-mono text-sm w-full md:w-auto shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] focus:outline-none focus:ring-0 rounded-none transition-none"
                 >
                   <option value="">{t("library.allTags", "All tags")}</option>
                   {(tags.data?.data ?? []).map((tag) => (
@@ -574,7 +574,7 @@ export default function LibraryPage() {
                     setSort(nextSort)
                     setOrder(nextOrder)
                   }}
-                  className="min-h-[44px] bg-background border-2 border-foreground px-4 py-2 font-mono text-sm text-foreground w-full md:w-auto col-span-2 lg:col-span-1"
+                  className="min-h-[44px] bg-background border-4 border-foreground px-4 py-2 font-mono text-sm text-foreground w-full md:w-auto col-span-2 lg:col-span-1 shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] focus:outline-none focus:ring-0 rounded-none transition-none"
                 >
                   <option value="created_at:desc">Newest first</option>
                   <option value="created_at:asc">Oldest first</option>
@@ -588,7 +588,7 @@ export default function LibraryPage() {
               <button
                 type="button"
                 onClick={() => setState("ALL")}
-                className="min-h-[44px] flex items-center justify-center border border-foreground px-3 py-2 font-mono text-[10px] font-bold uppercase"
+                className="min-h-[44px] flex items-center justify-center border-2 border-foreground px-3 py-2 font-mono text-[10px] font-bold uppercase transition-transform hover:bg-foreground/10 active:translate-y-[2px] active:translate-x-[2px]"
               >
                 {t("library.state", "State")}: {state === "ALL" ? t("library.allView", "전체보기") : getStateLabel(state, t)}
               </button>
@@ -596,7 +596,7 @@ export default function LibraryPage() {
                 <button
                   type="button"
                   onClick={() => setQ("")}
-                  className="min-h-[44px] flex items-center justify-center border border-foreground px-3 py-2 font-mono text-[10px] font-bold uppercase"
+                  className="min-h-[44px] flex items-center justify-center border-2 border-foreground px-3 py-2 font-mono text-[10px] font-bold uppercase transition-transform hover:bg-foreground/10 active:translate-y-[2px] active:translate-x-[2px]"
                 >
                   {t("library.query", "Search")}: {q} x
                 </button>
@@ -605,7 +605,7 @@ export default function LibraryPage() {
                 <button
                   type="button"
                   onClick={() => setKind("")}
-                  className="min-h-[44px] flex items-center justify-center border border-foreground px-3 py-2 font-mono text-[10px] font-bold uppercase"
+                  className="min-h-[44px] flex items-center justify-center border-2 border-foreground px-3 py-2 font-mono text-[10px] font-bold uppercase transition-transform hover:bg-foreground/10 active:translate-y-[2px] active:translate-x-[2px]"
                 >
                   {t("library.kind", "Kind")}: {kind} x
                 </button>
@@ -614,7 +614,7 @@ export default function LibraryPage() {
                 <button
                   type="button"
                   onClick={() => setTagId("")}
-                  className="min-h-[44px] flex items-center justify-center border border-foreground px-3 py-2 font-mono text-[10px] font-bold uppercase"
+                  className="min-h-[44px] flex items-center justify-center border-2 border-foreground px-3 py-2 font-mono text-[10px] font-bold uppercase transition-transform hover:bg-foreground/10 active:translate-y-[2px] active:translate-x-[2px]"
                 >
                   {t("library.tag", "Tag")}: {selectedTagName ? `#${selectedTagName}` : tagId.slice(0, 6)} x
                 </button>
@@ -623,7 +623,7 @@ export default function LibraryPage() {
                 <button
                   type="button"
                   onClick={clearAllFilters}
-                  className="min-h-[44px] flex items-center justify-center border-2 border-foreground bg-foreground px-3 py-2 font-mono text-[10px] font-bold uppercase text-background"
+                  className="min-h-[44px] flex items-center justify-center border-4 border-foreground bg-foreground px-3 py-2 font-mono text-[10px] font-bold uppercase text-background hover:bg-background hover:text-foreground transition-transform hover:shadow-brutal-sm active:translate-y-[2px] active:translate-x-[2px]"
                 >
                   {t("library.clearAll", "Clear all")}
                 </button>
@@ -645,25 +645,25 @@ export default function LibraryPage() {
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <p className="font-mono text-xs font-bold uppercase">{selectedIds.length} {t("library.selected", "선택됨")}</p>
                 <div className="flex items-center gap-2">
-                  <button type="button" onClick={selectVisible} className="min-h-[44px] border-2 border-foreground px-3 py-2 font-mono text-xs font-bold uppercase">
+                  <button type="button" onClick={selectVisible} className="min-h-[44px] border-4 border-foreground px-3 py-2 font-mono text-xs font-bold uppercase hover:bg-foreground hover:text-background transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm">
                     {t("library.selectVisible", "보이는 항목 선택")}
                   </button>
-                  <button type="button" onClick={clearSelection} className="min-h-[44px] border-2 border-foreground px-3 py-2 font-mono text-xs font-bold uppercase">
+                  <button type="button" onClick={clearSelection} className="min-h-[44px] border-4 border-foreground px-3 py-2 font-mono text-xs font-bold uppercase hover:bg-foreground hover:text-background transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm">
                     {t("library.clearSelection", "선택 해제")}
                   </button>
                 </div>
               </div>
               <div className="mb-3 flex flex-wrap items-center gap-2">
-                <button type="button" onClick={() => applyBulkState("ACTIVE")} className="min-h-[44px] border-2 border-foreground bg-background px-3 py-2 font-mono text-xs font-bold uppercase">
+                <button type="button" onClick={() => applyBulkState("ACTIVE")} className="min-h-[44px] border-4 border-foreground bg-background px-3 py-2 font-mono text-xs font-bold uppercase hover:bg-foreground hover:text-background transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm">
                   {t("library.bulk.activate", "활성화")}
                 </button>
-                <button type="button" onClick={() => applyBulkState("PINNED")} className="min-h-[44px] border-2 border-foreground bg-background px-3 py-2 font-mono text-xs font-bold uppercase">
+                <button type="button" onClick={() => applyBulkState("PINNED")} className="min-h-[44px] border-4 border-foreground bg-background px-3 py-2 font-mono text-xs font-bold uppercase hover:bg-foreground hover:text-background transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm">
                   {t("library.bulk.pin", "핀 고정")}
                 </button>
-                <button type="button" onClick={() => applyBulkState("ARCHIVED")} className="min-h-[44px] border-2 border-foreground bg-background px-3 py-2 font-mono text-xs font-bold uppercase">
+                <button type="button" onClick={() => applyBulkState("ARCHIVED")} className="min-h-[44px] border-4 border-foreground bg-background px-3 py-2 font-mono text-xs font-bold uppercase hover:bg-foreground hover:text-background transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm">
                   {t("library.bulk.archive", "보관")}
                 </button>
-                <button type="button" onClick={() => applyBulkState("TRASHED")} className="min-h-[44px] border-2 border-foreground bg-background px-3 py-2 font-mono text-xs font-bold uppercase">
+                <button type="button" onClick={() => applyBulkState("TRASHED")} className="min-h-[44px] border-4 border-foreground bg-background px-3 py-2 font-mono text-xs font-bold uppercase hover:bg-foreground hover:text-background transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm text-destructive hover:bg-destructive">
                   {t("library.bulk.trash", "휴지통")}
                 </button>
               </div>
@@ -671,17 +671,17 @@ export default function LibraryPage() {
                 <select
                   value={bulkTagIds[0] ?? ""}
                   onChange={(event) => setBulkTagIds(event.target.value ? [event.target.value] : [])}
-                  className="min-h-[44px] border-2 border-foreground bg-background px-3 py-2 font-mono text-xs"
+                  className="min-h-[44px] border-4 border-foreground bg-background px-3 py-2 font-mono text-xs focus:outline-none focus:ring-0 shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] rounded-none"
                 >
                   <option value="">{t("library.bulk.tagPlaceholder", "태그 선택")}</option>
                   {(tags.data?.data ?? []).map((tag) => (
                     <option key={tag.id} value={tag.id}>#{tag.name}</option>
                   ))}
                 </select>
-                <button type="button" onClick={() => applyBulkTags("add")} className="min-h-[44px] border-2 border-foreground px-3 py-2 font-mono text-xs font-bold uppercase">
+                <button type="button" onClick={() => applyBulkTags("add")} className="min-h-[44px] border-4 border-foreground px-3 py-2 font-mono text-xs font-bold uppercase hover:bg-foreground hover:text-background transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm">
                   {t("library.bulk.addTag", "태그 추가")}
                 </button>
-                <button type="button" onClick={() => applyBulkTags("replace")} className="min-h-[44px] border-2 border-foreground px-3 py-2 font-mono text-xs font-bold uppercase">
+                <button type="button" onClick={() => applyBulkTags("replace")} className="min-h-[44px] border-4 border-foreground px-3 py-2 font-mono text-xs font-bold uppercase hover:bg-foreground hover:text-background transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm">
                   {t("library.bulk.replaceTags", "태그 교체")}
                 </button>
               </div>
@@ -697,20 +697,20 @@ export default function LibraryPage() {
                 value={newTagName}
                 onChange={(event) => setNewTagName(event.target.value)}
                 placeholder={t("library.newTag", "new tag")}
-                className="min-h-[44px] bg-background border-2 border-foreground text-foreground px-4 py-2 font-mono text-sm w-full md:w-auto flex-1"
+                className="min-h-[44px] bg-background border-4 border-foreground text-foreground px-4 py-2 font-mono text-sm w-full md:w-auto flex-1 focus:outline-none focus:ring-0 shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] rounded-none"
               />
               <button
                 type="button"
                 onClick={() => createTag.mutate(newTagName.trim())}
                 disabled={!newTagName.trim() || createTag.isPending}
-                className="min-h-[44px] flex items-center justify-center px-4 py-2 border-2 border-foreground font-mono text-xs font-bold uppercase bg-background text-foreground w-full md:w-auto"
+                className="min-h-[44px] flex items-center justify-center px-4 py-2 border-4 border-foreground font-mono text-xs font-bold uppercase bg-background text-foreground w-full md:w-auto hover:bg-foreground hover:text-background transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm"
               >
                 {createTag.isPending ? <LoadingDots /> : t("library.create", "Create")}
               </button>
             </div>
             <div className="flex flex-wrap gap-3">
               {(tags.data?.data ?? []).map((tag) => (
-                <div key={tag.id} className="min-h-[44px] inline-flex items-center justify-between gap-3 border-2 border-foreground pl-3 pr-1 py-1 bg-background flex-grow md:flex-grow-0">
+                <div key={tag.id} className="min-h-[44px] inline-flex items-center justify-between gap-3 border-4 border-foreground pl-3 pr-1 py-1 bg-background flex-grow md:flex-grow-0 shadow-brutal-sm">
                   {editingTagId === tag.id ? (
                     <input
                       value={editingTagName}
@@ -730,14 +730,14 @@ export default function LibraryPage() {
                     <button
                       type="button"
                       onClick={() => handleRenameTag(tag)}
-                      className="min-h-[36px] min-w-[36px] flex items-center justify-center font-mono text-[10px] font-bold uppercase border border-transparent hover:border-foreground hover:bg-muted"
+                      className="min-h-[32px] min-w-[32px] flex items-center justify-center font-mono text-[10px] font-bold uppercase border-2 border-transparent hover:border-foreground hover:bg-muted"
                     >
                       {t("library.tagEdit", "편집")}
                     </button>
                     <button
                       type="button"
                       onClick={() => deleteTag.mutate(tag.id)}
-                      className="min-h-[36px] min-w-[36px] flex items-center justify-center font-mono text-[10px] font-bold uppercase border border-transparent hover:border-foreground hover:bg-muted"
+                      className="min-h-[32px] min-w-[32px] flex items-center justify-center font-mono text-[10px] font-bold uppercase border-2 border-transparent hover:border-foreground hover:bg-muted hover:text-destructive"
                     >
                       <Trash2 className="w-3 h-3" />
                     </button>
@@ -777,16 +777,19 @@ export default function LibraryPage() {
                     <input
                       type="checkbox"
                       checked={selectedIds.includes(record.id)}
-                      onChange={() => toggleSelect(record.id)}
-                      className="min-h-[32px] min-w-[32px] md:min-h-[44px] md:min-w-[44px] border-2 border-foreground"
+                      onChange={(e) => {
+                        e.stopPropagation()
+                        toggleSelect(record.id)
+                      }}
+                      className="min-h-[32px] min-w-[32px] md:min-h-[44px] md:min-w-[44px] border-4 border-foreground focus:ring-0 checked:bg-foreground checked:text-background appearance-none"
                     />
-                    <span className="font-mono text-[10px] font-bold border-2 border-current px-1.5 py-0.5 uppercase h-fit mt-1">
+                    <span className="font-mono text-[10px] font-bold border-2 border-current px-1.5 py-0.5 uppercase h-fit mt-1 hidden md:block group-hover:border-background">
                       {record.kind}
                     </span>
                     <span
-                      className={`font-mono text-[10px] font-bold border-2 px-1.5 py-0.5 uppercase h-fit mt-1 ${record.state === "INBOX"
+                      className={`font-mono text-[10px] font-bold border-2 px-1.5 py-0.5 uppercase h-fit mt-1 hidden md:block ${record.state === "INBOX"
                         ? "border-accent text-accent group-hover:border-background group-hover:text-background"
-                        : "border-current"
+                        : "border-current group-hover:border-background"
                         }`}
                     >
                       {getStateLabel(record.state, t)}
@@ -800,7 +803,7 @@ export default function LibraryPage() {
                           event.preventDefault()
                           activate.mutate(record.id)
                         }}
-                        className="min-h-[44px] border-2 border-accent px-2 py-1 font-mono text-[10px] font-bold uppercase text-accent transition-colors hover:bg-accent hover:text-white group-hover:border-white group-hover:text-white"
+                        className="min-h-[44px] border-2 border-accent px-2 py-1 font-mono text-[10px] font-bold uppercase text-accent transition-transform active:translate-y-[2px] active:translate-x-[2px] hover:bg-accent hover:text-white group-hover:border-background group-hover:text-foreground group-hover:bg-background group-hover:hover:bg-accent group-hover:hover:text-white"
                         title={t("library.inboxAction.activate", "ACTIVATE")}
                         type="button"
                         disabled={activate.isPending || inboxDecision.isPending}
@@ -812,7 +815,7 @@ export default function LibraryPage() {
                           event.preventDefault()
                           inboxDecision.mutate({ id: record.id, decisionType: "ACT", actionType: "TODO" })
                         }}
-                        className="min-h-[44px] border-2 border-foreground px-2 py-1 font-mono text-[10px] font-bold uppercase transition-colors hover:bg-foreground hover:text-background group-hover:border-white group-hover:text-white"
+                        className="min-h-[44px] border-2 border-foreground px-2 py-1 font-mono text-[10px] font-bold uppercase transition-transform active:translate-y-[2px] active:translate-x-[2px] hover:bg-foreground hover:text-background group-hover:border-background group-hover:text-foreground group-hover:bg-background"
                         title={t("library.inboxAction.todo", "TODO")}
                         type="button"
                         disabled={activate.isPending || inboxDecision.isPending}
@@ -830,7 +833,7 @@ export default function LibraryPage() {
                           event.preventDefault()
                           inboxDecision.mutate({ id: record.id, decisionType: "ARCHIVE" })
                         }}
-                        className="min-h-[44px] border-2 border-foreground px-2 py-1 font-mono text-[10px] font-bold uppercase transition-colors hover:bg-foreground hover:text-background group-hover:border-white group-hover:text-white"
+                        className="min-h-[44px] border-2 border-foreground px-2 py-1 font-mono text-[10px] font-bold uppercase transition-transform active:translate-y-[2px] active:translate-x-[2px] hover:bg-foreground hover:text-background group-hover:border-background group-hover:text-foreground group-hover:bg-background"
                         title={t("library.inboxAction.archive", "ARCHIVE")}
                         type="button"
                         disabled={activate.isPending || inboxDecision.isPending}
