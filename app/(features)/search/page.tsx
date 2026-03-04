@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
-import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Search } from "lucide-react"
 import AuthGate from "@shared/auth/auth-gate"
 import AppNav from "@shared/layout/app-nav"
@@ -15,6 +15,7 @@ import { EmptyState } from "@shared/ui/empty-state"
 import { ErrorState } from "@shared/ui/error-state"
 import { Skeleton } from "@shared/ui/skeleton"
 import { stripMarkdown } from "@feature-lib/content/strip-markdown"
+import { useDebouncedValue } from "@shared/hooks/use-debounced-value"
 
 type SearchResultRow = RecordRow & {
   semantic_score?: number
@@ -34,6 +35,7 @@ export default function SearchPage() {
   const { t } = useI18n()
   const searchParams = useSearchParams()
   const [q, setQ] = useState("")
+  const debouncedQ = useDebouncedValue(q, 220)
   const [state, setState] = useState("")
   const [tagId, setTagId] = useState("")
   const [fromDate, setFromDate] = useState("")
@@ -76,21 +78,27 @@ export default function SearchPage() {
 
   const queryString = useMemo(() => {
     const params = new URLSearchParams()
-    if (q.trim()) params.set("q", q.trim())
+    if (debouncedQ.trim()) params.set("q", debouncedQ.trim())
     if (state) params.set("state", state)
     if (tagId) params.set("tag_id", tagId)
     if (fromDate) params.set("from", fromDate)
     if (toDate) params.set("to", toDate)
     if (semantic) params.set("semantic", "1")
     return params.toString()
-  }, [q, state, tagId, fromDate, toDate, semantic])
+  }, [debouncedQ, state, tagId, fromDate, toDate, semantic])
 
   const result = useQuery({
     queryKey: ["search", queryString],
     queryFn: () => apiFetch<SearchResponse>(`/api/search?${queryString}`),
     enabled: queryString.length > 0,
-    staleTime: 1000 * 30 // 30 seconds
+    staleTime: 1000 * 30, // 30 seconds
+    placeholderData: keepPreviousData
   })
+
+  const searchBackHref = queryString ? `/search?${queryString}` : "/search"
+
+  const toRecordHref = (recordId: string) =>
+    `/records/${recordId}?from=${encodeURIComponent(searchBackHref)}`
 
   const qc = useQueryClient()
   function prefetchRecord(id: string) {
@@ -189,7 +197,13 @@ export default function SearchPage() {
             </div>
           </section>
 
-          {result.isFetching ? (
+          {result.isFetching && queryString.length > 0 ? (
+            <p className="mb-4 font-mono text-[10px] font-bold uppercase text-muted-foreground">
+              {t("search.searching", "SEARCHING...")}
+            </p>
+          ) : null}
+
+          {result.isLoading && !result.data ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-6">
               {[1, 2, 3, 4, 5, 6].map((i) => (
                 <Skeleton key={i} className="h-48 md:h-72 w-full" />
@@ -203,7 +217,7 @@ export default function SearchPage() {
             {(result.data?.data ?? []).map((record) => (
               <Link
                 key={record.id}
-                href={`/records/${record.id}`}
+                href={toRecordHref(record.id)}
                 onMouseEnter={() => prefetchRecord(record.id)}
                 onFocus={() => prefetchRecord(record.id)}
                 className="group flex h-48 flex-col border-[3px] md:border-4 border-foreground bg-card p-4 md:p-5 shadow-brutal-sm md:shadow-brutal hover:bg-foreground hover:text-background active:translate-x-1 active:translate-y-1 active:shadow-none transition-all md:h-72"

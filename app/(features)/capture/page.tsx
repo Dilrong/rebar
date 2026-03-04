@@ -3,11 +3,12 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import AuthGate from "@shared/auth/auth-gate"
 import AppNav from "@shared/layout/app-nav"
 import { apiFetch } from "@/lib/client-http"
 import { CreateRecordSchema, type CreateRecordInput } from "@/lib/schemas"
-import type { TagRow } from "@/lib/types"
+import type { RecordRow, TagRow } from "@/lib/types"
 import { useState } from "react"
 import type { ChangeEvent } from "react"
 import { useForm } from "react-hook-form"
@@ -326,6 +327,7 @@ function parseCsvPreview(raw: string): CsvPreview {
 
 export default function CapturePage() {
   const { t } = useI18n()
+  const router = useRouter()
   const form = useForm<CreateRecordInput>({
     resolver: zodResolver(CreateRecordSchema),
     defaultValues: {
@@ -351,6 +353,7 @@ export default function CapturePage() {
   const [ocrFile, setOcrFile] = useState<File | null>(null)
   const [ocrFileName, setOcrFileName] = useState<string | null>(null)
   const [showSavedToast, setShowSavedToast] = useState(false)
+  const [latestSavedRecordId, setLatestSavedRecordId] = useState<string | null>(null)
   const [ingestResult, setIngestResult] = useState<IngestResponse | null>(null)
   const [ingestError, setIngestError] = useState<string | null>(null)
   const [importMode, setImportMode] = useState<ImportMode>("manual")
@@ -358,7 +361,7 @@ export default function CapturePage() {
 
   const mutation = useMutation({
     mutationFn: async (payload: CreateRecordInput) =>
-      apiFetch("/api/records", {
+      apiFetch<RecordRow>("/api/records", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -368,8 +371,9 @@ export default function CapturePage() {
           tag_ids: payload.tag_ids && payload.tag_ids.length > 0 ? payload.tag_ids : undefined
         })
       }),
-    onSuccess: () => {
+    onSuccess: (createdRecord) => {
       setDuplicateRecordId(null)
+      setLatestSavedRecordId(createdRecord.id)
       form.reset({ kind: "note", content: "", url: "", source_title: "", tag_ids: [] })
       setShowSavedToast(true)
       window.setTimeout(() => setShowSavedToast(false), 2500)
@@ -408,6 +412,7 @@ export default function CapturePage() {
     onSuccess: (data) => {
       setIngestError(null)
       setIngestResult(data)
+      setLatestSavedRecordId(data.ids[0] ?? null)
       setExternalJson("")
       setCsvText("")
       setCsvFileName(null)
@@ -495,6 +500,7 @@ export default function CapturePage() {
   const handleIngestSubmit = () => {
     setIngestResult(null)
     setIngestError(null)
+    setLatestSavedRecordId(null)
 
     try {
       const items = parseExternalItems(externalJson)
@@ -521,6 +527,7 @@ export default function CapturePage() {
   const handleCsvSubmit = () => {
     setIngestResult(null)
     setIngestError(null)
+    setLatestSavedRecordId(null)
 
     try {
       const items = parseCsvItems(csvText)
@@ -569,6 +576,7 @@ export default function CapturePage() {
 
   const handleOcrSubmit = () => {
     setIngestError(null)
+    setLatestSavedRecordId(null)
     if (!ocrFile) {
       setIngestError(t("capture.ocrNoFile", "Select an image first"))
       return
@@ -990,7 +998,7 @@ content-type: application/json
                           {t("capture.mergeDuplicate", "중복 병합 저장")}
                         </button>
                         <Link
-                          href={`/records/${duplicateRecordId}`}
+                          href={`/records/${duplicateRecordId}?from=${encodeURIComponent("/capture")}`}
                           className="min-h-[44px] flex items-center justify-center border-2 border-foreground bg-background px-4 py-2 font-mono text-xs font-bold uppercase text-foreground transition-colors hover:bg-foreground hover:text-background"
                         >
                           {t("capture.openExisting", "기존 항목 보기")}
@@ -1027,8 +1035,17 @@ content-type: application/json
       {showSavedToast ? (
         <Toast
           message={t("toast.saved", "Saved")}
+          actionLabel={latestSavedRecordId ? t("toast.openRecord", "Open") : undefined}
+          onAction={
+            latestSavedRecordId
+              ? () => router.push(`/records/${latestSavedRecordId}?from=${encodeURIComponent("/capture")}`)
+              : undefined
+          }
           tone="success"
-          onClose={() => setShowSavedToast(false)}
+          onClose={() => {
+            setShowSavedToast(false)
+            setLatestSavedRecordId(null)
+          }}
         />
       ) : null}
     </div>

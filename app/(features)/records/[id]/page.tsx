@@ -1,6 +1,6 @@
 "use client"
 
-import { useParams, useRouter } from "next/navigation"
+import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useForm } from "react-hook-form"
 import { useEffect, useRef, useState, useCallback } from "react"
@@ -11,8 +11,7 @@ import { apiFetch } from "@/lib/client-http"
 import { getStateLabel } from "@/lib/i18n/state-label"
 import type { AnnotationRow, RecordRow, TagRow } from "@/lib/types"
 import { Link as LinkIcon, Hash, ArrowLeftSquare } from "lucide-react"
-import Link from "next/link"
-import { LoadingSpinner } from "@shared/ui/loading"
+import { LoadingDots, LoadingSpinner } from "@shared/ui/loading"
 import { Toast } from "@shared/ui/toast"
 import { ConfirmDialog } from "../_components/confirm-dialog"
 import { MarkdownContent } from "@shared/ui/markdown-content"
@@ -50,12 +49,27 @@ type SelectionPopup = {
   text: string
 } | null
 
+function resolveFromPath(value: string | null): string | null {
+  if (!value) {
+    return null
+  }
+
+  const normalized = value.trim()
+  if (!normalized.startsWith("/") || normalized.startsWith("//")) {
+    return null
+  }
+
+  return normalized
+}
+
 export default function RecordDetailPage() {
   const { t } = useI18n()
   const params = useParams<{ id: string }>()
+  const searchParams = useSearchParams()
   const id = params.id
   const router = useRouter()
   const queryClient = useQueryClient()
+  const backHref = resolveFromPath(searchParams.get("from"))
   const [editUrl, setEditUrl] = useState("")
   const [editSourceTitle, setEditSourceTitle] = useState("")
   const [editState, setEditState] = useState<RecordRow["state"]>("INBOX")
@@ -175,6 +189,36 @@ export default function RecordDetailPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ tag_ids: tagIds })
       }),
+    onMutate: async (tagIds) => {
+      await queryClient.cancelQueries({ queryKey: ["record-detail", id] })
+
+      const previousDetail = queryClient.getQueryData<DetailResponse>(["record-detail", id])
+      const allTags = queryClient.getQueryData<TagsResponse>(["tags"])?.data ?? []
+
+      const nextTags = allTags
+        .filter((tag) => tagIds.includes(tag.id))
+        .map((tag) => ({ id: tag.id, name: tag.name }))
+
+      queryClient.setQueryData<DetailResponse>(["record-detail", id], (current) => {
+        if (!current) {
+          return current
+        }
+
+        return {
+          ...current,
+          tags: nextTags
+        }
+      })
+
+      return {
+        previousDetail
+      }
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previousDetail) {
+        queryClient.setQueryData(["record-detail", id], context.previousDetail)
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["record-detail", id] })
       queryClient.invalidateQueries({ queryKey: ["records"] })
@@ -204,6 +248,37 @@ export default function RecordDetailPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       }),
+    onMutate: async (payload) => {
+      await queryClient.cancelQueries({ queryKey: ["record-detail", id] })
+
+      const previousDetail = queryClient.getQueryData<DetailResponse>(["record-detail", id])
+
+      queryClient.setQueryData<DetailResponse>(["record-detail", id], (current) => {
+        if (!current) {
+          return current
+        }
+
+        return {
+          ...current,
+          record: {
+            ...current.record,
+            url: payload.url || null,
+            source_title: payload.source_title || null,
+            state: payload.state,
+            updated_at: new Date().toISOString()
+          }
+        }
+      })
+
+      return {
+        previousDetail
+      }
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previousDetail) {
+        queryClient.setQueryData(["record-detail", id], context.previousDetail)
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["record-detail", id] })
       queryClient.invalidateQueries({ queryKey: ["records"] })
@@ -218,6 +293,34 @@ export default function RecordDetailPage() {
       apiFetch<{ record: RecordRow }>(`/api/records/${id}`, {
         method: "DELETE"
       }),
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ["record-detail", id] })
+      const previousDetail = queryClient.getQueryData<DetailResponse>(["record-detail", id])
+
+      queryClient.setQueryData<DetailResponse>(["record-detail", id], (current) => {
+        if (!current) {
+          return current
+        }
+
+        return {
+          ...current,
+          record: {
+            ...current.record,
+            state: "TRASHED",
+            updated_at: new Date().toISOString()
+          }
+        }
+      })
+
+      return {
+        previousDetail
+      }
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previousDetail) {
+        queryClient.setQueryData(["record-detail", id], context.previousDetail)
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["records"] })
       queryClient.invalidateQueries({ queryKey: ["review-today"] })
@@ -230,6 +333,8 @@ export default function RecordDetailPage() {
   })
 
   const selectedTagIds = new Set((detail.data?.tags ?? []).map((tag) => tag.id))
+  const isRecordMutating = updateRecord.isPending || deleteRecord.isPending
+  const isTagMutating = updateTags.isPending || createTag.isPending
 
   const toggleTag = (tagId: string) => {
     const current = detail.data?.tags.map((tag) => tag.id) ?? []
@@ -327,9 +432,20 @@ export default function RecordDetailPage() {
           <AppNav />
 
           <div className="mb-4 mt-4 flex justify-between gap-4">
-            <Link href="/library" className="inline-flex items-center text-sm font-black uppercase text-foreground hover:bg-foreground hover:text-background border-2 border-transparent hover:border-foreground px-2 py-1 transition-colors self-start">
+            <button
+              type="button"
+              onClick={() => {
+                if (backHref) {
+                  router.push(backHref)
+                  return
+                }
+
+                router.back()
+              }}
+              className="inline-flex min-h-[44px] items-center text-sm font-black uppercase text-foreground hover:bg-foreground hover:text-background border-2 border-transparent hover:border-foreground px-2 py-1 transition-colors self-start"
+            >
               <ArrowLeftSquare className="w-5 h-5 mr-2" strokeWidth={2.5} /> {t("record.back", "BACK")}
-            </Link>
+            </button>
 
             <button
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -406,7 +522,7 @@ export default function RecordDetailPage() {
                       <button
                         type="button"
                         onClick={quickArchive}
-                        disabled={updateRecord.isPending}
+                        disabled={isRecordMutating}
                         className="bg-background text-foreground hover:bg-accent hover:text-white font-black text-xl px-10 py-5 uppercase shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] border-4 border-foreground transition-all flex items-center justify-center gap-3 w-full md:w-auto"
                       >
                         {updateRecord.isPending ? "ARCHIVING..." : (
@@ -516,21 +632,29 @@ export default function RecordDetailPage() {
                       <span className="flex items-center gap-2"><ArrowLeftSquare className="w-6 h-6 rotate-180" strokeWidth={3} /> {t("record.manageRecord", "MANAGE")}</span>
                     </h3>
                     <div className="space-y-3">
+                      {isRecordMutating ? (
+                        <p className="font-mono text-[10px] font-bold uppercase text-muted-foreground">
+                          {t("record.pending", "SAVING...")}
+                        </p>
+                      ) : null}
                       <input
                         value={editSourceTitle}
                         onChange={(event) => setEditSourceTitle(event.target.value)}
                         placeholder="SOURCE TITLE"
+                        disabled={isRecordMutating}
                         className="min-h-[44px] w-full border-2 border-foreground bg-background p-2 font-mono text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                       />
                       <input
                         value={editUrl}
                         onChange={(event) => setEditUrl(event.target.value)}
                         placeholder="https://..."
+                        disabled={isRecordMutating}
                         className="min-h-[44px] w-full border-2 border-foreground bg-background p-2 font-mono text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                       />
                       <select
                         value={editState}
                         onChange={(event) => setEditState(event.target.value as RecordRow["state"])}
+                        disabled={isRecordMutating}
                         className="min-h-[44px] w-full border-2 border-foreground bg-background p-2 font-mono text-xs font-bold uppercase text-foreground focus:outline-none focus:ring-2 focus:ring-accent appearance-none cursor-pointer rounded-none"
                       >
                         <option value="INBOX">{getStateLabel("INBOX", t)}</option>
@@ -543,18 +667,18 @@ export default function RecordDetailPage() {
                         <button
                           type="button"
                           onClick={requestSaveRecord}
-                          disabled={updateRecord.isPending}
+                          disabled={isRecordMutating}
                           className="min-h-[44px] flex-1 bg-foreground text-background font-black text-xs uppercase py-2 hover:bg-accent hover:text-white transition-colors disabled:opacity-50"
                         >
-                          {updateRecord.isPending ? "..." : t("record.update", "UPDATE")}
+                          {updateRecord.isPending ? <LoadingDots /> : t("record.update", "UPDATE")}
                         </button>
                         <button
                           type="button"
                           onClick={requestDeleteRecord}
-                          disabled={deleteRecord.isPending}
+                          disabled={isRecordMutating}
                           className="min-h-[44px] flex-1 bg-destructive text-white font-black text-xs uppercase py-2 hover:bg-red-600 transition-colors disabled:opacity-50"
                         >
-                          {deleteRecord.isPending ? "..." : t("record.delete", "DELETE")}
+                          {deleteRecord.isPending ? <LoadingDots /> : t("record.delete", "DELETE")}
                         </button>
                       </div>
                     </div>
@@ -579,7 +703,7 @@ export default function RecordDetailPage() {
                             <button
                               type="button"
                               onClick={() => toggleTag(tag.id)}
-                              disabled={updateTags.isPending}
+                              disabled={isTagMutating}
                               className="px-2 py-1 border-l-2 border-background/20 hover:bg-destructive hover:text-white transition-colors"
                               aria-label="Remove tag"
                             >
@@ -600,7 +724,7 @@ export default function RecordDetailPage() {
                             if (e.target.value) toggleTag(e.target.value)
                             e.target.value = "" // Reset after selection
                           }}
-                          disabled={updateTags.isPending}
+                          disabled={isTagMutating}
                           className="w-full bg-background border-2 border-dashed border-foreground/50 text-foreground font-mono text-xs font-bold p-2 focus:outline-none focus:border-accent appearance-none rounded-none cursor-pointer uppercase"
                           defaultValue=""
                         >
@@ -624,14 +748,15 @@ export default function RecordDetailPage() {
                         value={newTagName}
                         onChange={(e) => setNewTagName(e.target.value)}
                         placeholder="+ NEW TAG"
+                        disabled={isTagMutating}
                         className="flex-1 bg-background border-2 border-r-0 border-foreground font-mono text-xs font-bold p-2 focus:outline-none focus:border-accent uppercase min-w-0 placeholder:text-muted-foreground/50"
                       />
                       <button
                         type="submit"
-                        disabled={!newTagName.trim() || createTag.isPending}
+                        disabled={!newTagName.trim() || isTagMutating}
                         className="bg-foreground text-background font-mono text-xs font-bold px-3 py-2 uppercase hover:bg-accent hover:text-white disabled:opacity-50 border-2 border-foreground"
                       >
-                        {createTag.isPending ? "..." : "ADD"}
+                        {createTag.isPending ? <LoadingDots /> : "ADD"}
                       </button>
                     </form>
 

@@ -2,11 +2,13 @@
 
 import { useEffect, useRef, useState } from "react"
 import { useSearchParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { useMutation } from "@tanstack/react-query"
 import AuthGate from "@shared/auth/auth-gate"
 import AppNav from "@shared/layout/app-nav"
 import { useI18n } from "@app-shared/i18n/i18n-provider"
 import { apiFetch } from "@/lib/client-http"
+import { Toast } from "@shared/ui/toast"
 
 type ShareResponse = {
   created: number
@@ -29,21 +31,28 @@ function parseTags(tagText: string): string[] {
 
 export default function SharePage() {
   const { t } = useI18n()
+  const router = useRouter()
   const searchParams = useSearchParams()
   const [content, setContent] = useState("")
   const [title, setTitle] = useState("")
   const [url, setUrl] = useState("")
   const [tags, setTags] = useState("")
+  const [showSavedToast, setShowSavedToast] = useState(false)
+  const [lastSharedRecordId, setLastSharedRecordId] = useState<string | null>(null)
   const autoSubmitKeyRef = useRef<string | null>(null)
 
-  const share = useMutation({
+  const shareWithFeedback = useMutation({
     mutationFn: (payload: SharePayload) =>
       apiFetch<ShareResponse>("/api/capture/share", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       }),
-    onSuccess: () => {
+    onSuccess: (data) => {
+      setLastSharedRecordId(data.ids[0] ?? null)
+      setShowSavedToast(true)
+      window.setTimeout(() => setShowSavedToast(false), 2500)
+
       setContent("")
       setTitle("")
       setUrl("")
@@ -79,20 +88,20 @@ export default function SharePage() {
 
       autoSubmitKeyRef.current = key
       const parsedTags = parseTags(tagsParam)
-      share.mutate({
+      shareWithFeedback.mutate({
         content: contentParam,
         title: titleParam || undefined,
         url: urlParam || undefined,
         tags: parsedTags.length > 0 ? parsedTags : undefined
       })
     }
-  }, [searchParams, share])
+  }, [searchParams, shareWithFeedback])
 
   const autoMode = searchParams.get("auto") === "1"
 
   const submitManual = () => {
     const parsedTags = parseTags(tags)
-    share.mutate({
+    shareWithFeedback.mutate({
       content,
       title: title || undefined,
       url: url || undefined,
@@ -109,7 +118,7 @@ export default function SharePage() {
             <h1 className="mb-4 border-b-4 border-foreground pb-2 font-black text-3xl uppercase">{t("share.title", "Quick Share")}</h1>
             {autoMode ? (
               <p className="mb-3 border-2 border-foreground bg-background p-2 font-mono text-xs font-bold uppercase">
-                {share.isPending
+                {shareWithFeedback.isPending
                   ? t("share.autoSaving", "Clip received. Saving automatically...")
                   : t("share.autoReady", "Clip received. Saving after login.")}
               </p>
@@ -143,21 +152,37 @@ export default function SharePage() {
               <button
                 type="button"
                 onClick={submitManual}
-                disabled={!content.trim() || share.isPending}
+                disabled={!content.trim() || shareWithFeedback.isPending}
                 className="w-full border-2 border-foreground bg-foreground px-3 py-3 font-mono text-sm font-bold uppercase text-background disabled:opacity-60"
               >
-                {share.isPending ? t("share.saving", "Saving...") : t("share.save", "Save to Vault")}
+                {shareWithFeedback.isPending ? t("share.saving", "Saving...") : t("share.save", "Save to Vault")}
               </button>
-              {share.error ? <p className="font-mono text-xs text-destructive">{share.error.message}</p> : null}
-              {share.data ? (
+              {shareWithFeedback.error ? <p className="font-mono text-xs text-destructive">{shareWithFeedback.error.message}</p> : null}
+              {shareWithFeedback.data ? (
                 <p className="font-mono text-xs text-foreground">
-                  {t("share.saved", "Saved")}: {share.data.created}
+                  {t("share.saved", "Saved")}: {shareWithFeedback.data.created}
                 </p>
               ) : null}
             </div>
           </section>
         </main>
       </AuthGate>
+      {showSavedToast ? (
+        <Toast
+          message={t("toast.saved", "Saved")}
+          actionLabel={lastSharedRecordId ? t("toast.openRecord", "Open") : undefined}
+          onAction={
+            lastSharedRecordId
+              ? () => router.push(`/records/${lastSharedRecordId}?from=${encodeURIComponent("/share")}`)
+              : undefined
+          }
+          tone="success"
+          onClose={() => {
+            setShowSavedToast(false)
+            setLastSharedRecordId(null)
+          }}
+        />
+      ) : null}
     </div>
   )
 }

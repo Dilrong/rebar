@@ -1,15 +1,15 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useTheme } from "next-themes"
-import { Search, Square, Plus, BookOpen, CheckSquare } from "lucide-react"
+import { Search, Square, Plus, BookOpen, CheckSquare, User, RefreshCw, Moon, Sun } from "lucide-react"
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react"
 import { useI18n } from "@app-shared/i18n/i18n-provider"
 import { cn } from "@/lib/utils"
 import { getSupabaseBrowser } from "@/lib/supabase-browser"
 import { getStartPagePreference } from "@feature-lib/settings/preferences"
-import { useIsFetching, useQuery } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
 import { apiFetch } from "@/lib/client-http"
 
 const NAV_LINKS = ["capture", "review", "library", "search"] as const
@@ -34,6 +34,7 @@ function formatSyncAge(updatedAt: number | null): string {
 
 export default function AppNav() {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const router = useRouter()
   const { theme, setTheme } = useTheme()
   const { t } = useI18n()
@@ -46,10 +47,16 @@ export default function AppNav() {
   const [quickQuery, setQuickQuery] = useState("")
   const [quickResults, setQuickResults] = useState<Array<{ id: string; kind: string; content: string }>>([])
   const [quickActiveIndex, setQuickActiveIndex] = useState(-1)
+  const [quickLoading, setQuickLoading] = useState(false)
   const [lastSyncAt, setLastSyncAt] = useState<number | null>(null)
   const quickDialogRef = useRef<HTMLDivElement | null>(null)
   const quickInputRef = useRef<HTMLInputElement | null>(null)
-  const fetchingCount = useIsFetching()
+
+  const currentQuery = searchParams.toString()
+  const currentLocation = currentQuery ? `${pathname}?${currentQuery}` : pathname
+
+  const buildRecordHref = (recordId: string) =>
+    `/records/${recordId}?from=${encodeURIComponent(currentLocation)}`
 
   const syncHealth = useQuery({
     queryKey: ["sync-health"],
@@ -67,7 +74,7 @@ export default function AppNav() {
 
   const syncStatusLabel = syncHealth.isError
     ? t("nav.syncError", "SYNC ERR")
-    : fetchingCount > 0
+    : syncHealth.isFetching
       ? t("nav.syncing", "SYNCING...")
       : `${t("nav.synced", "SYNCED")} ${formatSyncAge(lastSyncAt)}`
 
@@ -108,24 +115,46 @@ export default function AppNav() {
 
   useEffect(() => {
     if (!quickOpen) {
+      setQuickLoading(false)
       return
     }
     if (!quickQuery.trim()) {
       setQuickResults([])
+      setQuickActiveIndex(-1)
+      setQuickLoading(false)
       return
     }
+
+    let active = true
+    setQuickLoading(true)
 
     const timer = window.setTimeout(async () => {
       try {
         const response = await fetch(`/api/search?q=${encodeURIComponent(quickQuery.trim())}&limit=5`)
         const data = (await response.json()) as { data?: Array<{ id: string; kind: string; content: string }> }
+        if (!active) {
+          return
+        }
+
         setQuickResults(data.data ?? [])
+        setQuickActiveIndex(-1)
       } catch {
+        if (!active) {
+          return
+        }
+
         setQuickResults([])
+      } finally {
+        if (active) {
+          setQuickLoading(false)
+        }
       }
     }, 180)
 
-    return () => window.clearTimeout(timer)
+    return () => {
+      active = false
+      window.clearTimeout(timer)
+    }
   }, [quickOpen, quickQuery])
 
   useEffect(() => {
@@ -210,11 +239,16 @@ export default function AppNav() {
       return
     }
 
-    if (event.key === "Enter" && quickActiveIndex >= 0) {
+    if (event.key === "Enter") {
       event.preventDefault()
-      const selected = quickResults[quickActiveIndex]
+
+      const selected = quickResults[quickActiveIndex >= 0 ? quickActiveIndex : 0]
+      if (!selected) {
+        return
+      }
+
       setQuickOpen(false)
-      router.push(`/records/${selected.id}`)
+      router.push(buildRecordHref(selected.id))
     }
   }
 
@@ -255,7 +289,7 @@ export default function AppNav() {
               "min-h-[44px] flex items-center justify-center border-2 px-3 py-2 font-mono text-[10px] font-bold uppercase transition-colors",
               syncHealth.isError
                 ? "border-destructive text-destructive"
-                : fetchingCount > 0
+                : syncHealth.isFetching
                   ? "border-accent text-accent"
                   : "border-foreground text-foreground hover:bg-foreground hover:text-background"
             )}
@@ -319,61 +353,56 @@ export default function AppNav() {
       </nav>
 
       {/* --- MOBILE TOP BAR (Logo + Theme/Profile only) --- */}
-      <nav className="flex md:hidden mb-4 flex-row items-center justify-between border-b-[3px] border-foreground py-2 px-1 gap-2">
+      <nav className="flex md:hidden sticky top-0 z-30 bg-background mb-4 flex-row items-center justify-between border-b-[3px] border-foreground py-2 px-3 gap-2 shadow-brutal-sm">
         <Link
           href={homeHref}
           className="rotate-[-2deg] self-start border-2 border-foreground bg-accent px-2 py-0.5 mt-0.5 font-black text-xl uppercase tracking-tighter text-white shadow-brutal-sm transition-transform hover:rotate-0"
         >
           REBAR_
         </Link>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => syncHealth.refetch()}
             disabled={syncHealth.isFetching}
             className={cn(
-              "min-h-[36px] flex items-center justify-center border-2 px-2 py-1 font-mono text-[9px] font-bold uppercase",
-              syncHealth.isError
-                ? "border-destructive text-destructive"
-                : fetchingCount > 0
-                  ? "border-accent text-accent"
-                  : "border-foreground text-foreground"
+              "min-h-[36px] min-w-[36px] flex items-center justify-center border-2 border-foreground bg-background p-1.5 shadow-brutal-sm active:translate-y-[2px] active:translate-x-[2px] active:shadow-none transition-all",
+              syncHealth.isError ? "text-destructive" : syncHealth.isFetching ? "text-accent" : "text-foreground"
             )}
-            title={t("nav.syncHint", "Click to refresh sync status")}
+            title={syncStatusLabel}
           >
-            {syncStatusLabel}
+            <RefreshCw className={cn("h-4 w-4", syncHealth.isFetching && "animate-spin")} strokeWidth={3} />
           </button>
           {authEmail ? (
             <Link
               href="/settings"
               title={authEmail}
-              className="min-h-[36px] flex items-center justify-center border-2 border-foreground bg-background px-2 py-1 font-mono text-[10px] font-bold text-foreground"
+              className="min-h-[36px] min-w-[36px] flex items-center justify-center border-2 border-foreground bg-background p-1.5 shadow-brutal-sm text-foreground active:translate-y-[2px] active:translate-x-[2px] active:shadow-none transition-all"
             >
-              {t("nav.profile", "USER")}
+              <User className="h-4 w-4" strokeWidth={3} />
             </Link>
           ) : (
             <Link
               href="/signup"
-              className="min-h-[36px] flex items-center justify-center border-2 border-foreground bg-background px-2 py-1 font-mono text-[10px] font-bold text-foreground"
+              className="min-h-[36px] flex items-center justify-center border-2 border-foreground bg-background px-2 py-1 font-mono text-[10px] font-bold text-foreground shadow-brutal-sm active:translate-y-[2px] active:translate-x-[2px] active:shadow-none transition-all"
             >
-              {t("nav.auth")}
+              AUTH
             </Link>
           )}
           <button
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className="min-h-[36px] flex items-center justify-center active:translate-y-[2px] active:translate-x-[2px] active:shadow-none"
+            className="min-h-[36px] min-w-[36px] flex items-center justify-center border-2 border-foreground bg-background p-1.5 shadow-brutal-sm text-foreground active:translate-y-[2px] active:translate-x-[2px] active:shadow-none transition-all"
             aria-label={t("nav.theme")}
             type="button"
           >
-            {mounted && (
-              <Square
-                size={16}
-                strokeWidth={3}
-                className={cn(
-                  "border-2 border-foreground bg-background p-1.5 text-foreground shadow-brutal-sm hover:bg-muted",
-                  theme === "dark" && "fill-accent"
-                )}
-              />
+            {mounted ? (
+              theme === "dark" ? (
+                <Moon className="h-4 w-4" strokeWidth={3} />
+              ) : (
+                <Sun className="h-4 w-4" strokeWidth={3} />
+              )
+            ) : (
+              <Sun className="h-4 w-4" strokeWidth={3} />
             )}
           </button>
         </div>
@@ -478,7 +507,7 @@ export default function AppNav() {
                   id={`quick-option-${index}`}
                   role="option"
                   aria-selected={quickActiveIndex === index}
-                  href={`/records/${item.id}`}
+                  href={buildRecordHref(item.id)}
                   onClick={() => setQuickOpen(false)}
                   onMouseEnter={() => setQuickActiveIndex(index)}
                   className={cn(
@@ -490,6 +519,24 @@ export default function AppNav() {
                   <p className="line-clamp-2 text-sm font-semibold">{item.content}</p>
                 </Link>
               ))}
+
+              {quickLoading ? (
+                <p className="border-2 border-foreground p-3 font-mono text-[10px] font-bold uppercase text-muted-foreground">
+                  {t("nav.quickSearching", "SEARCHING...")}
+                </p>
+              ) : null}
+
+              {!quickLoading && quickQuery.trim() && quickResults.length === 0 ? (
+                <p className="border-2 border-foreground p-3 font-mono text-[10px] font-bold uppercase text-muted-foreground">
+                  {t("nav.quickEmpty", "NO MATCHES")}
+                </p>
+              ) : null}
+
+              {!quickLoading && !quickQuery.trim() ? (
+                <p className="border-2 border-dashed border-foreground p-3 font-mono text-[10px] font-bold uppercase text-muted-foreground">
+                  {t("nav.quickHint", "TYPE TO SEARCH")}
+                </p>
+              ) : null}
             </div>
           </div>
         </div>
