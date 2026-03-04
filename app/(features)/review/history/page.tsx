@@ -30,6 +30,39 @@ type ReviewHistoryResponse = {
   total: number
 }
 
+function formatActionLabel(action: ReviewHistoryItem["action"], t: (key: string, fallback: string) => string): string {
+  if (action === "reviewed") return t("history.action.reviewed", "REVIEWED")
+  if (action === "resurface") return t("history.action.resurface", "RESURFACE")
+  return t("history.action.undo", "UNDO")
+}
+
+function formatDecisionLabel(
+  decisionType: ReviewHistoryItem["decision_type"],
+  t: (key: string, fallback: string) => string
+): string {
+  if (decisionType === "ARCHIVE") return t("review.triage.archive", "보관")
+  if (decisionType === "ACT") return t("review.triage.act", "실행")
+  return t("review.triage.defer", "보류")
+}
+
+function formatActionTypeLabel(
+  actionType: ReviewHistoryItem["action_type"],
+  t: (key: string, fallback: string) => string
+): string {
+  if (actionType === "EXPERIMENT") return t("review.actionType.experiment", "실험")
+  if (actionType === "SHARE") return t("review.actionType.share", "공유")
+  return t("review.actionType.todo", "할일")
+}
+
+function formatDeferReasonLabel(
+  deferReason: ReviewHistoryItem["defer_reason"],
+  t: (key: string, fallback: string) => string
+): string {
+  if (deferReason === "NEED_INFO") return t("review.deferReason.needInfo", "정보부족")
+  if (deferReason === "LOW_CONFIDENCE") return t("review.deferReason.lowConfidence", "중요도불명")
+  return t("review.deferReason.noTime", "시간없음")
+}
+
 const PAGE_SIZE = 20
 
 export default function ReviewHistoryPage() {
@@ -113,7 +146,7 @@ export default function ReviewHistoryPage() {
                 </select>
               </label>
               <label className="font-mono text-xs font-bold uppercase">
-                DECISION
+                {t("history.decision", "결정")}
                 <select
                   value={decisionType}
                   onChange={(event) => {
@@ -129,7 +162,7 @@ export default function ReviewHistoryPage() {
                 </select>
               </label>
               <label className="font-mono text-xs font-bold uppercase">
-                ACTION TYPE
+                {t("history.actionType", "실행 타입")}
                 <select
                   value={actionType}
                   onChange={(event) => {
@@ -145,7 +178,7 @@ export default function ReviewHistoryPage() {
                 </select>
               </label>
               <label className="font-mono text-xs font-bold uppercase">
-                DEFER REASON
+                {t("history.deferReason", "보류 사유")}
                 <select
                   value={deferReason}
                   onChange={(event) => {
@@ -209,8 +242,17 @@ export default function ReviewHistoryPage() {
           ) : null}
 
           {history.error ? (
-            <div className="bg-destructive text-white p-4 font-mono text-xs font-bold uppercase border-4 border-foreground">
-              ERR: {history.error.message}
+            <div className="space-y-2">
+              <div className="bg-destructive text-white p-4 font-mono text-xs font-bold uppercase border-4 border-foreground">
+                ERR: {history.error.message}
+              </div>
+              <button
+                type="button"
+                className="min-h-[44px] border-2 border-foreground px-3 py-2 font-mono text-xs font-bold uppercase hover:bg-foreground hover:text-background"
+                onClick={() => history.refetch()}
+              >
+                {t("review.retry", "다시 시도")}
+              </button>
             </div>
           ) : null}
 
@@ -219,21 +261,21 @@ export default function ReviewHistoryPage() {
               <article key={item.id} className="border-4 border-foreground bg-card p-4">
                 <div className="flex flex-wrap gap-2 items-center mb-2">
                   <span className="font-mono text-[10px] font-bold border-2 border-current px-1.5 py-0.5 uppercase">
-                    {item.action}
+                    {formatActionLabel(item.action, t)}
                   </span>
                   {item.decision_type ? (
-                    <span className="font-mono text-[10px] font-bold border-2 border-current px-1.5 py-0.5 uppercase">
-                      {item.decision_type}
+                    <span className="font-mono text-[10px] font-bold border-2 border-current bg-accent/10 px-1.5 py-0.5 uppercase">
+                      {formatDecisionLabel(item.decision_type, t)}
                     </span>
                   ) : null}
                   {item.action_type ? (
-                    <span className="font-mono text-[10px] font-bold border-2 border-current px-1.5 py-0.5 uppercase">
-                      {item.action_type}
+                    <span className="font-mono text-[10px] font-bold border-2 border-current bg-background px-1.5 py-0.5 uppercase">
+                      {formatActionTypeLabel(item.action_type, t)}
                     </span>
                   ) : null}
                   {item.defer_reason ? (
-                    <span className="font-mono text-[10px] font-bold border-2 border-current px-1.5 py-0.5 uppercase">
-                      {item.defer_reason}
+                    <span className="font-mono text-[10px] font-bold border-2 border-current bg-background px-1.5 py-0.5 uppercase">
+                      {formatDeferReasonLabel(item.defer_reason, t)}
                     </span>
                   ) : null}
                   <span className="font-mono text-[10px] font-bold border-2 border-current px-1.5 py-0.5 uppercase">

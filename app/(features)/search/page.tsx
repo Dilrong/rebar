@@ -113,7 +113,7 @@ export default function SearchPage() {
             </h1>
           </header>
 
-          <section className="border-4 border-foreground bg-card p-4 mb-6">
+          <section className="border-[3px] md:border-4 border-foreground bg-card p-3 md:p-4 mb-4 md:mb-6 shadow-brutal-sm md:shadow-brutal">
             <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-5">
               <input
                 value={q}
@@ -174,11 +174,10 @@ export default function SearchPage() {
               <button
                 type="button"
                 onClick={() => setSemantic((prev) => !prev)}
-                className={`min-h-[44px] border-2 px-3 py-2 font-mono text-xs font-bold uppercase transition-colors ${
-                  semantic
-                    ? "border-accent bg-accent text-white"
-                    : "border-foreground bg-background text-foreground hover:bg-foreground hover:text-background"
-                }`}
+                className={`min-h-[44px] border-2 px-3 py-2 font-mono text-xs font-bold uppercase transition-colors ${semantic
+                  ? "border-accent bg-accent text-white"
+                  : "border-foreground bg-background text-foreground hover:bg-foreground hover:text-background"
+                  }`}
               >
                 {semantic ? t("search.semanticOn", "SEMANTIC ON") : t("search.semanticOff", "SEMANTIC OFF")}
               </button>
@@ -191,7 +190,7 @@ export default function SearchPage() {
           </section>
 
           {result.isFetching ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-6">
               {[1, 2, 3, 4, 5, 6].map((i) => (
                 <Skeleton key={i} className="h-48 md:h-72 w-full" />
               ))}
@@ -200,14 +199,14 @@ export default function SearchPage() {
 
           {result.error ? <ErrorState message={result.error.message} onRetry={() => result.refetch()} /> : null}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
             {(result.data?.data ?? []).map((record) => (
               <Link
                 key={record.id}
                 href={`/records/${record.id}`}
                 onMouseEnter={() => prefetchRecord(record.id)}
                 onFocus={() => prefetchRecord(record.id)}
-                className="group flex h-48 flex-col border-4 border-foreground bg-card p-5 shadow-brutal hover:bg-foreground hover:text-background active:translate-x-1 active:translate-y-1 active:shadow-none transition-all md:h-72"
+                className="group flex h-48 flex-col border-[3px] md:border-4 border-foreground bg-card p-4 md:p-5 shadow-brutal-sm md:shadow-brutal hover:bg-foreground hover:text-background active:translate-x-1 active:translate-y-1 active:shadow-none transition-all md:h-72"
               >
                 <div className="flex gap-2 mb-3">
                   {record.favicon_url && (

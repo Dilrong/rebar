@@ -76,6 +76,13 @@
       padding-bottom: 0;
     }
   }
+
+  /* Prevent iOS zoom on input fields */
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
 }
 
 @layer utilities {

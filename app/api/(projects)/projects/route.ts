@@ -5,6 +5,7 @@ import { fail, ok, rateLimited } from "@/lib/http"
 import { checkRateLimitDistributed, resolveClientKey } from "@/lib/rate-limit"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
 
+const PROJECT_MODE_ENABLED = false
 const UuidSchema = z.string().uuid()
 
 type ProjectMetrics = {
@@ -59,6 +60,10 @@ export async function GET(request: NextRequest) {
   const userId = await getUserId(request.headers)
   if (!userId) {
     return fail("Unauthorized", 401)
+  }
+
+  if (!PROJECT_MODE_ENABLED) {
+    return fail("Project mode is temporarily disabled", 503)
   }
 
   const selectedTagId = request.nextUrl.searchParams.get("tag_id")?.trim() ?? ""

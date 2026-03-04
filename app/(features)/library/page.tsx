@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Database, Download, Plus, Tag, Trash2 } from "lucide-react"
 import AuthGate from "@shared/auth/auth-gate"
 import AppNav from "@shared/layout/app-nav"
@@ -15,6 +15,7 @@ import { getStateLabel } from "@/lib/i18n/state-label"
 import { EmptyState } from "@shared/ui/empty-state"
 import { ErrorState } from "@shared/ui/error-state"
 import { Skeleton } from "@shared/ui/skeleton"
+import { useDebouncedValue } from "@shared/hooks/use-debounced-value"
 
 import type { RecordRow, TagRow } from "@/lib/types"
 import { stripMarkdown } from "@feature-lib/content/strip-markdown"
@@ -46,6 +47,7 @@ export default function LibraryPage() {
   const [state, setState] = useState<StateFilter>("ALL")
   const [kind, setKind] = useState("")
   const [q, setQ] = useState("")
+  const debouncedQ = useDebouncedValue(q, 220)
   const [tagId, setTagId] = useState("")
   const [newTagName, setNewTagName] = useState("")
   const [sort, setSort] = useState<"created_at" | "review_count" | "due_at">("created_at")
@@ -105,8 +107,8 @@ export default function LibraryPage() {
     if (kind) {
       params.set("kind", kind)
     }
-    if (q) {
-      params.set("q", q)
+    if (debouncedQ) {
+      params.set("q", debouncedQ)
     }
     if (tagId) {
       params.set("tag_id", tagId)
@@ -114,13 +116,7 @@ export default function LibraryPage() {
     params.set("sort", sort)
     params.set("order", order)
     return params.toString()
-  }, [kind, order, q, sort, state, tagId])
-
-  // Reset accumulated records + cursor when filters change
-  useEffect(() => {
-    setAllRecords([])
-    setCursor(null)
-  }, [queryString])
+  }, [debouncedQ, kind, order, sort, state, tagId])
 
   const qc = useQueryClient()
 
@@ -142,8 +138,14 @@ export default function LibraryPage() {
       setCursor(data.next_cursor ?? null)
       return data
     },
-    staleTime: 1000 * 60 * 5 // 5 minutes
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    placeholderData: keepPreviousData
   })
+
+  const libraryBackHref = queryString ? `/library?${queryString}` : "/library"
+
+  const toRecordHref = (recordId: string) =>
+    `/records/${recordId}?from=${encodeURIComponent(libraryBackHref)}`
 
   const tags = useQuery({
     queryKey: ["tags"],
@@ -431,13 +433,13 @@ export default function LibraryPage() {
         <main className="max-w-6xl mx-auto animate-fade-in-up pb-24">
           <AppNav />
 
-          <header className="mb-8 flex flex-col md:flex-row md:items-end justify-between border-b-4 border-foreground pb-4 gap-4">
-            <h1 className="font-black text-5xl uppercase text-foreground leading-none flex items-center gap-4">
-              <Database className="w-10 h-10" strokeWidth={3} />
+          <header className="mb-6 md:mb-8 flex flex-col md:flex-row md:items-end justify-between border-b-[3px] md:border-b-4 border-foreground pb-3 md:pb-4 gap-3 md:gap-4">
+            <h1 className="font-black text-4xl md:text-5xl uppercase text-foreground leading-none flex items-center gap-3 md:gap-4">
+              <Database className="w-8 h-8 md:w-10 md:h-10" strokeWidth={3} />
               {t("library.title", "VAULT")}
             </h1>
-            <div className="flex items-center gap-3">
-              <span className="min-h-[44px] flex items-center justify-center font-mono text-sm font-bold bg-foreground text-background px-3 py-2 uppercase">
+            <div className="flex items-center gap-2 md:gap-3">
+              <span className="min-h-[44px] flex items-center justify-center font-mono text-xs md:text-sm font-bold bg-foreground text-background px-3 py-2 uppercase">
                 {t("library.rows", "ROWS")}: {records.data?.total || 0}
               </span>
               <div ref={exportMenuWrapRef} className="relative">
@@ -748,6 +750,12 @@ export default function LibraryPage() {
             {deleteTag.error ? <p className="font-mono text-xs text-destructive mt-2">{deleteTag.error.message}</p> : null}
           </section>
 
+          {records.isFetching ? (
+            <p className="mb-4 font-mono text-[10px] font-bold uppercase text-muted-foreground">
+              {t("library.searching", "UPDATING RESULTS...")}
+            </p>
+          ) : null}
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {records.isLoading ? (
               <>
@@ -762,9 +770,9 @@ export default function LibraryPage() {
                 key={record.id}
                 onMouseEnter={() => prefetchRecord(record.id)}
                 onFocus={() => prefetchRecord(record.id)}
-                className="group flex h-48 flex-col border-4 border-foreground bg-card p-4 md:p-6 shadow-brutal hover:bg-foreground hover:text-background active:translate-x-1 active:translate-y-1 active:shadow-none transition-all md:h-72"
+                className="group flex h-48 flex-col border-[3px] md:border-4 border-foreground bg-card p-4 md:p-6 shadow-brutal-sm md:shadow-brutal hover:bg-foreground hover:text-background active:translate-x-1 active:translate-y-1 active:shadow-none transition-all md:h-72"
               >
-                <div className="flex justify-between items-start mb-4">
+                <div className="flex justify-between items-start mb-3 md:mb-4">
                   <div className="flex gap-2">
                     <input
                       type="checkbox"
@@ -810,8 +818,8 @@ export default function LibraryPage() {
                         disabled={activate.isPending || inboxDecision.isPending}
                       >
                         {inboxDecision.isPending &&
-                        inboxDecision.variables?.id === record.id &&
-                        inboxDecision.variables?.decisionType === "ACT" ? (
+                          inboxDecision.variables?.id === record.id &&
+                          inboxDecision.variables?.decisionType === "ACT" ? (
                           <LoadingDots />
                         ) : (
                           t("library.inboxAction.todo", "TODO")
@@ -828,8 +836,8 @@ export default function LibraryPage() {
                         disabled={activate.isPending || inboxDecision.isPending}
                       >
                         {inboxDecision.isPending &&
-                        inboxDecision.variables?.id === record.id &&
-                        inboxDecision.variables?.decisionType === "ARCHIVE" ? (
+                          inboxDecision.variables?.id === record.id &&
+                          inboxDecision.variables?.decisionType === "ARCHIVE" ? (
                           <LoadingDots />
                         ) : (
                           t("library.inboxAction.archive", "ARCHIVE")
@@ -839,7 +847,7 @@ export default function LibraryPage() {
                   ) : null}
                 </div>
 
-                <Link href={`/records/${record.id}`} className="flex-1 overflow-hidden flex flex-col">
+                <Link href={toRecordHref(record.id)} className="flex-1 overflow-hidden flex flex-col">
                   <p className="font-bold text-base md:text-lg leading-tight line-clamp-5 flex-1 mb-4">
                     {stripMarkdown(record.content)}
                   </p>
@@ -869,9 +877,10 @@ export default function LibraryPage() {
               <button
                 type="button"
                 onClick={loadMore}
-                className="min-h-[44px] border-4 border-foreground bg-background px-8 py-3 font-mono text-sm font-bold uppercase hover:bg-foreground hover:text-background shadow-brutal-sm transition-colors"
+                disabled={records.isFetching}
+                className="min-h-[44px] border-4 border-foreground bg-background px-8 py-3 font-mono text-sm font-bold uppercase hover:bg-foreground hover:text-background shadow-brutal-sm transition-colors disabled:opacity-60"
               >
-                {t("library.loadMore", "더 불러오기")} ↓
+                {records.isFetching ? t("library.loadingMore", "LOADING...") : `${t("library.loadMore", "더 불러오기")} ↓`}
               </button>
             </div>
           ) : null}

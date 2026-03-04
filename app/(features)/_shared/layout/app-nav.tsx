@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useTheme } from "next-themes"
-import { Search, Square, Plus, BookOpen, CheckSquare, BriefcaseBusiness } from "lucide-react"
+import { Search, Square, Plus, BookOpen, CheckSquare } from "lucide-react"
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react"
 import { useI18n } from "@app-shared/i18n/i18n-provider"
 import { cn } from "@/lib/utils"
@@ -12,7 +12,7 @@ import { getStartPagePreference } from "@feature-lib/settings/preferences"
 import { useIsFetching, useQuery } from "@tanstack/react-query"
 import { apiFetch } from "@/lib/client-http"
 
-const NAV_LINKS = ["capture", "review", "library", "search", "projects"] as const
+const NAV_LINKS = ["capture", "review", "library", "search"] as const
 
 type SyncHealthResponse = {
   authenticated: boolean
@@ -319,20 +319,20 @@ export default function AppNav() {
       </nav>
 
       {/* --- MOBILE TOP BAR (Logo + Theme/Profile only) --- */}
-      <nav className="flex md:hidden mb-6 flex-row items-center justify-between border-b-4 border-foreground py-4 gap-2">
+      <nav className="flex md:hidden mb-4 flex-row items-center justify-between border-b-[3px] border-foreground py-2 px-1 gap-2">
         <Link
           href={homeHref}
-          className="rotate-[-2deg] self-start border-2 border-foreground bg-accent px-2 py-1 font-black text-2xl uppercase tracking-tighter text-white shadow-brutal-sm transition-transform hover:rotate-0"
+          className="rotate-[-2deg] self-start border-2 border-foreground bg-accent px-2 py-0.5 mt-0.5 font-black text-xl uppercase tracking-tighter text-white shadow-brutal-sm transition-transform hover:rotate-0"
         >
           REBAR_
         </Link>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <button
             type="button"
             onClick={() => syncHealth.refetch()}
             disabled={syncHealth.isFetching}
             className={cn(
-              "min-h-[44px] flex items-center justify-center border-2 px-2 py-2 font-mono text-[9px] font-bold uppercase",
+              "min-h-[36px] flex items-center justify-center border-2 px-2 py-1 font-mono text-[9px] font-bold uppercase",
               syncHealth.isError
                 ? "border-destructive text-destructive"
                 : fetchingCount > 0
@@ -347,21 +347,21 @@ export default function AppNav() {
             <Link
               href="/settings"
               title={authEmail}
-              className="min-h-[44px] flex items-center justify-center border-2 border-foreground bg-background px-3 py-2 font-mono text-[10px] font-bold text-foreground"
+              className="min-h-[36px] flex items-center justify-center border-2 border-foreground bg-background px-2 py-1 font-mono text-[10px] font-bold text-foreground"
             >
               {t("nav.profile", "USER")}
             </Link>
           ) : (
             <Link
               href="/signup"
-              className="min-h-[44px] flex items-center justify-center border-2 border-foreground bg-background px-3 py-2 font-mono text-[10px] font-bold text-foreground"
+              className="min-h-[36px] flex items-center justify-center border-2 border-foreground bg-background px-2 py-1 font-mono text-[10px] font-bold text-foreground"
             >
               {t("nav.auth")}
             </Link>
           )}
           <button
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className="min-h-[44px] flex items-center justify-center active:translate-y-[2px] active:translate-x-[2px] active:shadow-none"
+            className="min-h-[36px] flex items-center justify-center active:translate-y-[2px] active:translate-x-[2px] active:shadow-none"
             aria-label={t("nav.theme")}
             type="button"
           >
@@ -370,7 +370,7 @@ export default function AppNav() {
                 size={16}
                 strokeWidth={3}
                 className={cn(
-                  "border-2 border-foreground bg-background p-2 text-foreground shadow-brutal-sm hover:bg-muted",
+                  "border-2 border-foreground bg-background p-1.5 text-foreground shadow-brutal-sm hover:bg-muted",
                   theme === "dark" && "fill-accent"
                 )}
               />
@@ -380,38 +380,38 @@ export default function AppNav() {
       </nav>
 
       {/* --- MOBILE BOTTOM NAVIGATION BAR --- */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 border-t-4 border-foreground bg-background shadow-[0_-4px_0_0_rgba(0,0,0,1)] pb-[env(safe-area-inset-bottom)] dark:shadow-[0_-4px_0_0_rgba(255,255,255,0.1)]">
-        <div className="flex flex-row items-center justify-around px-2 py-2 relative">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 border-t-4 border-foreground bg-background shadow-none pb-[env(safe-area-inset-bottom)]">
+        <div className="flex flex-row items-center justify-around px-1 py-1 relative">
 
           <Link
             href="/library"
             className={cn(
-              "flex flex-col items-center justify-center p-2 min-w-[64px] transition-colors",
+              "flex flex-col items-center justify-center p-3 min-w-[64px] transition-colors",
               pathname.includes("/library") ? "text-accent" : "text-muted-foreground hover:text-foreground"
             )}
           >
             <BookOpen className="h-6 w-6 stroke-[2.5]" />
-            <span className="font-mono text-[9px] font-bold uppercase mt-1">LIBRARY</span>
+            <span className="font-mono text-[9px] font-bold uppercase mt-1.5">LIBRARY</span>
           </Link>
 
           <Link
             href="/review"
             className={cn(
-              "flex flex-col items-center justify-center p-2 min-w-[64px] transition-colors",
+              "flex flex-col items-center justify-center p-3 min-w-[64px] transition-colors",
               pathname.includes("/review") ? "text-accent" : "text-muted-foreground hover:text-foreground"
             )}
           >
             <CheckSquare className="h-6 w-6 stroke-[2.5]" />
-            <span className="font-mono text-[9px] font-bold uppercase mt-1">REVIEW</span>
+            <span className="font-mono text-[9px] font-bold uppercase mt-1.5">REVIEW</span>
           </Link>
 
           {/* OVERSIZED CORE CAPTURE / FAB BUTTON */}
           <Link
             href="/capture"
-            className="flex flex-col flex-1 items-center justify-center relative -top-6"
+            className="flex flex-col flex-1 items-center justify-center relative -top-5"
           >
             <div className={cn(
-              "flex h-16 w-16 items-center justify-center border-4 border-foreground bg-accent shadow-brutal transition-transform active:translate-y-1 active:shadow-none rounded-none rotate-3",
+              "flex h-[60px] w-[60px] items-center justify-center border-[3px] border-foreground bg-accent shadow-brutal-sm transition-transform active:translate-y-1 active:shadow-none rounded-none rotate-3",
               pathname === "/capture" && "bg-foreground text-background"
             )}>
               <Plus className="h-8 w-8 text-white stroke-[3] -rotate-3" />
@@ -421,22 +421,11 @@ export default function AppNav() {
           <button
             type="button"
             onClick={() => setQuickOpen(true)}
-            className="flex flex-col items-center justify-center p-2 min-w-[64px] text-muted-foreground hover:text-foreground transition-colors"
+            className="flex flex-col items-center justify-center p-3 min-w-[64px] text-muted-foreground hover:text-foreground transition-colors"
           >
             <Search className="h-6 w-6 stroke-[2.5]" />
-            <span className="font-mono text-[9px] font-bold uppercase mt-1">SEARCH</span>
+            <span className="font-mono text-[9px] font-bold uppercase mt-1.5">SEARCH</span>
           </button>
-
-          <Link
-            href="/projects"
-            className={cn(
-              "flex flex-col items-center justify-center p-2 min-w-[64px] transition-colors",
-              pathname.includes("/projects") ? "text-accent" : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <BriefcaseBusiness className="h-6 w-6 stroke-[2.5]" />
-            <span className="font-mono text-[9px] font-bold uppercase mt-1">PROJ</span>
-          </Link>
 
         </div>
       </div>

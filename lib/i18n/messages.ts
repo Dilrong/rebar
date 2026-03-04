@@ -294,6 +294,10 @@ export const messages: Record<Locale, MessageTable> = {
     "projects.graph": "지식 그래프",
     "projects.records": "프로젝트 레코드",
     "projects.loading": "프로젝트 모드 로딩 중...",
+    "projects.disabled": "프로젝트 모드는 잠시 비활성화되었습니다",
+    "projects.disabledHint": "기본 캡처/리뷰/볼트 흐름은 그대로 사용할 수 있습니다",
+    "projects.gotoReview": "리뷰로 이동",
+    "projects.gotoLibrary": "볼트로 이동",
     "common.yes": "예",
     "common.no": "아니오"
   },
@@ -588,6 +592,10 @@ export const messages: Record<Locale, MessageTable> = {
     "projects.graph": "KNOWLEDGE GRAPH",
     "projects.records": "PROJECT RECORDS",
     "projects.loading": "LOADING PROJECT MODE...",
+    "projects.disabled": "PROJECT MODE IS TEMPORARILY DISABLED",
+    "projects.disabledHint": "CORE CAPTURE/REVIEW/LIBRARY FLOW IS STILL AVAILABLE",
+    "projects.gotoReview": "GO REVIEW",
+    "projects.gotoLibrary": "GO LIBRARY",
     "common.yes": "Yes",
     "common.no": "No"
   }

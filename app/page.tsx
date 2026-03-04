@@ -98,20 +98,20 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col p-6 bg-background font-sans">
-      <main className="max-w-4xl w-full mx-auto mt-16 md:mt-24 space-y-12 animate-fade-in-up">
+    <div className="min-h-screen flex flex-col p-4 md:p-6 bg-background font-sans">
+      <main className="max-w-4xl w-full mx-auto mt-8 md:mt-24 space-y-8 md:space-y-12 animate-fade-in-up">
 
-        <header className="space-y-6 border-l-8 border-accent pl-6 py-2">
+        <header className="space-y-4 md:space-y-6 border-l-4 md:border-l-8 border-accent pl-4 md:pl-6 py-2">
           <h1 className="font-black text-5xl sm:text-6xl md:text-8xl tracking-tighter uppercase text-foreground leading-[0.9] break-words">
             {t("home.title.line1", "DATA")}<br />{t("home.title.line2", "INFRASTRUCTURE")}.
           </h1>
-          <p className="text-xl md:text-2xl font-mono text-muted-foreground uppercase tracking-wider font-bold max-w-2xl bg-foreground text-background inline-block px-3 py-1">
+          <p className="text-lg md:text-2xl font-mono text-muted-foreground uppercase tracking-wider font-bold max-w-2xl bg-foreground text-background inline-block px-3 py-1">
             {t("home.subtitle", "SSOT // SYSTEM.READY")}
           </p>
         </header>
 
         {onboarding.show ? (
-          <section className="border-4 border-foreground bg-card p-5 md:p-6 shadow-brutal">
+          <section className="border-[3px] md:border-4 border-foreground bg-card p-4 md:p-6 shadow-brutal-sm md:shadow-brutal">
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="font-black text-2xl uppercase">{t("home.onboarding.title", "2-MIN ONBOARDING")}</p>
@@ -132,11 +132,10 @@ export default function HomePage() {
               {onboarding.steps.map((step) => (
                 <div
                   key={step.key}
-                  className={`min-h-[44px] border-2 px-3 py-2 font-mono text-xs font-bold uppercase ${
-                    step.done
+                  className={`min-h-[44px] border-2 px-3 py-2 font-mono text-xs font-bold uppercase ${step.done
                       ? "border-foreground bg-foreground text-background"
                       : "border-foreground bg-background text-foreground"
-                  }`}
+                    }`}
                 >
                   <span className="mr-2">{step.done ? "[x]" : "[ ]"}</span>
                   {step.label}
@@ -166,11 +165,11 @@ export default function HomePage() {
           </section>
         ) : null}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 pt-6 md:pt-12">
 
           <Link
             href="/review"
-            className="group block border-4 border-foreground bg-card p-6 md:p-8 hover:bg-accent hover:text-white transition-colors shadow-brutal active:translate-x-2 active:translate-y-2 active:shadow-none"
+            className="group block border-[3px] md:border-4 border-foreground bg-card p-5 md:p-8 hover:bg-accent hover:text-white transition-colors shadow-brutal-sm md:shadow-brutal active:translate-x-2 active:translate-y-2 active:shadow-none"
           >
             <div className="flex justify-between items-start mb-8">
               <CheckSquare className="w-10 h-10 group-hover:animate-pulse" strokeWidth={2.5} />
@@ -189,10 +188,10 @@ export default function HomePage() {
             )}
           </Link>
 
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-4 md:gap-6">
             <Link
               href="/capture"
-              className="group flex-1 flex flex-col border-4 border-foreground bg-card p-6 hover:bg-foreground hover:text-background transition-colors shadow-brutal active:translate-x-1.5 active:translate-y-1.5 active:shadow-none"
+              className="group flex-1 flex flex-col border-[3px] md:border-4 border-foreground bg-card p-5 md:p-6 hover:bg-foreground hover:text-background transition-colors shadow-brutal-sm md:shadow-brutal active:translate-x-1.5 active:translate-y-1.5 active:shadow-none"
             >
               <div className="flex justify-between items-start mb-6">
                 <Terminal className="w-8 h-8" strokeWidth={2.5} />
@@ -203,7 +202,7 @@ export default function HomePage() {
 
             <Link
               href="/library"
-              className="group flex-1 flex flex-col border-4 border-foreground bg-card p-6 hover:bg-foreground hover:text-background transition-colors shadow-brutal active:translate-x-1.5 active:translate-y-1.5 active:shadow-none"
+              className="group flex-1 flex flex-col border-[3px] md:border-4 border-foreground bg-card p-5 md:p-6 hover:bg-foreground hover:text-background transition-colors shadow-brutal-sm md:shadow-brutal active:translate-x-1.5 active:translate-y-1.5 active:shadow-none"
             >
               <div className="flex justify-between items-start mb-6">
                 <Database className="w-8 h-8" strokeWidth={2.5} />

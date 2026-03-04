@@ -583,12 +583,12 @@ export default function CapturePage() {
         <main className="max-w-3xl w-full mx-auto animate-fade-in-up pb-24">
           <AppNav />
 
-          <div className="border-4 border-foreground bg-card p-6 md:p-10 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.1)]">
-            <header className="mb-10 flex flex-col md:flex-row md:items-end justify-between border-b-4 border-foreground pb-6 gap-4">
-              <h1 className="font-black text-4xl md:text-5xl uppercase text-foreground leading-none">
+          <div className="border-[3px] md:border-4 border-foreground bg-card p-4 md:p-10 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.1)] md:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] md:dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.1)]">
+            <header className="mb-6 md:mb-10 flex flex-col md:flex-row md:items-end justify-between border-b-[3px] md:border-b-4 border-foreground pb-4 md:pb-6 gap-4">
+              <h1 className="font-black text-3xl md:text-5xl uppercase text-foreground leading-none">
                 {t("capture.title", "CAPTURE")}
               </h1>
-              <span className="font-mono text-xs font-bold bg-foreground text-background px-2 py-1 uppercase">
+              <span className="font-mono text-[10px] md:text-xs font-bold bg-foreground text-background px-2 py-1 uppercase w-fit">
                 {t("capture.ready", "READY TO ADD")}
               </span>
             </header>
