@@ -9,6 +9,10 @@ This document tracks recent implementation context, completed rounds, and next a
 - Extension authentication aligned with server-side cookie session flow
 - API auth path unified to reduce duplicated checks
 - Origin validation added on sensitive capture routes
+- API key exposure path removed from auth helper endpoint (`/api/auth/ingest-key` now returns `enabled` only)
+- URL extract flow hardened with host/scheme guards against internal/private targets
+- Bulk record mutation APIs are now rate-limited
+- Tag-filter ownership checks enforced on export/list/search flows
 - Extension UX improved (loading states, connectivity messaging, options validation)
 - Retry behavior improved for transient network and rate-limit scenarios
 
@@ -43,12 +47,21 @@ This document tracks recent implementation context, completed rounds, and next a
 - Accessibility and interaction polish for nav/export/library interactions
 - Initial API integration test coverage expanded
 
+### Round 4 (Completed)
+
+- Security preflight executed with dependency audit + route review
+- Capture extract route hardening verified with dedicated API tests
+- Bulk mutation route throttling and related test updates applied
+- Export route integrity fix and markdown response completion verified
+- Full verification pass: typecheck, test, lint, build
+
 ## Active Risk Watchlist
 
 - Keep semantic search path aligned with actual DB capabilities
 - Ensure cron schedules and endpoint protections stay synchronized
 - Continue monitoring extension service worker lifecycle edge cases
 - Maintain strict ownership checks on all bulk and mutation APIs
+- Break down oversized client pages over time (`capture`, `library`, `review`) to reduce change risk
 
 ## Recommended Next Actions
 
@@ -56,6 +69,7 @@ This document tracks recent implementation context, completed rounds, and next a
 - Continue capture/review UX simplification without adding AI auto-categorization
 - Improve observability around retry queues and rate-limited traffic
 - Keep docs synchronized when auth/capture flows change
+- Add a lightweight security regression checklist for new API routes (origin, auth path, rate-limit, ownership)
 
 ## Handoff Checklist
 

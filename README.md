@@ -17,6 +17,8 @@ cp .env.example .env.local
 - `SUPABASE_SECRET_KEY` (recommended)
 - `REBAR_INGEST_API_KEY` (external agent/webhook ingest key)
 - `REBAR_CRON_SECRET` (Vercel Cron protection key)
+- `REBAR_ALLOWED_EXTENSION_IDS` (optional, comma-separated production extension IDs)
+- `REBAR_ALLOW_ALL_EXTENSION_ORIGINS` (optional debug override, defaults to false)
 
 Legacy fallback is supported:
 
@@ -142,10 +144,14 @@ lib/
 - `GET /api/export?format=markdown|obsidian&state=&tag_id=` — Markdown/Obsidian export
 
 ### Capture (External Ingest)
-- `POST /api/capture/extract` — URL metadata extraction
+- `POST /api/capture/extract` — URL metadata extraction (http/https only, internal/private hosts blocked)
 - `POST /api/capture/ingest` — Batch ingest (JSON/CSV, max 300 items)
 - `POST /api/capture/share` — Single item capture (mobile/extension)
 - `GET /api/capture/guide` — Ingest format guide (human/LLM)
+
+### Auth
+- `GET /api/auth/check` — Session authentication status
+- `GET /api/auth/ingest-key` — Ingest key configured status only (`enabled`), never returns secret value
 
 ### Tags
 - `POST /api/tags` / `GET /api/tags` / `PATCH /api/tags/:id` / `DELETE /api/tags/:id`

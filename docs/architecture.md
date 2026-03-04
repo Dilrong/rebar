@@ -74,9 +74,13 @@ Allowed states: `INBOX`, `ACTIVE`, `PINNED`, `ARCHIVED`, `TRASHED`
 ## Authentication and Security
 
 - Bearer token auth for web app requests
-- API key path for external ingest automation
+- API key auth path is restricted to capture ingest flow (`/api/capture/ingest`) with explicit opt-in
 - Cookie session path for same-site/browser clients (including extension flow)
-- Origin validation for sensitive capture routes
+- Shared origin validation utility for API proxy/auth checks
+- Extension origin controls via env (`REBAR_ALLOWED_EXTENSION_IDS`, optional `REBAR_ALLOW_ALL_EXTENSION_ORIGINS`)
+- URL extraction (`/api/capture/extract`) blocks non-http(s) schemes and internal/private hosts
+- Bulk mutation routes are rate-limited to reduce abuse and accidental overload
+- Tag-filtered list/search/export paths validate tag ownership before lookup
 - Timing-safe secret comparisons for auth/cron checks
 - RLS on user-owned tables (`user_id = auth.uid()`)
 

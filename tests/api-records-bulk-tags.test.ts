@@ -2,12 +2,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { NextRequest } from "next/server"
 
 const getUserIdMock = vi.fn<(headers: Headers) => Promise<string | null>>()
+const rateLimitMock = vi.fn<() => Promise<{ ok: boolean; retryAfterSec: number; remaining: number }>>()
 
 const recordsRows = [{ id: "11111111-1111-1111-1111-111111111111" }]
 const ownedTagRows = [{ id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa" }]
 
 vi.mock("@/lib/auth", () => ({
   getUserId: (headers: Headers) => getUserIdMock(headers)
+}))
+
+vi.mock("@/lib/rate-limit", () => ({
+  checkRateLimitDistributed: () => rateLimitMock(),
+  resolveClientKey: () => "test-client"
 }))
 
 vi.mock("@/lib/supabase-admin", () => ({
@@ -44,6 +50,7 @@ describe("POST /api/records/bulk/tags", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     getUserIdMock.mockResolvedValue("user-1")
+    rateLimitMock.mockResolvedValue({ ok: true, retryAfterSec: 1, remaining: 999 })
   })
 
   it("returns 400 when tag_ids include non-owned tags", async () => {

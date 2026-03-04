@@ -220,4 +220,27 @@ export async function GET(request: NextRequest) {
     const obsidianNotes = records
       .map((record) => {
         const names = tagMap.get(record.id) ?? []
-        const frontmatter = toObsidianFrontmatter(record,
+        const frontmatter = toObsidianFrontmatter(record, names)
+        return `${frontmatter}${record.content}\n`
+      })
+      .join("\n")
+
+    const obsidianFilename = `rebar-obsidian-export-${today}.md`
+    return new Response(obsidianNotes, {
+      status: 200,
+      headers: {
+        "Content-Type": "text/markdown; charset=utf-8",
+        "Content-Disposition": `attachment; filename="${obsidianFilename}"`
+      }
+    })
+  }
+
+  const filename = `rebar-export-${today}.md`
+  return new Response(markdownContent, {
+    status: 200,
+    headers: {
+      "Content-Type": "text/markdown; charset=utf-8",
+      "Content-Disposition": `attachment; filename="${filename}"`
+    }
+  })
+}
