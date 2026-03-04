@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useTheme } from "next-themes"
-import { Search, Square, Plus, BookOpen, CheckSquare, User, RefreshCw, Moon, Sun } from "lucide-react"
+import { Search, Square, Plus, BookOpen, CheckSquare, User, RefreshCw, Moon, Sun, LogOut } from "lucide-react"
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react"
 import { useI18n } from "@app-shared/i18n/i18n-provider"
 import { cn } from "@/lib/utils"
@@ -263,21 +263,29 @@ export default function AppNav() {
           >
             REBAR_
           </Link>
-          <div className="flex flex-wrap items-center gap-1">
-            {NAV_LINKS.map((segment) => (
-              <Link
-                key={segment}
-                href={`/${segment}`}
-                className={cn(
-                  "border-2 px-3 py-2 min-h-[44px] flex items-center justify-center font-mono text-sm font-bold transition-all",
-                  pathname === `/${segment}`
-                    ? "translate-x-[-2px] translate-y-[-2px] border-foreground bg-foreground text-background shadow-brutal-sm"
-                    : "border-transparent text-muted-foreground hover:border-border hover:text-foreground"
-                )}
-              >
-                [{t(`nav.${segment}`)}]
-              </Link>
-            ))}
+          <div className="flex flex-wrap items-center gap-2">
+            {NAV_LINKS.map((segment) => {
+              const Icon =
+                segment === 'capture' ? Plus :
+                  segment === 'review' ? CheckSquare :
+                    segment === 'library' ? BookOpen : Search;
+
+              return (
+                <Link
+                  key={segment}
+                  href={`/${segment}`}
+                  title={t(`nav.${segment}`)}
+                  className={cn(
+                    "border-2 p-2 min-h-[40px] min-w-[40px] flex items-center justify-center transition-all",
+                    pathname === `/${segment}`
+                      ? "translate-x-[-2px] translate-y-[-2px] border-foreground bg-foreground text-background shadow-brutal-sm"
+                      : "border-transparent text-muted-foreground hover:border-foreground hover:text-foreground hover:shadow-brutal-sm hover:translate-x-[-2px] hover:translate-y-[-2px]"
+                  )}
+                >
+                  <Icon className="h-5 w-5" strokeWidth={2.5} />
+                </Link>
+              );
+            })}
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -286,67 +294,73 @@ export default function AppNav() {
             onClick={() => syncHealth.refetch()}
             disabled={syncHealth.isFetching}
             className={cn(
-              "min-h-[44px] flex items-center justify-center border-2 px-3 py-2 font-mono text-[10px] font-bold uppercase transition-colors",
+              "min-h-[40px] min-w-[40px] flex items-center justify-center border-2 p-2 transition-all active:translate-y-[2px] active:translate-x-[2px] active:shadow-none",
               syncHealth.isError
-                ? "border-destructive text-destructive"
+                ? "border-destructive text-destructive bg-destructive/10 hover:bg-destructive hover:text-white shadow-brutal-sm"
                 : syncHealth.isFetching
-                  ? "border-accent text-accent"
-                  : "border-foreground text-foreground hover:bg-foreground hover:text-background"
+                  ? "border-accent text-accent shadow-brutal-sm"
+                  : "border-transparent text-muted-foreground hover:border-foreground hover:text-foreground hover:shadow-brutal-sm hover:translate-x-[-2px] hover:translate-y-[-2px]"
             )}
-            title={t("nav.syncHint", "Click to refresh sync status")}
+            title={syncStatusLabel}
           >
-            {syncStatusLabel}
+            <RefreshCw className={cn("h-5 w-5", syncHealth.isFetching && "animate-spin")} strokeWidth={2.5} />
           </button>
+
           {authEmail ? (
             <>
               <Link
                 href="/settings"
                 title={authEmail}
-                className="min-h-[44px] flex items-center justify-center border-2 border-foreground bg-background px-3 py-2 font-mono text-xs font-bold text-foreground hover:bg-foreground hover:text-background"
+                className="min-h-[40px] min-w-[40px] flex items-center justify-center border-2 border-transparent text-muted-foreground hover:border-foreground hover:text-foreground hover:shadow-brutal-sm hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all"
               >
-                {t("nav.profile", "PROFILE")}
+                <User className="h-5 w-5" strokeWidth={2.5} />
               </Link>
               <button
                 type="button"
                 onClick={handleSignOut}
                 disabled={pending}
-                className="min-h-[44px] flex items-center justify-center border-2 border-foreground bg-background px-3 py-2 font-mono text-xs font-bold text-foreground hover:bg-foreground hover:text-background transition-colors"
+                className="min-h-[40px] min-w-[40px] flex items-center justify-center border-2 border-transparent text-muted-foreground hover:border-foreground hover:text-foreground hover:shadow-brutal-sm hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all"
+                title={t("nav.logout")}
               >
-                {t("nav.logout")}
+                <LogOut className="h-5 w-5" strokeWidth={2.5} />
               </button>
             </>
           ) : (
             <Link
               href="/signup"
-              className="min-h-[44px] flex items-center justify-center border-2 border-foreground bg-background px-3 py-2 font-mono text-xs font-bold text-foreground"
+              className="min-h-[40px] px-3 flex items-center justify-center border-2 border-foreground bg-background font-mono text-xs font-bold text-foreground hover:bg-foreground hover:text-background shadow-brutal-sm transition-all hover:translate-x-[-2px] hover:translate-y-[-2px]"
+              title={t("nav.auth")}
             >
-              {t("nav.auth")}
+              AUTH
             </Link>
           )}
+
+          <div className="w-px h-6 bg-border mx-1"></div>
 
           <button
             type="button"
             onClick={() => setQuickOpen(true)}
-            className="min-h-[44px] flex items-center justify-center border-2 border-foreground bg-background px-3 py-2 font-mono text-xs font-bold uppercase text-foreground hover:bg-foreground hover:text-background transition-colors"
+            className="min-h-[40px] min-w-[40px] flex items-center justify-center border-2 border-transparent text-muted-foreground hover:border-foreground hover:text-foreground hover:shadow-brutal-sm hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all"
             aria-label="Quick search"
+            title="Quick Search (⌘K)"
           >
-            <Search className="h-4 w-4" />
+            <Search className="h-5 w-5" strokeWidth={2.5} />
           </button>
           <button
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className="min-h-[44px] flex items-center justify-center active:translate-y-[2px] active:translate-x-[2px] active:shadow-none"
+            className="min-h-[40px] min-w-[40px] flex items-center justify-center border-2 border-transparent text-muted-foreground hover:border-foreground hover:text-foreground hover:shadow-brutal-sm hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all"
             aria-label={t("nav.theme")}
+            title="Toggle Theme"
             type="button"
           >
-            {mounted && (
-              <Square
-                size={18}
-                strokeWidth={3}
-                className={cn(
-                  "border-2 border-foreground bg-background p-2.5 text-foreground shadow-brutal-sm hover:bg-muted",
-                  theme === "dark" && "fill-accent"
-                )}
-              />
+            {mounted ? (
+              theme === "dark" ? (
+                <Moon className="h-5 w-5" strokeWidth={2.5} />
+              ) : (
+                <Sun className="h-5 w-5" strokeWidth={2.5} />
+              )
+            ) : (
+              <Sun className="h-5 w-5" strokeWidth={2.5} />
             )}
           </button>
         </div>
