@@ -1,18 +1,21 @@
 "use client"
 
-import Link from "next/link"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useTheme } from "next-themes"
-import { Search, Square, Plus, BookOpen, CheckSquare, User, RefreshCw, Moon, Sun, LogOut } from "lucide-react"
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react"
 import { useI18n } from "@app-shared/i18n/i18n-provider"
-import { cn } from "@/lib/utils"
 import { getSupabaseBrowser } from "@/lib/supabase-browser"
-import { getStartPagePreference } from "@feature-lib/settings/preferences"
+import {
+  getStartPagePreference,
+  getStartPagePreferenceServer,
+  setStartPagePreference
+} from "@feature-lib/settings/preferences"
 import { useQuery } from "@tanstack/react-query"
 import { apiFetch } from "@/lib/client-http"
-
-const NAV_LINKS = ["capture", "review", "library"] as const
+import { NavDesktop } from "./_components/nav-desktop"
+import { NavMobileTop } from "./_components/nav-mobile-top"
+import { NavMobileBottom } from "./_components/nav-mobile-bottom"
+import { QuickSearchDialog, type QuickSearchResult } from "./_components/quick-search-dialog"
 
 type SyncHealthResponse = {
   authenticated: boolean
@@ -44,7 +47,7 @@ export default function AppNav() {
   const [homeHref, setHomeHref] = useState("/")
   const [quickOpen, setQuickOpen] = useState(false)
   const [quickQuery, setQuickQuery] = useState("")
-  const [quickResults, setQuickResults] = useState<Array<{ id: string; kind: string; content: string }>>([])
+  const [quickResults, setQuickResults] = useState<QuickSearchResult[]>([])
   const [quickActiveIndex, setQuickActiveIndex] = useState(-1)
   const [quickLoading, setQuickLoading] = useState(false)
   const [lastSyncAt, setLastSyncAt] = useState<number | null>(null)
@@ -201,7 +204,17 @@ export default function AppNav() {
   }, [quickOpen])
 
   useEffect(() => {
-    setHomeHref(getStartPagePreference())
+    const localStartPage = getStartPagePreference()
+    setHomeHref(localStartPage)
+
+    void getStartPagePreferenceServer().then((serverStartPage) => {
+      if (!serverStartPage) {
+        return
+      }
+
+      setStartPagePreference(serverStartPage)
+      setHomeHref(serverStartPage)
+    })
   }, [])
 
 
@@ -237,296 +250,53 @@ export default function AppNav() {
 
   return (
     <>
-      {/* --- DESKTOP NAVIGATION --- */}
-      <nav className="hidden md:flex mb-12 flex-row items-center justify-between border-b-4 border-foreground py-6 gap-4">
-        <div className="flex flex-row items-center gap-6 justify-between w-auto">
-          <Link
-            href={homeHref}
-            className="rotate-[-2deg] self-start border-2 border-foreground bg-accent px-2 py-1 font-black text-3xl uppercase tracking-tighter text-white shadow-brutal-sm transition-transform hover:rotate-0"
-          >
-            REBAR_
-          </Link>
-          <div className="flex flex-wrap items-center gap-2">
-            {NAV_LINKS.map((segment) => {
-              const Icon =
-                segment === 'capture' ? Plus :
-                  segment === 'review' ? CheckSquare :
-                    segment === 'library' ? BookOpen : Search;
+      <NavDesktop
+        t={t}
+        pathname={pathname}
+        homeHref={homeHref}
+        authEmail={authEmail}
+        mounted={mounted}
+        theme={theme}
+        syncStatusLabel={syncStatusLabel}
+        syncFetching={syncHealth.isFetching}
+        syncError={syncHealth.isError}
+        onSync={() => syncHealth.refetch()}
+        onOpenQuickSearch={() => setQuickOpen(true)}
+        onToggleTheme={() => setTheme(theme === "dark" ? "light" : "dark")}
+      />
 
-              return (
-                <Link
-                  key={segment}
-                  href={`/${segment}`}
-                  title={t(`nav.${segment}`)}
-                  className={cn(
-                    "border-2 p-2 min-h-[40px] min-w-[40px] flex items-center justify-center transition-all",
-                    pathname === `/${segment}`
-                      ? "translate-x-[-2px] translate-y-[-2px] border-foreground bg-foreground text-background shadow-brutal-sm"
-                      : "border-transparent text-muted-foreground hover:border-foreground hover:text-foreground hover:shadow-brutal-sm hover:translate-x-[-2px] hover:translate-y-[-2px]"
-                  )}
-                >
-                  <Icon className="h-5 w-5" strokeWidth={2.5} />
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => syncHealth.refetch()}
-            disabled={syncHealth.isFetching}
-            className={cn(
-              "min-h-[40px] min-w-[40px] flex items-center justify-center border-2 p-2 transition-all active:translate-y-[2px] active:translate-x-[2px] active:shadow-none",
-              syncHealth.isError
-                ? "border-destructive text-destructive bg-destructive/10 hover:bg-destructive hover:text-white shadow-brutal-sm"
-                : syncHealth.isFetching
-                  ? "border-accent text-accent shadow-brutal-sm"
-                  : "border-transparent text-muted-foreground hover:border-foreground hover:text-foreground hover:shadow-brutal-sm hover:translate-x-[-2px] hover:translate-y-[-2px]"
-            )}
-            title={syncStatusLabel}
-          >
-            <RefreshCw className={cn("h-5 w-5", syncHealth.isFetching && "animate-spin")} strokeWidth={2.5} />
-          </button>
+      <NavMobileTop
+        t={t}
+        homeHref={homeHref}
+        authEmail={authEmail}
+        mounted={mounted}
+        theme={theme}
+        syncStatusLabel={syncStatusLabel}
+        syncFetching={syncHealth.isFetching}
+        syncError={syncHealth.isError}
+        onSync={() => syncHealth.refetch()}
+        onToggleTheme={() => setTheme(theme === "dark" ? "light" : "dark")}
+      />
 
-          {authEmail ? (
-            <Link
-              href="/settings"
-              title={authEmail}
-              className="min-h-[40px] min-w-[40px] flex items-center justify-center border-2 border-transparent text-muted-foreground hover:border-foreground hover:text-foreground hover:shadow-brutal-sm hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all"
-            >
-              <User className="h-5 w-5" strokeWidth={2.5} />
-            </Link>
-          ) : (
-            <Link
-              href="/signup"
-              className="min-h-[40px] px-3 flex items-center justify-center border-2 border-foreground bg-background font-mono text-xs font-bold text-foreground hover:bg-foreground hover:text-background shadow-brutal-sm transition-all hover:translate-x-[-2px] hover:translate-y-[-2px]"
-              title={t("nav.auth")}
-            >
-              AUTH
-            </Link>
-          )}
-
-          <div className="w-px h-6 bg-border mx-1"></div>
-
-          <button
-            type="button"
-            onClick={() => setQuickOpen(true)}
-            className="min-h-[40px] min-w-[40px] flex items-center justify-center border-2 border-transparent text-muted-foreground hover:border-foreground hover:text-foreground hover:shadow-brutal-sm hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all"
-            aria-label="Quick search"
-            title="Quick Search (⌘K)"
-          >
-            <Search className="h-5 w-5" strokeWidth={2.5} />
-          </button>
-          <button
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className="min-h-[40px] min-w-[40px] flex items-center justify-center border-2 border-transparent text-muted-foreground hover:border-foreground hover:text-foreground hover:shadow-brutal-sm hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all"
-            aria-label={t("nav.theme")}
-            title="Toggle Theme"
-            type="button"
-          >
-            {mounted ? (
-              theme === "dark" ? (
-                <Moon className="h-5 w-5" strokeWidth={2.5} />
-              ) : (
-                <Sun className="h-5 w-5" strokeWidth={2.5} />
-              )
-            ) : (
-              <Sun className="h-5 w-5" strokeWidth={2.5} />
-            )}
-          </button>
-        </div>
-      </nav>
-
-      {/* --- MOBILE TOP BAR (Logo + Theme/Profile only) --- */}
-      <nav className="flex md:hidden sticky top-0 z-30 bg-background mb-4 flex-row items-center justify-between border-b-[3px] border-foreground py-2 px-3 gap-2 shadow-brutal-sm">
-        <Link
-          href={homeHref}
-          className="rotate-[-2deg] self-start border-2 border-foreground bg-accent px-2 py-0.5 mt-0.5 font-black text-xl uppercase tracking-tighter text-white shadow-brutal-sm transition-transform hover:rotate-0"
-        >
-          REBAR_
-        </Link>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => syncHealth.refetch()}
-            disabled={syncHealth.isFetching}
-            className={cn(
-              "min-h-[36px] min-w-[36px] flex items-center justify-center border-2 border-foreground bg-background p-1.5 shadow-brutal-sm active:translate-y-[2px] active:translate-x-[2px] active:shadow-none transition-all",
-              syncHealth.isError ? "text-destructive" : syncHealth.isFetching ? "text-accent" : "text-foreground"
-            )}
-            title={syncStatusLabel}
-          >
-            <RefreshCw className={cn("h-4 w-4", syncHealth.isFetching && "animate-spin")} strokeWidth={3} />
-          </button>
-          {authEmail ? (
-            <Link
-              href="/settings"
-              title={authEmail}
-              className="min-h-[36px] min-w-[36px] flex items-center justify-center border-2 border-foreground bg-background p-1.5 shadow-brutal-sm text-foreground active:translate-y-[2px] active:translate-x-[2px] active:shadow-none transition-all"
-            >
-              <User className="h-4 w-4" strokeWidth={3} />
-            </Link>
-          ) : (
-            <Link
-              href="/signup"
-              className="min-h-[36px] flex items-center justify-center border-2 border-foreground bg-background px-2 py-1 font-mono text-[10px] font-bold text-foreground shadow-brutal-sm active:translate-y-[2px] active:translate-x-[2px] active:shadow-none transition-all"
-            >
-              AUTH
-            </Link>
-          )}
-          <button
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className="min-h-[36px] min-w-[36px] flex items-center justify-center border-2 border-foreground bg-background p-1.5 shadow-brutal-sm text-foreground active:translate-y-[2px] active:translate-x-[2px] active:shadow-none transition-all"
-            aria-label={t("nav.theme")}
-            type="button"
-          >
-            {mounted ? (
-              theme === "dark" ? (
-                <Moon className="h-4 w-4" strokeWidth={3} />
-              ) : (
-                <Sun className="h-4 w-4" strokeWidth={3} />
-              )
-            ) : (
-              <Sun className="h-4 w-4" strokeWidth={3} />
-            )}
-          </button>
-        </div>
-      </nav>
-
-      {/* --- MOBILE BOTTOM NAVIGATION BAR --- */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 border-t-4 border-foreground bg-background shadow-none pb-[env(safe-area-inset-bottom)]">
-        <div className="flex flex-row items-center justify-around px-1 py-1 relative">
-
-          <Link
-            href="/library"
-            className={cn(
-              "flex flex-col items-center justify-center p-3 min-w-[64px] transition-colors",
-              pathname.includes("/library") ? "text-accent" : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <BookOpen className="h-6 w-6 stroke-[2.5]" />
-            <span className="font-mono text-[9px] font-bold uppercase mt-1.5">LIBRARY</span>
-          </Link>
-
-          <Link
-            href="/review"
-            className={cn(
-              "flex flex-col items-center justify-center p-3 min-w-[64px] transition-colors",
-              pathname.includes("/review") ? "text-accent" : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <CheckSquare className="h-6 w-6 stroke-[2.5]" />
-            <span className="font-mono text-[9px] font-bold uppercase mt-1.5">REVIEW</span>
-          </Link>
-
-          {/* OVERSIZED CORE CAPTURE / FAB BUTTON */}
-          <Link
-            href="/capture"
-            className="flex flex-col flex-1 items-center justify-center relative -top-5"
-          >
-            <div className={cn(
-              "flex h-[60px] w-[60px] items-center justify-center border-[3px] border-foreground bg-accent shadow-brutal-sm transition-transform active:translate-y-1 active:shadow-none rounded-none rotate-3",
-              pathname === "/capture" && "bg-foreground text-background"
-            )}>
-              <Plus className="h-8 w-8 text-white stroke-[3] -rotate-3" />
-            </div>
-          </Link>
-
-          <button
-            type="button"
-            onClick={() => setQuickOpen(true)}
-            className="flex flex-col items-center justify-center p-3 min-w-[64px] text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <Search className="h-6 w-6 stroke-[2.5]" />
-            <span className="font-mono text-[9px] font-bold uppercase mt-1.5">SEARCH</span>
-          </button>
-
-        </div>
-      </div>
+      <NavMobileBottom pathname={pathname} onOpenQuickSearch={() => setQuickOpen(true)} />
 
       {authError ? <p className="font-mono text-xs text-destructive mt-[-1rem] mb-4">{authError}</p> : null}
 
-      {quickOpen ? (
-        <div
-          className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 backdrop-blur-sm p-4 transition-all"
-          onClick={(event) => {
-            if (event.target === event.currentTarget) {
-              setQuickOpen(false)
-            }
-          }}
-        >
-          <div
-            ref={quickDialogRef}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="quick-search-title"
-            aria-describedby="quick-search-description"
-            className="mt-16 w-full max-w-2xl border-4 border-foreground bg-card p-4 shadow-brutal"
-          >
-            <div className="mb-3 flex flex-col sm:flex-row items-start sm:items-center justify-between border-b-2 border-foreground pb-2 gap-2">
-              <p id="quick-search-title" className="font-mono text-xs font-bold uppercase">QUICK SEARCH (⌘K / Ctrl+K)</p>
-              <button type="button" onClick={() => setQuickOpen(false)} className="min-h-[44px] flex items-center justify-center border-2 border-foreground px-4 py-2 font-mono text-xs font-bold uppercase w-full sm:w-auto hover:bg-foreground hover:text-background active:translate-y-[2px] active:translate-x-[2px] active:shadow-none transition-all">
-                CLOSE
-              </button>
-            </div>
-            <p id="quick-search-description" className="mb-2 font-mono text-[10px] font-bold uppercase text-muted-foreground">
-              키보드: ↑↓ 이동, Enter 열기, Esc 닫기
-            </p>
-            <input
-              ref={quickInputRef}
-              value={quickQuery}
-              onChange={(event) => setQuickQuery(event.target.value)}
-              onKeyDown={handleQuickInputKeyDown}
-              placeholder="검색어 입력..."
-              className="mb-3 w-full border-2 border-foreground bg-background p-3 font-mono text-sm min-h-[44px]"
-              role="combobox"
-              aria-expanded={quickResults.length > 0}
-              aria-controls="quick-search-results"
-              aria-activedescendant={quickActiveIndex >= 0 ? `quick-option-${quickActiveIndex}` : undefined}
-              autoFocus
-            />
-            <div id="quick-search-results" role="listbox" className="space-y-2">
-              {quickResults.map((item, index) => (
-                <Link
-                  key={item.id}
-                  id={`quick-option-${index}`}
-                  role="option"
-                  aria-selected={quickActiveIndex === index}
-                  href={buildRecordHref(item.id)}
-                  onClick={() => setQuickOpen(false)}
-                  onMouseEnter={() => setQuickActiveIndex(index)}
-                  className={cn(
-                    "block border-2 min-h-[44px] border-foreground px-3 py-2 hover:bg-foreground hover:text-background active:translate-y-[2px] active:translate-x-[2px] active:shadow-none transition-all",
-                    quickActiveIndex === index && "bg-foreground text-background"
-                  )}
-                >
-                  <p className="font-mono text-[10px] font-bold uppercase">{item.kind}</p>
-                  <p className="line-clamp-2 text-sm font-semibold">{item.content}</p>
-                </Link>
-              ))}
-
-              {quickLoading ? (
-                <p className="border-2 border-foreground p-3 font-mono text-[10px] font-bold uppercase text-muted-foreground">
-                  {t("nav.quickSearching", "SEARCHING...")}
-                </p>
-              ) : null}
-
-              {!quickLoading && quickQuery.trim() && quickResults.length === 0 ? (
-                <p className="border-2 border-foreground p-3 font-mono text-[10px] font-bold uppercase text-muted-foreground">
-                  {t("nav.quickEmpty", "NO MATCHES")}
-                </p>
-              ) : null}
-
-              {!quickLoading && !quickQuery.trim() ? (
-                <p className="border-2 border-dashed border-foreground p-3 font-mono text-[10px] font-bold uppercase text-muted-foreground">
-                  {t("nav.quickHint", "TYPE TO SEARCH")}
-                </p>
-              ) : null}
-            </div>
-          </div>
-        </div>
-      ) : null}
+      <QuickSearchDialog
+        t={t}
+        open={quickOpen}
+        dialogRef={quickDialogRef}
+        inputRef={quickInputRef}
+        query={quickQuery}
+        results={quickResults}
+        activeIndex={quickActiveIndex}
+        loading={quickLoading}
+        onClose={() => setQuickOpen(false)}
+        onQueryChange={setQuickQuery}
+        onInputKeyDown={handleQuickInputKeyDown}
+        onActiveIndexChange={setQuickActiveIndex}
+        buildRecordHref={buildRecordHref}
+      />
     </>
   )
 }

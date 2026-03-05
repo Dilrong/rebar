@@ -1,0 +1,25 @@
+{
+  "concurrency": 1,
+  "defaults": {
+    "standard": "WCAG2AA",
+    "timeout": 60000,
+    "wait": 1200,
+    "chromeLaunchConfig": {
+      "args": [
+        "--no-sandbox",
+        "--disable-setuid-sandbox"
+      ]
+    }
+  },
+  "urls": [
+    "http://127.0.0.1:4173/",
+    "http://127.0.0.1:4173/signup",
+    "http://127.0.0.1:4173/capture",
+    "http://127.0.0.1:4173/library",
+    "http://127.0.0.1:4173/review",
+    "http://127.0.0.1:4173/review/history",
+    "http://127.0.0.1:4173/search",
+    "http://127.0.0.1:4173/projects",
+    "http://127.0.0.1:4173/share"
+  ]
+}

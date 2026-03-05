@@ -8,7 +8,7 @@ function resolveFaviconUrl(url: string | null): string | null {
   if (!url) return null
   try {
     const { hostname } = new URL(url)
-    return `https://www.google.com/s2/favicons?domain=${hostname}&sz=64`
+    return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(hostname)}&sz=64`
   } catch {
     return null
   }
@@ -18,12 +18,12 @@ export const ExternalTagSchema = z.union([z.string().min(1), z.object({ name: z.
 
 export const ExternalItemSchema = z
   .object({
-    content: z.string().optional(),
-    text: z.string().optional(),
-    highlight: z.string().optional(),
-    note: z.string().optional(),
-    title: z.string().optional(),
-    source_title: z.string().optional(),
+    content: z.string().max(50_000).optional(),
+    text: z.string().max(50_000).optional(),
+    highlight: z.string().max(50_000).optional(),
+    note: z.string().max(50_000).optional(),
+    title: z.string().max(500).optional(),
+    source_title: z.string().max(500).optional(),
     url: z.string().url().optional(),
     source_url: z.string().url().optional(),
     kind: RecordKindSchema.optional(),
@@ -116,6 +116,7 @@ export async function processIngest(userId: string, payload: IngestPayload) {
 
     if (!existing.url) {
       existing.url = resolveUrl(item)
+      existing.favicon_url = resolveFaviconUrl(existing.url)
     }
     if (!existing.source_title) {
       existing.source_title = resolveSourceTitle(item)

@@ -1,0 +1,137 @@
+import Link from "next/link"
+import { BookOpen, CheckSquare, Moon, Plus, RefreshCw, Search, Sun, User } from "lucide-react"
+import { cn } from "@/lib/utils"
+
+const NAV_LINKS = ["capture", "review", "library"] as const
+
+type NavDesktopProps = {
+  t: (key: string, fallback?: string) => string
+  pathname: string
+  homeHref: string
+  authEmail: string | null
+  mounted: boolean
+  theme: string | undefined
+  syncStatusLabel: string
+  syncFetching: boolean
+  syncError: boolean
+  onSync: () => void
+  onOpenQuickSearch: () => void
+  onToggleTheme: () => void
+}
+
+export function NavDesktop({
+  t,
+  pathname,
+  homeHref,
+  authEmail,
+  mounted,
+  theme,
+  syncStatusLabel,
+  syncFetching,
+  syncError,
+  onSync,
+  onOpenQuickSearch,
+  onToggleTheme
+}: NavDesktopProps) {
+  return (
+    <nav className="hidden md:flex mb-12 flex-row items-center justify-between border-b-4 border-foreground py-6 gap-4">
+      <div className="flex flex-row items-center gap-6 justify-between w-auto">
+        <Link
+          href={homeHref}
+          className="rotate-[-2deg] self-start border-2 border-foreground bg-accent px-2 py-1 font-black text-3xl uppercase tracking-tighter text-white shadow-brutal-sm transition-transform hover:rotate-0"
+        >
+          REBAR_
+        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          {NAV_LINKS.map((segment) => {
+            const Icon =
+              segment === "capture" ? Plus :
+                segment === "review" ? CheckSquare :
+                  segment === "library" ? BookOpen : Search
+
+            return (
+              <Link
+                key={segment}
+                href={`/${segment}`}
+                title={t(`nav.${segment}`)}
+                className={cn(
+                  "border-2 p-2 min-h-[40px] min-w-[40px] flex items-center justify-center transition-all",
+                  pathname === `/${segment}`
+                    ? "translate-x-[-2px] translate-y-[-2px] border-foreground bg-foreground text-background shadow-brutal-sm"
+                    : "border-transparent text-muted-foreground hover:border-foreground hover:text-foreground hover:shadow-brutal-sm hover:translate-x-[-2px] hover:translate-y-[-2px]"
+                )}
+              >
+                <Icon className="h-5 w-5" strokeWidth={2.5} />
+              </Link>
+            )
+          })}
+        </div>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={onSync}
+          disabled={syncFetching}
+          className={cn(
+            "min-h-[40px] min-w-[40px] flex items-center justify-center border-2 p-2 transition-all active:translate-y-[2px] active:translate-x-[2px] active:shadow-none",
+            syncError
+              ? "border-destructive text-destructive bg-destructive/10 hover:bg-destructive hover:text-destructive-foreground shadow-brutal-sm"
+              : syncFetching
+                ? "border-accent text-accent shadow-brutal-sm"
+                : "border-transparent text-muted-foreground hover:border-foreground hover:text-foreground hover:shadow-brutal-sm hover:translate-x-[-2px] hover:translate-y-[-2px]"
+          )}
+          title={syncStatusLabel}
+        >
+          <RefreshCw className={cn("h-5 w-5", syncFetching && "animate-spin")} strokeWidth={2.5} />
+        </button>
+
+        {authEmail ? (
+          <Link
+            href="/settings"
+            title={authEmail}
+            className="min-h-[40px] min-w-[40px] flex items-center justify-center border-2 border-transparent text-muted-foreground hover:border-foreground hover:text-foreground hover:shadow-brutal-sm hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all"
+          >
+            <User className="h-5 w-5" strokeWidth={2.5} />
+          </Link>
+        ) : (
+          <Link
+            href="/signup"
+            className="min-h-[40px] px-3 flex items-center justify-center border-2 border-foreground bg-background font-mono text-xs font-bold text-foreground hover:bg-foreground hover:text-background shadow-brutal-sm transition-all hover:translate-x-[-2px] hover:translate-y-[-2px]"
+            title={t("nav.auth")}
+          >
+            AUTH
+          </Link>
+        )}
+
+        <div className="w-px h-6 bg-border mx-1"></div>
+
+        <button
+          type="button"
+          onClick={onOpenQuickSearch}
+          className="min-h-[40px] min-w-[40px] flex items-center justify-center border-2 border-transparent text-muted-foreground hover:border-foreground hover:text-foreground hover:shadow-brutal-sm hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all"
+          aria-label="Quick search"
+          title="Quick Search (⌘K)"
+        >
+          <Search className="h-5 w-5" strokeWidth={2.5} />
+        </button>
+        <button
+          onClick={onToggleTheme}
+          className="min-h-[40px] min-w-[40px] flex items-center justify-center border-2 border-transparent text-muted-foreground hover:border-foreground hover:text-foreground hover:shadow-brutal-sm hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all"
+          aria-label={t("nav.theme")}
+          title="Toggle Theme"
+          type="button"
+        >
+          {mounted ? (
+            theme === "dark" ? (
+              <Moon className="h-5 w-5" strokeWidth={2.5} />
+            ) : (
+              <Sun className="h-5 w-5" strokeWidth={2.5} />
+            )
+          ) : (
+            <Sun className="h-5 w-5" strokeWidth={2.5} />
+          )}
+        </button>
+      </div>
+    </nav>
+  )
+}

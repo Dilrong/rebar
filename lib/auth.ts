@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "node:crypto"
 import { z } from "zod"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
+import { isLocalRequestHost } from "@/lib/security/localhost"
 import { isAllowedOrigin } from "@/lib/security/origin"
 
 const UserIdSchema = z.string().uuid()
@@ -23,11 +24,15 @@ export async function getUserId(headers: Headers, options: GetUserIdOptions = {}
     const token = authHeader.slice("Bearer ".length).trim()
 
     if (token.length > 0) {
-      const supabase = getSupabaseAdmin()
-      const { data, error } = await supabase.auth.getUser(token)
+      try {
+        const supabase = getSupabaseAdmin()
+        const { data, error } = await supabase.auth.getUser(token)
 
-      if (!error && data.user?.id) {
-        return data.user.id
+        if (!error && data.user?.id) {
+          return data.user.id
+        }
+      } catch {
+        // Token validation failed (network error, malformed token, etc.)
       }
 
       return null
@@ -81,6 +86,19 @@ export async function getUserId(headers: Headers, options: GetUserIdOptions = {}
     }
 
     return parsedDev.data
+  }
+
+  if (process.env.REBAR_E2E_BYPASS_AUTH === "true") {
+    // Only check the host header — x-forwarded-host can be spoofed by clients
+    const hostHeader = headers.get("host")
+    const isLocalHost = hostHeader !== null && isLocalRequestHost(hostHeader)
+
+    if (isLocalHost) {
+      const parsedE2EUser = UserIdSchema.safeParse(process.env.REBAR_E2E_TEST_USER_ID)
+      if (parsedE2EUser.success) {
+        return parsedE2EUser.data
+      }
+    }
   }
 
   return null

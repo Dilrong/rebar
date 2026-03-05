@@ -31,7 +31,7 @@ Rebar is a personal SSOT knowledge pipeline that turns captured data into a long
 - Validation: Zod (shared schemas)
 - Auth/DB: Supabase Auth + PostgreSQL + RLS
 - Styling: Tailwind CSS (Industrial Brutalism direction)
-- Tests: Vitest
+- Tests: Vitest + pa11y-ci accessibility audit
 - Deploy: Vercel
 
 ## Key Domain Concepts

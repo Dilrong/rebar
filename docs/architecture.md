@@ -12,6 +12,7 @@ User/Agent -> Capture APIs/UI -> SSOT DB -> Review Loop -> User
 ## High-Level Components
 
 - Next.js app (App Router): pages, API routes, server actions
+- Feature-local component decomposition (`app/(features)/*/_components`) for large UI surfaces
 - Supabase Auth: session and identity
 - Supabase PostgreSQL: records, review logs, tags, ingest jobs
 - Extension client (`extension/`): clipping + authenticated save
@@ -27,6 +28,7 @@ User/Agent -> Capture APIs/UI -> SSOT DB -> Review Loop -> User
 - `tags`: user tags
 - `record_tags`: many-to-many mapping
 - `ingest_jobs`: failed ingest retry queue
+- `user_preferences`: persisted per-user UI preferences (e.g. start page)
 
 ### Record State Machine
 
@@ -66,6 +68,11 @@ Allowed states: `INBOX`, `ACTIVE`, `PINNED`, `ARCHIVED`, `TRASHED`
 - `POST /api/cron/ingest-jobs/retry`
 - `POST /api/cron/records/cleanup`
 
+### Settings
+
+- `GET /api/settings/preferences`
+- `PATCH /api/settings/preferences`
+
 ### MCP (Read-only)
 
 - `GET /api/mcp`
@@ -78,11 +85,12 @@ Allowed states: `INBOX`, `ACTIVE`, `PINNED`, `ARCHIVED`, `TRASHED`
 - Cookie session path for same-site/browser clients (including extension flow)
 - Shared origin validation utility for API proxy/auth checks
 - Extension origin controls via env (`REBAR_ALLOWED_EXTENSION_IDS`, optional `REBAR_ALLOW_ALL_EXTENSION_ORIGINS`)
-- URL extraction (`/api/capture/extract`) blocks non-http(s) schemes and internal/private hosts
+- URL extraction (`/api/capture/extract`) blocks non-http(s) schemes/internal hosts and enforces TOCTOU-resistant DNS checks (lookup-time IP validation + guarded redirects)
 - Bulk mutation routes are rate-limited to reduce abuse and accidental overload
 - Tag-filtered list/search/export paths validate tag ownership before lookup
 - Timing-safe secret comparisons for auth/cron checks
 - RLS on user-owned tables (`user_id = auth.uid()`)
+- Localhost-only E2E/a11y auth bypass is gated by explicit env flags and strict loopback host validation (`localhost`, `127.0.0.1`, `::1` only)
 
 ## Extension Integration Architecture
 
@@ -96,6 +104,7 @@ Allowed states: `INBOX`, `ACTIVE`, `PINNED`, `ARCHIVED`, `TRASHED`
 - Dedup uses SHA-256 `content_hash`
 - Review scheduling uses interval progression with upper bound
 - Retry and cleanup cron routes protect data consistency and lifecycle
+- Quality gates include typecheck, test, lint, build, and pa11y-ci accessibility checks
 
 ## Near-Term Architecture Direction
 

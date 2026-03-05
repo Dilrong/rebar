@@ -61,6 +61,8 @@ CREATE TABLE tags (
   UNIQUE (user_id, name)
 );
 
+CREATE UNIQUE INDEX tags_user_id_lower_name_unique ON tags (user_id, lower(name));
+
 CREATE TABLE record_tags (
   record_id UUID NOT NULL REFERENCES records ON DELETE CASCADE,
   tag_id UUID NOT NULL REFERENCES tags ON DELETE CASCADE,
@@ -82,18 +84,27 @@ CREATE TABLE ingest_jobs (
 
 CREATE INDEX ingest_jobs_user_status_created ON ingest_jobs (user_id, status, created_at DESC);
 
+CREATE TABLE user_preferences (
+  user_id UUID PRIMARY KEY REFERENCES auth.users ON DELETE CASCADE,
+  start_page TEXT NOT NULL DEFAULT '/library' CHECK (start_page IN ('/review', '/capture', '/library', '/search')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 ALTER TABLE records ENABLE ROW LEVEL SECURITY;
 ALTER TABLE annotations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE review_log ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tags ENABLE ROW LEVEL SECURITY;
 ALTER TABLE record_tags ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ingest_jobs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_preferences ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY records_owner_policy ON records USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
 CREATE POLICY annotations_owner_policy ON annotations USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
 CREATE POLICY review_log_owner_policy ON review_log USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
 CREATE POLICY tags_owner_policy ON tags USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
 CREATE POLICY ingest_jobs_owner_policy ON ingest_jobs USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
+CREATE POLICY user_preferences_owner_policy ON user_preferences USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
 CREATE POLICY record_tags_owner_policy ON record_tags
 USING (
   EXISTS (
@@ -127,5 +138,10 @@ EXECUTE FUNCTION set_updated_at();
 
 CREATE TRIGGER ingest_jobs_set_updated_at
 BEFORE UPDATE ON ingest_jobs
+FOR EACH ROW
+EXECUTE FUNCTION set_updated_at();
+
+CREATE TRIGGER user_preferences_set_updated_at
+BEFORE UPDATE ON user_preferences
 FOR EACH ROW
 EXECUTE FUNCTION set_updated_at();

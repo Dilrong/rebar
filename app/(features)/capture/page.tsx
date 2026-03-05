@@ -2,7 +2,6 @@
 
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQuery } from "@tanstack/react-query"
-import Link from "next/link"
 import { useRouter } from "next/navigation"
 import AuthGate from "@shared/auth/auth-gate"
 import AppNav from "@shared/layout/app-nav"
@@ -12,10 +11,14 @@ import type { RecordRow, TagRow } from "@/lib/types"
 import { useState } from "react"
 import type { ChangeEvent } from "react"
 import { useForm } from "react-hook-form"
-import { AlertTriangle, CheckSquare } from "lucide-react"
-import { LoadingSpinner, LoadingDots } from "@shared/ui/loading"
 import { useI18n } from "@app-shared/i18n/i18n-provider"
 import { Toast } from "@shared/ui/toast"
+import { CaptureImportModeTabs } from "./_components/capture-import-mode-tabs"
+import { CaptureUrlSection } from "./_components/capture-url-section"
+import { CaptureCsvSection } from "./_components/capture-csv-section"
+import { CaptureOcrSection } from "./_components/capture-ocr-section"
+import { CaptureManualForm } from "./_components/capture-manual-form"
+import { CaptureBatchSection } from "./_components/capture-batch-section"
 
 type TagsResponse = {
   data: TagRow[]
@@ -601,433 +604,80 @@ export default function CapturePage() {
               </span>
             </header>
 
-            <section className="mb-6 border-b-4 border-foreground pb-0">
-              <div className="flex overflow-x-auto overflow-y-hidden flex-nowrap border-4 border-foreground bg-background hide-scrollbar shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.1)] mb-4">
-                <button
-                  type="button"
-                  onClick={() => setImportMode("manual")}
-                  className={`min-h-[44px] flex-none px-4 py-2 text-center font-mono text-xs font-bold uppercase transition-transform active:translate-y-[2px] active:translate-x-[2px] border-r-4 border-foreground ${importMode === "manual" ? "bg-foreground text-background" : "text-foreground hover:bg-foreground/10"
-                    }`}
-                >
-                  {t("capture.modeManual", "MANUAL")}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setImportMode("url")}
-                  className={`min-h-[44px] flex-none px-4 py-2 text-center font-mono text-xs font-bold uppercase transition-transform active:translate-y-[2px] active:translate-x-[2px] border-r-4 border-foreground ${importMode === "url" ? "bg-foreground text-background" : "text-foreground hover:bg-foreground/10"
-                    }`}
-                >
-                  {t("capture.modeUrl", "URL")}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setImportMode("batch")}
-                  className={`min-h-[44px] flex-none px-4 py-2 text-center font-mono text-xs font-bold uppercase transition-transform active:translate-y-[2px] active:translate-x-[2px] border-r-4 border-foreground ${importMode === "batch" ? "bg-foreground text-background" : "text-foreground hover:bg-foreground/10"
-                    }`}
-                >
-                  {t("capture.modeBatch", "BATCH")}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setImportMode("csv")}
-                  className={`min-h-[44px] flex-none px-4 py-2 text-center font-mono text-xs font-bold uppercase transition-transform active:translate-y-[2px] active:translate-x-[2px] border-r-4 border-foreground ${importMode === "csv" ? "bg-foreground text-background" : "text-foreground hover:bg-foreground/10"
-                    }`}
-                >
-                  {t("capture.modeCsv", "CSV")}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setImportMode("ocr")}
-                  className={`min-h-[44px] flex-none px-4 py-2 text-center font-mono text-xs font-bold uppercase transition-transform active:translate-y-[2px] active:translate-x-[2px] ${importMode === "ocr" ? "bg-foreground text-background" : "text-foreground hover:bg-foreground/10"
-                    }`}
-                >
-                  {t("capture.modeOcr", "OCR")}
-                </button>
-              </div>
-            </section>
+            <CaptureImportModeTabs importMode={importMode} setImportMode={setImportMode} t={t} />
 
             {importMode === "url" ? (
-              <section className="mb-8 border-2 border-foreground p-4 bg-background/60">
-                <p className="font-mono text-xs font-bold uppercase mb-3">{t("capture.quickImport", "QUICK IMPORT FROM URL")}</p>
-                <div className="flex flex-col md:flex-row gap-3">
-                  <input
-                    value={externalUrl}
-                    onChange={(event) => setExternalUrl(event.target.value)}
-                    placeholder="https://..."
-                    className="min-h-[44px] w-full bg-background border-4 border-foreground text-foreground px-4 py-3 font-mono text-sm focus:outline-none focus:ring-0 shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] placeholder:text-muted-foreground/50 rounded-none transition-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => extractMutation.mutate(externalUrl)}
-                    disabled={!externalUrl || extractMutation.isPending}
-                    className="min-h-[44px] px-4 py-3 border-4 border-foreground font-mono text-xs font-bold uppercase bg-background text-foreground min-w-[100px] flex items-center justify-center hover:bg-foreground hover:text-background transition-all active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm"
-                  >
-                    {extractMutation.isPending ? <LoadingDots /> : t("capture.import", "IMPORT")}
-                  </button>
-                </div>
-                {extractMutation.error ? (
-                  <p className="font-mono text-xs text-destructive mt-2">{extractMutation.error.message}</p>
-                ) : null}
-                {extractMutation.isSuccess ? (
-                  <p className="font-mono text-xs text-foreground mt-2">
-                    {t("capture.importSuccess", "URL metadata loaded into the form.")}
-                  </p>
-                ) : null}
-              </section>
+              <CaptureUrlSection
+                t={t}
+                externalUrl={externalUrl}
+                onExternalUrlChange={setExternalUrl}
+                onImport={() => extractMutation.mutate(externalUrl)}
+                importPending={extractMutation.isPending}
+                importError={extractMutation.error?.message ?? null}
+                importSuccess={extractMutation.isSuccess}
+              />
             ) : null}
 
             {importMode === "batch" ? (
-              <section className="mb-8 border-2 border-foreground p-4 bg-background/60">
-                <div className="mb-3 flex items-center justify-between gap-2">
-                  <p className="font-mono text-xs font-bold uppercase">{t("capture.ingestTitle", "READWISE STYLE BATCH IMPORT")}</p>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Link
-                      href="/api/capture/ingest"
-                      className="min-h-[44px] flex items-center justify-center border-4 border-foreground px-4 py-2 font-mono text-[10px] font-bold uppercase hover:bg-foreground hover:text-background transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm"
-                      target="_blank"
-                    >
-                      API
-                    </Link>
-                    <Link
-                      href="/api/capture/guide"
-                      className="min-h-[44px] flex items-center justify-center border-4 border-foreground px-4 py-2 font-mono text-[10px] font-bold uppercase hover:bg-foreground hover:text-background transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm"
-                      target="_blank"
-                    >
-                      {t("capture.guide", "GUIDE")}
-                    </Link>
-                  </div>
-                </div>
-                <textarea
-                  rows={6}
-                  value={externalJson}
-                  onChange={(event) => setExternalJson(event.target.value)}
-                  placeholder={t(
-                    "capture.ingestPlaceholder",
-                    '[{"content":"...","title":"...","url":"https://...","tags":["book","idea"]}]'
-                  )}
-                  className="w-full bg-background border-4 border-foreground text-foreground p-3 font-mono text-xs focus:outline-none focus:ring-0 shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] rounded-none resize-y transition-none"
-                />
-                <div className="mt-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                  <p className="font-mono text-[10px] font-bold text-muted-foreground">
-                    {t("capture.ingestHint", "Paste JSON array, Readwise-like highlights, or object with highlights/items.")}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={handleIngestSubmit}
-                    disabled={!externalJson.trim() || ingestMutation.isPending}
-                    className="min-h-[44px] flex items-center justify-center border-4 border-foreground bg-background px-4 py-2 font-mono text-xs font-bold uppercase disabled:opacity-60 hover:bg-foreground hover:text-background transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm w-full sm:w-auto"
-                  >
-                    {ingestMutation.isPending ? t("capture.ingesting", "IMPORTING...") : t("capture.ingestRun", "BATCH IMPORT")}
-                  </button>
-                </div>
-                <details className="mt-3 border-2 border-foreground bg-background p-3">
-                  <summary className="min-h-[44px] flex items-center cursor-pointer font-mono text-[10px] font-bold uppercase">ADVANCED IMPORT TOOLS</summary>
-                  <div className="mt-3 border-2 border-foreground bg-background p-3">
-                    <p className="mb-2 font-mono text-[10px] font-bold uppercase">{t("capture.agentTitle", "EXTERNAL AGENT (OPENCLAW) HEADERS")}</p>
-                    <p className="font-mono text-[10px] text-muted-foreground">
-                      {t("capture.agentHint", "Use Authorization Bearer (session) or x-rebar-ingest-key + x-user-id.")}
-                    </p>
-                    <pre className="mt-2 overflow-x-auto border border-foreground p-2 font-mono text-[10px]">
-                      {`POST /api/capture/ingest
-x-rebar-ingest-key: <REBAR_INGEST_API_KEY>
-x-user-id: <USER_UUID>
-content-type: application/json
-
-{"items":[{"content":"...","title":"...","url":"https://..."}]}`}
-                    </pre>
-                  </div>
-                  <div className="mt-3 border-2 border-foreground bg-background p-3">
-                    <p className="mb-3 font-mono text-[10px] font-bold uppercase">{t("capture.shareTitle", "SHARE WEBHOOK (KAKAO/TELEGRAM)")}</p>
-                    <Link
-                      href="/share"
-                      className="min-h-[44px] mb-4 inline-flex items-center justify-center border-4 border-foreground px-4 py-2 font-mono text-[10px] font-bold uppercase hover:bg-foreground hover:text-background transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm"
-                    >
-                      {t("capture.sharePage", "OPEN MOBILE SHARE PAGE")}
-                    </Link>
-                    <pre className="overflow-x-auto border border-foreground p-2 font-mono text-[10px]">
-                      {`POST /api/capture/share
-x-rebar-ingest-key: <REBAR_INGEST_API_KEY>
-x-user-id: <USER_UUID>
-content-type: application/json
-
-{"content":"공유 텍스트","title":"공유 제목","url":"https://..."}`}
-                    </pre>
-                  </div>
-                  <div className="mt-3 border-2 border-foreground bg-background p-3">
-                    <p className="mb-2 font-mono text-[10px] font-bold uppercase">
-                      {t("capture.retryTitle", "INGEST RETRY QUEUE")}: {ingestJobs.data?.total ?? 0}
-                    </p>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => retryAllMutation.mutate()}
-                        disabled={(ingestJobs.data?.total ?? 0) === 0 || retryAllMutation.isPending}
-                        className="min-h-[44px] flex items-center justify-center border-4 border-foreground bg-foreground px-4 py-2 font-mono text-[10px] font-bold uppercase text-background disabled:opacity-60 transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm"
-                      >
-                        {t("capture.retryRun", "RETRY ALL")}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => clearRetryMutation.mutate()}
-                        disabled={(ingestJobs.data?.total ?? 0) === 0 || clearRetryMutation.isPending}
-                        className="min-h-[44px] flex items-center justify-center border-4 border-foreground bg-background px-4 py-2 font-mono text-[10px] font-bold uppercase disabled:opacity-60 hover:bg-foreground hover:text-background transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm"
-                      >
-                        {t("capture.retryClear", "CLEAR")}
-                      </button>
-                    </div>
-                  </div>
-                </details>
-                {ingestError ? <p className="mt-2 font-mono text-xs text-destructive">{ingestError}</p> : null}
-                {ingestMutation.error ? (
-                  <p className="mt-2 font-mono text-xs text-destructive">{ingestMutation.error.message}</p>
-                ) : null}
-                {ingestResult ? (
-                  <p className="mt-2 font-mono text-xs text-foreground">
-                    {t("capture.ingestDone", "Imported")}: {ingestResult.created}
-                  </p>
-                ) : null}
-              </section>
+              <CaptureBatchSection
+                t={t}
+                externalJson={externalJson}
+                onExternalJsonChange={setExternalJson}
+                onRunBatchImport={handleIngestSubmit}
+                ingestPending={ingestMutation.isPending}
+                ingestError={ingestError}
+                ingestMutationError={ingestMutation.error?.message ?? null}
+                ingestResultCreated={ingestResult?.created ?? null}
+                pendingJobsTotal={ingestJobs.data?.total ?? 0}
+                retryAllPending={retryAllMutation.isPending}
+                clearRetryPending={clearRetryMutation.isPending}
+                onRetryAll={() => retryAllMutation.mutate()}
+                onClearRetry={() => clearRetryMutation.mutate()}
+              />
             ) : null}
 
             {importMode === "csv" ? (
-              <section className="mb-8 border-2 border-foreground p-4 bg-background/60">
-                <div className="mb-3 flex items-center justify-between gap-2">
-                  <p className="font-mono text-xs font-bold uppercase">{t("capture.csvTitle", "CSV IMPORT")}</p>
-                </div>
-                <label className="mb-2 block font-mono text-xs font-bold uppercase text-foreground">
-                  {t("capture.csvFile", "CSV FILE")}
-                </label>
-                <input
-                  type="file"
-                  accept=".csv,text/csv"
-                  onChange={handleCsvFileChange}
-                  className="min-h-[44px] w-full bg-background border-4 border-foreground text-foreground p-3 font-mono text-xs rounded-none shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] focus:outline-none focus:ring-0 cursor-pointer"
-                />
-                {csvFileName ? (
-                  <p className="mt-3 font-mono text-xs text-foreground">
-                    {t("capture.csvSelected", "Selected file")}: {csvFileName}
-                  </p>
-                ) : null}
-                {csvFileName ? (
-                  <div className="mt-3 border border-foreground p-2 font-mono text-[10px]">
-                    <p>
-                      {t("capture.csvRows", "Rows")}: {csvPreview.totalRows} / {t("capture.csvImportable", "Importable")}: {csvPreview.importableRows}
-                    </p>
-                    <p>
-                      {t("capture.csvReadwise", "Readwise format")}: {csvPreview.readwiseDetected ? t("common.yes", "Yes") : t("common.no", "No")}
-                    </p>
-                  </div>
-                ) : null}
-                <details className="mt-3 border border-foreground p-2">
-                  <summary className="min-h-[44px] flex items-center cursor-pointer font-mono text-[10px] font-bold uppercase">
-                    {t("capture.csvFormat", "CSV FORMAT EXAMPLE")}
-                  </summary>
-                  <pre className="mt-2 overflow-x-auto font-mono text-[10px]">
-                    {t(
-                      "capture.csvPlaceholder",
-                      "content,title,url,tags,kind\nexample note,Article title,https://example.com,book|idea,note"
-                    )}
-                  </pre>
-                </details>
-                <div className="mt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                  <p className="font-mono text-[10px] font-bold text-muted-foreground">
-                    {t("capture.csvHint", "Header required: content. Optional: title,url,tags,kind")}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={handleCsvSubmit}
-                    disabled={!csvText.trim() || ingestMutation.isPending}
-                    className="min-h-[44px] w-full sm:w-auto flex items-center justify-center border-4 border-foreground bg-background px-4 py-2 font-mono text-xs font-bold uppercase disabled:opacity-60 hover:bg-foreground hover:text-background transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm"
-                  >
-                    {ingestMutation.isPending ? t("capture.csvImporting", "IMPORTING...") : t("capture.csvRun", "IMPORT CSV")}
-                  </button>
-                </div>
-                {ingestError ? <p className="mt-2 font-mono text-xs text-destructive">{ingestError}</p> : null}
-                {ingestMutation.error ? (
-                  <p className="mt-2 font-mono text-xs text-destructive">{ingestMutation.error.message}</p>
-                ) : null}
-                {ingestResult ? (
-                  <p className="mt-2 font-mono text-xs text-foreground">
-                    {t("capture.ingestDone", "Imported")}: {ingestResult.created}
-                  </p>
-                ) : null}
-              </section>
+              <CaptureCsvSection
+                t={t}
+                csvFileName={csvFileName}
+                csvPreview={csvPreview}
+                ingestPending={ingestMutation.isPending}
+                ingestError={ingestError}
+                ingestMutationError={ingestMutation.error?.message ?? null}
+                ingestResultCreated={ingestResult?.created ?? null}
+                canSubmit={csvText.trim().length > 0}
+                onCsvFileChange={handleCsvFileChange}
+                onSubmit={handleCsvSubmit}
+              />
             ) : null}
 
             {importMode === "ocr" ? (
-              <section className="mb-8 border-2 border-foreground p-4 bg-background/60">
-                <div className="mb-3 flex items-center justify-between gap-2">
-                  <p className="font-mono text-xs font-bold uppercase">{t("capture.ocrTitle", "IMAGE OCR")}</p>
-                </div>
-                <label className="mb-2 block font-mono text-xs font-bold uppercase text-foreground">
-                  {t("capture.ocrFile", "IMAGE FILE")}
-                </label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleOcrFileChange}
-                  className="min-h-[44px] w-full bg-background border-4 border-foreground text-foreground p-3 font-mono text-xs rounded-none shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] focus:outline-none focus:ring-0 cursor-pointer"
-                />
-                {ocrFileName ? (
-                  <p className="mt-3 font-mono text-xs text-foreground">{t("capture.ocrSelected", "Selected image")}: {ocrFileName}</p>
-                ) : null}
-                <div className="mt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                  <p className="font-mono text-[10px] font-bold text-muted-foreground">
-                    {t("capture.ocrHint", "Runs locally with free OCR engine (kor+eng).")}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={handleOcrSubmit}
-                    disabled={!ocrFile || ocrMutation.isPending}
-                    className="min-h-[44px] w-full sm:w-auto flex items-center justify-center border-4 border-foreground bg-background px-4 py-2 font-mono text-xs font-bold uppercase disabled:opacity-60 hover:bg-foreground hover:text-background transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm"
-                  >
-                    {ocrMutation.isPending ? t("capture.ocrRunning", "READING...") : t("capture.ocrRun", "EXTRACT TEXT")}
-                  </button>
-                </div>
-                {ocrMutation.error ? <p className="mt-2 font-mono text-xs text-destructive">{ocrMutation.error.message}</p> : null}
-                {ingestError ? <p className="mt-2 font-mono text-xs text-destructive">{ingestError}</p> : null}
-              </section>
+              <CaptureOcrSection
+                t={t}
+                ocrFileName={ocrFileName}
+                hasOcrFile={Boolean(ocrFile)}
+                ocrPending={ocrMutation.isPending}
+                ocrError={ocrMutation.error?.message ?? null}
+                ingestError={ingestError}
+                onOcrFileChange={handleOcrFileChange}
+                onSubmit={handleOcrSubmit}
+              />
             ) : null}
 
             {importMode === "manual" ? (
-              <form className="space-y-8" onSubmit={onSubmit}>
-                <div className="space-y-2">
-                  <label className="font-mono text-sm font-bold uppercase text-foreground">{`>> ${t("capture.dataType", "DATA.TYPE")}`}</label>
-                  <div className="relative">
-                    <select
-                      {...form.register("kind")}
-                      className="min-h-[44px] w-full bg-background border-4 border-foreground text-foreground p-4 focus:outline-none focus:ring-0 shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] transition-none appearance-none cursor-pointer font-bold uppercase rounded-none"
-                    >
-                      <option value="quote">{t("capture.kind.quote", "Quote / Highlight")}</option>
-                      <option value="note">{t("capture.kind.note", "Personal Note")}</option>
-                      <option value="link">{t("capture.kind.link", "Web Link")}</option>
-                      <option value="ai">{t("capture.kind.ai", "AI Content")}</option>
-                    </select>
-                    <div className="absolute top-1/2 right-4 -translate-y-1/2 pointer-events-none font-black text-xl">
-                      ▼
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="font-mono text-sm font-bold uppercase text-foreground">{`>> ${t("capture.dataPayload", "DATA.PAYLOAD")}`}</label>
-                  <textarea
-                    rows={6}
-                    placeholder={t("capture.contentPlaceholder", "Paste your content")}
-                    className="w-full bg-background border-4 border-foreground text-foreground text-lg md:text-xl p-4 focus:outline-none focus:ring-0 shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] transition-none resize-y placeholder:text-muted-foreground/50 rounded-none"
-                    {...form.register("content")}
-                    autoFocus
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 border-t-4 border-dashed border-border pt-8">
-                  <div className="space-y-2">
-                    <label className="font-mono text-sm font-bold uppercase text-foreground">{`>> ${t("capture.metaUrl", "META.URL")}`}</label>
-                    <input
-                      placeholder="https://..."
-                      className="min-h-[44px] w-full bg-background border-4 border-foreground text-foreground p-3 focus:outline-none focus:ring-0 shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] transition-none placeholder:text-muted-foreground/40 font-mono text-sm rounded-none"
-                      {...form.register("url")}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="font-mono text-sm font-bold uppercase text-foreground">{`>> ${t("capture.metaRef", "META.REF")}`}</label>
-                    <input
-                      placeholder="SOURCE IDENTIFIER"
-                      className="min-h-[44px] w-full bg-background border-4 border-foreground text-foreground p-3 focus:outline-none focus:ring-0 shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] transition-none placeholder:text-muted-foreground/40 font-mono text-sm uppercase rounded-none"
-                      {...form.register("source_title")}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-3 border-t-2 border-border pt-6">
-                  <label className="font-mono text-sm font-bold uppercase text-foreground">{`>> ${t("capture.tags", "TAGS")}`}</label>
-                  <div className="flex flex-wrap gap-2">
-                    {(tags.data?.data ?? []).map((tag) => {
-                      const checked = selectedTagIds.includes(tag.id)
-                      return (
-                        <button
-                          key={tag.id}
-                          type="button"
-                          onClick={() => {
-                            const current = form.getValues("tag_ids") ?? []
-                            const next = checked
-                              ? current.filter((id) => id !== tag.id)
-                              : [...current, tag.id]
-                            form.setValue("tag_ids", next)
-                          }}
-                          className={`min-h-[44px] px-4 py-2 border-4 font-mono text-xs font-bold uppercase flex items-center justify-center transition-transform active:translate-y-[2px] active:translate-x-[2px] hover:bg-foreground hover:text-background shadow-brutal-sm ${checked
-                            ? "border-foreground bg-foreground text-background"
-                            : "border-foreground bg-background text-foreground"
-                            }`}
-                        >
-                          #{tag.name}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-
-                <div className="pt-6 border-t-4 border-foreground flex flex-col items-start gap-4">
-                  {Object.values(form.formState.errors).map((error) => (
-                    <div key={error.message} className="flex items-center text-background bg-destructive font-mono text-xs font-bold px-3 py-2 uppercase">
-                      <AlertTriangle className="w-4 h-4 mr-2" strokeWidth={3} />
-                      ERR: {error.message}
-                    </div>
-                  ))}
-
-                  {mutation.error && (
-                    <div className="flex items-center text-background bg-destructive font-mono text-xs font-bold px-3 py-2 uppercase">
-                      <AlertTriangle className="w-4 h-4 mr-2" strokeWidth={3} />
-                      SYS.ERR: {mutation.error.message}
-                    </div>
-                  )}
-
-                  {duplicateRecordId ? (
-                    <div className="w-full border-2 border-foreground bg-background p-3">
-                      <p className="font-mono text-xs font-bold uppercase text-foreground">
-                        {t("capture.duplicateFound", "중복 항목이 있어 병합 저장을 권장합니다.")}
-                      </p>
-                      <div className="mt-3 flex flex-wrap items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={handleMergeDuplicate}
-                          disabled={mutation.isPending}
-                          className="min-h-[44px] flex items-center justify-center border-4 border-foreground bg-foreground px-4 py-2 font-mono text-xs font-bold uppercase text-background transition-transform active:translate-y-[2px] active:translate-x-[2px] hover:bg-background hover:text-foreground hover:shadow-brutal-sm shadow-brutal"
-                        >
-                          {t("capture.mergeDuplicate", "중복 병합 저장")}
-                        </button>
-                        <Link
-                          href={`/records/${duplicateRecordId}?from=${encodeURIComponent("/capture")}`}
-                          className="min-h-[44px] flex items-center justify-center border-4 border-foreground bg-background px-4 py-2 font-mono text-xs font-bold uppercase text-foreground transition-transform active:translate-y-[2px] active:translate-x-[2px] hover:bg-foreground hover:text-background hover:shadow-brutal"
-                        >
-                          {t("capture.openExisting", "기존 항목 보기")}
-                        </Link>
-                      </div>
-                    </div>
-                  ) : null}
-
-                  {mutation.isSuccess && !showSavedToast ? (
-                    <div className="flex items-center text-white bg-accent font-mono text-xs font-bold px-3 py-2 uppercase animate-pulse">
-                      <CheckSquare className="w-4 h-4 mr-2" strokeWidth={3} />
-                      {t("capture.committed", "COMMITTED TO DATABASE.")}
-                    </div>
-                  ) : null}
-
-                  <button
-                    type="submit"
-                    disabled={mutation.isPending}
-                    className="w-full mt-4 bg-foreground text-background font-black text-xl uppercase py-5 border-4 border-foreground hover:bg-accent hover:border-accent hover:text-white transition-transform active:translate-y-[4px] active:translate-x-[4px] disabled:opacity-50 disabled:cursor-not-allowed rounded-none shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.1)] active:shadow-none"
-                  >
-                    {mutation.isPending ? (
-                      <div className="flex items-center justify-center gap-3">
-                        <LoadingSpinner className="w-6 h-6" />
-                        <span>{t("capture.transmitting", "SAVING...")}</span>
-                      </div>
-                    ) : t("capture.commit", "SAVE")}
-                  </button>
-                </div>
-              </form>
+              <CaptureManualForm
+                t={t}
+                form={form}
+                tags={tags.data?.data ?? []}
+                selectedTagIds={selectedTagIds}
+                onSubmit={onSubmit}
+                mutationPending={mutation.isPending}
+                mutationErrorMessage={mutation.error?.message ?? null}
+                mutationSuccess={mutation.isSuccess}
+                showSavedToast={showSavedToast}
+                duplicateRecordId={duplicateRecordId}
+                onMergeDuplicate={handleMergeDuplicate}
+              />
             ) : null}
           </div>
         </main>

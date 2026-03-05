@@ -6,7 +6,13 @@ import AuthGate from "@shared/auth/auth-gate"
 import ProtectedPageShell from "./_components/protected-page-shell"
 import { useI18n } from "@app-shared/i18n/i18n-provider"
 import { getSupabaseBrowser } from "@/lib/supabase-browser"
-import { getStartPagePreference, setStartPagePreference, type StartPage } from "@feature-lib/settings/preferences"
+import {
+  getStartPagePreference,
+  getStartPagePreferenceServer,
+  setStartPagePreference,
+  setStartPagePreferenceServer,
+  type StartPage
+} from "@feature-lib/settings/preferences"
 
 type AccountInfo = {
   id: string | null
@@ -47,7 +53,16 @@ export default function SettingsPage() {
       })
     })
 
-    setStartPage(getStartPagePreference())
+    const localStartPage = getStartPagePreference()
+    setStartPage(localStartPage)
+    void getStartPagePreferenceServer().then((serverStartPage) => {
+      if (!serverStartPage) {
+        return
+      }
+
+      setStartPage(serverStartPage)
+      setStartPagePreference(serverStartPage)
+    })
     setOrigin(window.location.origin)
   }, [])
 
@@ -90,7 +105,7 @@ export default function SettingsPage() {
             type="button"
             onClick={handleSignOut}
             disabled={pendingLogout}
-            className="border-4 border-destructive bg-background px-4 py-2 font-mono text-xs font-bold uppercase text-destructive hover:bg-destructive hover:text-white transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm"
+            className="border-4 border-destructive bg-background px-4 py-2 font-mono text-xs font-bold uppercase text-destructive hover:bg-destructive hover:text-destructive-foreground transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm"
           >
             {pendingLogout ? "LOGGING OUT..." : t("nav.logout", "LOGOUT")}
           </button>
@@ -129,12 +144,17 @@ export default function SettingsPage() {
 
         <section className="mt-6 border-4 border-foreground bg-card p-5">
           <h2 className="mb-4 border-b-2 border-foreground pb-2 font-black text-2xl uppercase">{t("settings.startPage", "START PAGE")}</h2>
+          <label htmlFor="settings-start-page" className="sr-only">
+            {t("settings.startPage", "START PAGE")}
+          </label>
           <select
+            id="settings-start-page"
             value={startPage}
             onChange={(event) => {
               const next = event.target.value as StartPage
               setStartPage(next)
               setStartPagePreference(next)
+              void setStartPagePreferenceServer(next)
             }}
             className="w-full min-h-[44px] border-4 border-foreground bg-background p-3 font-mono text-xs font-bold uppercase text-foreground focus:outline-none focus:ring-0 shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] rounded-none"
           >

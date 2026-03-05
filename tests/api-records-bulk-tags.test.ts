@@ -68,4 +68,22 @@ describe("POST /api/records/bulk/tags", () => {
     expect(response.status).toBe(400)
     await expect(response.json()).resolves.toEqual({ error: "Invalid tag_ids" })
   })
+
+  it("returns 401 when unauthenticated", async () => {
+    getUserIdMock.mockResolvedValueOnce(null)
+
+    const request = new NextRequest("http://localhost/api/records/bulk/tags", {
+      method: "POST",
+      body: JSON.stringify({
+        ids: ["11111111-1111-1111-1111-111111111111"],
+        tag_ids: [],
+        mode: "add"
+      }),
+      headers: { "Content-Type": "application/json" }
+    })
+
+    const response = await POST(request)
+    expect(response.status).toBe(401)
+    await expect(response.json()).resolves.toEqual({ error: "Unauthorized" })
+  })
 })

@@ -11,10 +11,14 @@ import { apiFetch } from "@/lib/client-http"
 import { getStateLabel } from "@/lib/i18n/state-label"
 import type { AnnotationRow, RecordRow, TagRow } from "@/lib/types"
 import { Link as LinkIcon, Hash, ArrowLeftSquare } from "lucide-react"
-import { LoadingDots, LoadingSpinner } from "@shared/ui/loading"
+import { LoadingSpinner } from "@shared/ui/loading"
 import { Toast } from "@shared/ui/toast"
 import { ConfirmDialog } from "../_components/confirm-dialog"
 import { MarkdownContent } from "@shared/ui/markdown-content"
+import { RecordAssistPanel } from "../_components/record-assist-panel"
+import { RecordManagePanel } from "../_components/record-manage-panel"
+import { RecordTagsPanel } from "../_components/record-tags-panel"
+import { RecordHistoryPanel } from "../_components/record-history-panel"
 
 type DetailResponse = {
   record: RecordRow
@@ -557,265 +561,57 @@ export default function RecordDetailPage() {
 
               {isSidebarOpen && (
                 <section className="lg:col-span-4 flex flex-col gap-6">
-                  <div className="border-4 border-foreground bg-card p-5 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.1)]">
-                    <h3 className="font-black text-xl uppercase text-foreground mb-4 border-b-4 border-foreground pb-2">
-                      {t("record.assist.title", "AI EXECUTION")}
-                    </h3>
-                    <button
-                      type="button"
-                      onClick={() => assist.mutate()}
-                      disabled={assist.isPending}
-                      className="min-h-[44px] w-full border-2 border-foreground bg-background px-3 py-2 font-mono text-xs font-bold uppercase hover:bg-foreground hover:text-background disabled:opacity-60"
-                    >
-                      {assist.isPending
-                        ? t("record.assist.running", "GENERATING...")
-                        : t("record.assist.run", "GENERATE SUMMARY + TODO")}
-                    </button>
+                  <RecordAssistPanel
+                    t={t}
+                    pending={assist.isPending}
+                    errorMessage={assist.error?.message ?? null}
+                    data={assist.data?.data ?? null}
+                    checkedTodos={checkedAssistTodos}
+                    onRun={() => assist.mutate()}
+                    onToggleTodo={toggleAssistTodo}
+                    onCopyTodos={copyAssistTodos}
+                  />
 
-                    {assist.error ? (
-                      <p className="mt-3 font-mono text-xs text-destructive">{assist.error.message}</p>
-                    ) : null}
+                  <RecordManagePanel
+                    t={t}
+                    editSourceTitle={editSourceTitle}
+                    editUrl={editUrl}
+                    editState={editState}
+                    isRecordMutating={isRecordMutating}
+                    updatePending={updateRecord.isPending}
+                    deletePending={deleteRecord.isPending}
+                    onEditSourceTitleChange={setEditSourceTitle}
+                    onEditUrlChange={setEditUrl}
+                    onEditStateChange={setEditState}
+                    onRequestSave={requestSaveRecord}
+                    onRequestDelete={requestDeleteRecord}
+                  />
 
-                    {assist.data ? (
-                      <div className="mt-4 space-y-4">
-                        <div>
-                          <p className="mb-2 font-mono text-[10px] font-bold uppercase text-muted-foreground">
-                            {t("record.assist.summary", "SUMMARY")}
-                          </p>
-                          <div className="space-y-2">
-                            {assist.data.data.summary.map((item) => (
-                              <p key={item} className="border-2 border-foreground bg-background p-2 font-mono text-xs font-bold">
-                                {item}
-                              </p>
-                            ))}
-                          </div>
-                        </div>
+                  <RecordTagsPanel
+                    t={t}
+                    tags={tags.data?.data ?? []}
+                    selectedTagIds={selectedTagIds}
+                    newTagName={newTagName}
+                    isTagMutating={isTagMutating}
+                    updateTagsError={updateTags.error?.message ?? null}
+                    createTagPending={createTag.isPending}
+                    onToggleTag={toggleTag}
+                    onNewTagNameChange={setNewTagName}
+                    onCreateTag={() => createTag.mutate(newTagName.trim())}
+                  />
 
-                        <div>
-                          <p className="mb-2 font-mono text-[10px] font-bold uppercase text-muted-foreground">
-                            {t("record.assist.questions", "KEY QUESTIONS")}
-                          </p>
-                          <div className="space-y-2">
-                            {assist.data.data.questions.map((item) => (
-                              <p key={item} className="border border-foreground bg-background p-2 font-mono text-xs">
-                                {item}
-                              </p>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div>
-                          <div className="mb-2 flex items-center justify-between gap-2">
-                            <p className="font-mono text-[10px] font-bold uppercase text-muted-foreground">
-                              {t("record.assist.todos", "ACTION TODOS")}
-                            </p>
-                            <button
-                              type="button"
-                              onClick={copyAssistTodos}
-                              className="min-h-[36px] border border-foreground px-2 py-1 font-mono text-[10px] font-bold uppercase hover:bg-foreground hover:text-background"
-                            >
-                              {t("record.assist.copyTodos", "COPY")}
-                            </button>
-                          </div>
-                          <div className="space-y-2">
-                            {assist.data.data.todos.map((todo) => {
-                              const checked = checkedAssistTodos.includes(todo)
-                              return (
-                                <button
-                                  key={todo}
-                                  type="button"
-                                  onClick={() => toggleAssistTodo(todo)}
-                                  className={`min-h-[44px] w-full border-2 px-3 py-2 text-left font-mono text-xs font-bold transition-colors ${
-                                    checked
-                                      ? "border-foreground bg-foreground text-background"
-                                      : "border-foreground bg-background text-foreground hover:bg-muted"
-                                  }`}
-                                >
-                                  <span className="mr-2">{checked ? "[x]" : "[ ]"}</span>
-                                  {todo}
-                                </button>
-                              )
-                            })}
-                          </div>
-                        </div>
-
-                        {assist.data.data.signals.topKeywords.length > 0 ? (
-                          <p className="font-mono text-[10px] font-bold uppercase text-muted-foreground">
-                            {t("record.assist.keywords", "KEYWORDS")}: {assist.data.data.signals.topKeywords.join(", ")}
-                          </p>
-                        ) : null}
-                      </div>
-                    ) : null}
-                  </div>
-
-                  <div className="border-4 border-foreground bg-card p-5 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.1)]">
-                    <h3 className="font-black text-xl uppercase text-foreground mb-4 flex items-center justify-between border-b-4 border-foreground pb-2">
-                      <span className="flex items-center gap-2"><ArrowLeftSquare className="w-6 h-6 rotate-180" strokeWidth={3} /> {t("record.manageRecord", "MANAGE")}</span>
-                    </h3>
-                    <div className="space-y-3">
-                      {isRecordMutating ? (
-                        <p className="font-mono text-[10px] font-bold uppercase text-muted-foreground">
-                          {t("record.pending", "SAVING...")}
-                        </p>
-                      ) : null}
-                      <input
-                        value={editSourceTitle}
-                        onChange={(event) => setEditSourceTitle(event.target.value)}
-                        placeholder="SOURCE TITLE"
-                        disabled={isRecordMutating}
-                        className="min-h-[44px] w-full border-2 border-foreground bg-background p-2 font-mono text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
-                      />
-                      <input
-                        value={editUrl}
-                        onChange={(event) => setEditUrl(event.target.value)}
-                        placeholder="https://..."
-                        disabled={isRecordMutating}
-                        className="min-h-[44px] w-full border-2 border-foreground bg-background p-2 font-mono text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
-                      />
-                      <select
-                        value={editState}
-                        onChange={(event) => setEditState(event.target.value as RecordRow["state"])}
-                        disabled={isRecordMutating}
-                        className="min-h-[44px] w-full border-2 border-foreground bg-background p-2 font-mono text-xs font-bold uppercase text-foreground focus:outline-none focus:ring-2 focus:ring-accent appearance-none cursor-pointer rounded-none"
-                      >
-                        <option value="INBOX">{getStateLabel("INBOX", t)}</option>
-                        <option value="ACTIVE">{getStateLabel("ACTIVE", t)}</option>
-                        <option value="PINNED">{getStateLabel("PINNED", t)}</option>
-                        <option value="ARCHIVED">{getStateLabel("ARCHIVED", t)}</option>
-                        <option value="TRASHED">{getStateLabel("TRASHED", t)}</option>
-                      </select>
-                      <div className="flex gap-2 pt-2">
-                        <button
-                          type="button"
-                          onClick={requestSaveRecord}
-                          disabled={isRecordMutating}
-                          className="min-h-[44px] flex-1 bg-foreground text-background font-black text-xs uppercase py-2 hover:bg-accent hover:text-white transition-colors disabled:opacity-50"
-                        >
-                          {updateRecord.isPending ? <LoadingDots /> : t("record.update", "UPDATE")}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={requestDeleteRecord}
-                          disabled={isRecordMutating}
-                          className="min-h-[44px] flex-1 bg-destructive text-white font-black text-xs uppercase py-2 hover:bg-red-600 transition-colors disabled:opacity-50"
-                        >
-                          {deleteRecord.isPending ? <LoadingDots /> : t("record.delete", "DELETE")}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="border-4 border-foreground bg-card p-5 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                    <h3 className="font-black text-xl uppercase text-foreground mb-4 flex items-center gap-2 border-b-4 border-foreground pb-2">
-                      <Hash className="w-6 h-6" strokeWidth={3} /> {t("record.tagsEdit", "TAGS")}
-                    </h3>
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      {(tags.data?.data ?? []).length === 0 && (
-                        <span className="font-mono text-xs text-muted-foreground uppercase">{t("record.noTagsAvail", "NO TAGS AVAILABLE")}</span>
-                      )}
-                      {(tags.data?.data ?? [])
-                        .filter((tag: TagRow) => selectedTagIds.has(tag.id))
-                        .map((tag: TagRow) => (
-                          <div
-                            key={tag.id}
-                            className="flex items-center border-2 border-foreground bg-foreground text-background font-mono text-xs font-bold uppercase transition-transform hover:scale-105"
-                          >
-                            <span className="px-2 py-1">#{tag.name}</span>
-                            <button
-                              type="button"
-                              onClick={() => toggleTag(tag.id)}
-                              disabled={isTagMutating}
-                              className="px-2 py-1 border-l-2 border-background/20 hover:bg-destructive hover:text-white transition-colors"
-                              aria-label="Remove tag"
-                            >
-                              X
-                            </button>
-                          </div>
-                        ))}
-                    </div>
-
-                    {/* Select for unassigned tags */}
-                    {(() => {
-                      const unassignedTags = (tags.data?.data ?? []).filter((tag: TagRow) => !selectedTagIds.has(tag.id))
-                      if (unassignedTags.length === 0) return null
-
-                      return (
-                        <select
-                          onChange={(e) => {
-                            if (e.target.value) toggleTag(e.target.value)
-                            e.target.value = "" // Reset after selection
-                          }}
-                          disabled={isTagMutating}
-                          className="w-full bg-background border-2 border-dashed border-foreground/50 text-foreground font-mono text-xs font-bold p-2 focus:outline-none focus:border-accent appearance-none rounded-none cursor-pointer uppercase"
-                          defaultValue=""
-                        >
-                          <option value="" disabled>+ {t("record.addTag", "ADD TAG...")}</option>
-                          {unassignedTags.map((tag: TagRow) => (
-                            <option key={tag.id} value={tag.id}>{tag.name}</option>
-                          ))}
-                        </select>
-                      )
-                    })()}
-
-                    <form
-                      onSubmit={(e) => {
-                        e.preventDefault()
-                        if (newTagName.trim()) createTag.mutate(newTagName.trim())
-                      }}
-                      className="mt-4 flex gap-0"
-                    >
-                      <input
-                        type="text"
-                        value={newTagName}
-                        onChange={(e) => setNewTagName(e.target.value)}
-                        placeholder="+ NEW TAG"
-                        disabled={isTagMutating}
-                        className="flex-1 bg-background border-2 border-r-0 border-foreground font-mono text-xs font-bold p-2 focus:outline-none focus:border-accent uppercase min-w-0 placeholder:text-muted-foreground/50"
-                      />
-                      <button
-                        type="submit"
-                        disabled={!newTagName.trim() || isTagMutating}
-                        className="bg-foreground text-background font-mono text-xs font-bold px-3 py-2 uppercase hover:bg-accent hover:text-white disabled:opacity-50 border-2 border-foreground"
-                      >
-                        {createTag.isPending ? <LoadingDots /> : "ADD"}
-                      </button>
-                    </form>
-
-                    {updateTags.error ? (
-                      <p className="font-mono text-xs text-destructive mt-3">{updateTags.error.message}</p>
-                    ) : null}
-                  </div>
-
-                  <div className="border-4 border-foreground bg-card p-5 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.1)]">
-
-                    {updateRecord.error ? <p className="font-mono text-xs text-destructive">{updateRecord.error.message}</p> : null}
-                    {deleteRecord.error ? <p className="font-mono text-xs text-destructive">{deleteRecord.error.message}</p> : null}
-
-                    <div className="flex flex-col gap-4">
-                      <h2 className="font-black text-2xl text-foreground uppercase pt-4 px-2">{t("record.logHistory", "LOG.HISTORY")}</h2>
-
-                      {detail.data.annotations.length === 0 && (
-                        <p className="font-mono text-sm font-bold text-muted-foreground uppercase border-2 border-dashed border-border p-4 text-center">{t("record.noLogs", "NO LOGS FOUND.")}</p>
-                      )}
-
-                      <div className="space-y-4">
-                        {detail.data.annotations.map(ann => (
-                          <div key={ann.id} className="border-2 border-foreground bg-background p-4 relative shadow-[2px_2px_0px_0px_theme(colors.accent)]">
-                            <span className="inline-block bg-accent text-white font-mono text-[10px] font-bold px-1.5 py-0.5 uppercase mb-2">
-                              {ann.kind}
-                            </span>
-                            <p className="text-foreground font-medium text-sm whitespace-pre-wrap">{ann.body}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
+                  <RecordHistoryPanel
+                    t={t}
+                    annotations={detail.data.annotations}
+                    updateRecordError={updateRecord.error?.message ?? null}
+                    deleteRecordError={deleteRecord.error?.message ?? null}
+                  />
                 </section>
               )}
             </div>
           )}
           {detail.error ? (
-            <div className="bg-destructive text-white p-4 font-mono text-xs font-bold uppercase border-4 border-foreground mt-6">
+            <div className="bg-destructive text-destructive-foreground p-4 font-mono text-xs font-bold uppercase border-4 border-foreground mt-6">
               ERR: {detail.error.message}
             </div>
           ) : null}

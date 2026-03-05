@@ -124,25 +124,41 @@ export default function SharePage() {
               </p>
             ) : null}
             <div className="space-y-3">
+              <label htmlFor="share-title" className="sr-only">
+                {t("share.titlePlaceholder", "Title (optional)")}
+              </label>
               <input
+                id="share-title"
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
                 placeholder={t("share.titlePlaceholder", "Title (optional)")}
                 className="w-full border-2 border-foreground bg-background p-3 font-mono text-sm"
               />
+              <label htmlFor="share-url" className="sr-only">
+                {t("share.urlPlaceholder", "https://... (optional)")}
+              </label>
               <input
+                id="share-url"
                 value={url}
                 onChange={(event) => setUrl(event.target.value)}
                 placeholder={t("share.urlPlaceholder", "https://... (optional)")}
                 className="w-full border-2 border-foreground bg-background p-3 font-mono text-sm"
               />
+              <label htmlFor="share-tags" className="sr-only">
+                {t("share.tagsPlaceholder", "tags,comma,separated")}
+              </label>
               <input
+                id="share-tags"
                 value={tags}
                 onChange={(event) => setTags(event.target.value)}
                 placeholder={t("share.tagsPlaceholder", "tags,comma,separated")}
                 className="w-full border-2 border-foreground bg-background p-3 font-mono text-sm"
               />
+              <label htmlFor="share-content" className="sr-only">
+                {t("share.contentPlaceholder", "Paste shared text")}
+              </label>
               <textarea
+                id="share-content"
                 value={content}
                 onChange={(event) => setContent(event.target.value)}
                 rows={8}

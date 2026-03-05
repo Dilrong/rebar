@@ -90,13 +90,21 @@ export default function SignUpPage() {
         </header>
 
         <section className="border-4 border-foreground bg-card p-6 md:p-8 space-y-4 shadow-brutal">
+          <label htmlFor="signup-email" className="sr-only">
+            {t("signup.email", "email")}
+          </label>
           <input
+            id="signup-email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             placeholder={t("signup.email", "email")}
             className="min-h-[44px] w-full bg-background border-2 border-foreground text-foreground px-4 py-3 font-mono text-sm"
           />
+          <label htmlFor="signup-password" className="sr-only">
+            {t("signup.password", "password")}
+          </label>
           <input
+            id="signup-password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             type="password"

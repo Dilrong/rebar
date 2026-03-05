@@ -45,4 +45,78 @@ describe("POST /api/capture/extract", () => {
     expect(response.status).toBe(400)
     await expect(response.json()).resolves.toEqual({ error: "URL host is not allowed" })
   })
+
+  it("returns 400 for blocked metadata hosts", async () => {
+    const response = await POST(
+      new NextRequest("http://localhost/api/capture/extract", {
+        method: "POST",
+        body: JSON.stringify({ url: "http://metadata.google.internal/computeMetadata/v1" })
+      })
+    )
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toEqual({ error: "URL host is not allowed" })
+  })
+
+  it("returns 400 for blocked .internal hosts", async () => {
+    const response = await POST(
+      new NextRequest("http://localhost/api/capture/extract", {
+        method: "POST",
+        body: JSON.stringify({ url: "http://api.internal/private" })
+      })
+    )
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toEqual({ error: "URL host is not allowed" })
+  })
+
+  it("returns 400 for blocked .local hosts", async () => {
+    const response = await POST(
+      new NextRequest("http://localhost/api/capture/extract", {
+        method: "POST",
+        body: JSON.stringify({ url: "http://service.local/private" })
+      })
+    )
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toEqual({ error: "URL host is not allowed" })
+  })
+
+  it("returns 401 when user is not authenticated", async () => {
+    getUserIdMock.mockResolvedValueOnce(null)
+
+    const response = await POST(
+      new NextRequest("http://localhost/api/capture/extract", {
+        method: "POST",
+        body: JSON.stringify({ url: "http://example.com/page" })
+      })
+    )
+
+    expect(response.status).toBe(401)
+    await expect(response.json()).resolves.toEqual({ error: "Unauthorized" })
+  })
+
+  it("returns 429 when rate limited", async () => {
+    rateLimitMock.mockResolvedValueOnce({ ok: false, retryAfterSec: 17, remaining: 0 })
+
+    const response = await POST(
+      new NextRequest("http://localhost/api/capture/extract", {
+        method: "POST",
+        body: JSON.stringify({ url: "http://example.com/page" })
+      })
+    )
+
+    expect(response.status).toBe(429)
+  })
+
+  it("returns 400 for invalid payload", async () => {
+    const response = await POST(
+      new NextRequest("http://localhost/api/capture/extract", {
+        method: "POST",
+        body: JSON.stringify({ bad: true })
+      })
+    )
+
+    expect(response.status).toBe(400)
+  })
 })

@@ -9,9 +9,9 @@ type ToastProps = {
 export function Toast({ message, actionLabel, onAction, onClose, tone = "default" }: ToastProps) {
   const toneClass =
     tone === "success"
-      ? "border-accent bg-accent text-white"
+      ? "border-accent bg-accent text-accent-foreground"
       : tone === "error"
-        ? "border-destructive bg-destructive text-white"
+        ? "border-destructive bg-destructive text-destructive-foreground"
         : "border-foreground bg-foreground text-background"
 
   return (

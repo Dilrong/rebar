@@ -41,4 +41,18 @@ describe("GET /api/search", () => {
     expect(response.status).toBe(400)
     await expect(response.json()).resolves.toEqual({ error: "Invalid state" })
   })
+
+  it("returns 400 for invalid tag_id format", async () => {
+    const response = await GET(new NextRequest("http://localhost/api/search?q=test&tag_id=not-a-uuid", { method: "GET" }))
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toEqual({ error: "Invalid tag_id" })
+  })
+
+  it("returns 400 for invalid cursor", async () => {
+    const response = await GET(new NextRequest("http://localhost/api/search?q=test&cursor=bad-cursor", { method: "GET" }))
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toEqual({ error: "Invalid cursor" })
+  })
 })

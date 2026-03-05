@@ -1,4 +1,8 @@
 import { NextRequest } from "next/server"
+import { lookup as dnsLookup } from "node:dns"
+import { request as httpRequest } from "node:http"
+import { request as httpsRequest } from "node:https"
+import type { IncomingHttpHeaders } from "node:http"
 import { lookup } from "node:dns/promises"
 import { isIP } from "node:net"
 import { z } from "zod"
@@ -72,6 +76,104 @@ async function resolvesToPrivateAddress(hostname: string): Promise<boolean> {
   } catch {
     return false
   }
+}
+
+type RequestResult = {
+  statusCode: number
+  headers: IncomingHttpHeaders
+  body: string
+}
+
+function requestHtmlWithPinnedLookup(targetUrl: URL): Promise<RequestResult | null> {
+  return new Promise((resolve) => {
+    const client = targetUrl.protocol === "https:" ? httpsRequest : httpRequest
+    const request = client(
+      targetUrl,
+      {
+        method: "GET",
+        timeout: 10_000,
+        lookup(hostname, _options, callback) {
+          dnsLookup(hostname, { family: 0, all: false, verbatim: true }, (error, address, family) => {
+            if (error) {
+              callback(error, "", 4)
+              return
+            }
+
+            if (!address || isPrivateIp(address)) {
+              callback(new Error("URL host is not allowed"), "", family ?? 4)
+              return
+            }
+
+            callback(null, address, family)
+          })
+        }
+      },
+      (response) => {
+        const chunks: string[] = []
+        response.setEncoding("utf8")
+        response.on("data", (chunk: string) => {
+          chunks.push(chunk)
+        })
+        response.on("end", () => {
+          resolve({
+            statusCode: response.statusCode ?? 0,
+            headers: response.headers,
+            body: chunks.join("")
+          })
+        })
+      }
+    )
+
+    request.on("timeout", () => {
+      request.destroy()
+      resolve(null)
+    })
+
+    request.on("error", () => {
+      resolve(null)
+    })
+
+    request.end()
+  })
+}
+
+async function fetchWithGuards(inputUrl: URL): Promise<RequestResult | null> {
+  let currentUrl = new URL(inputUrl.toString())
+
+  for (let index = 0; index < 5; index += 1) {
+    if (currentUrl.protocol !== "http:" && currentUrl.protocol !== "https:") {
+      return null
+    }
+
+    if (await resolvesToPrivateAddress(currentUrl.hostname)) {
+      return null
+    }
+
+    const response = await requestHtmlWithPinnedLookup(currentUrl)
+
+    if (!response) {
+      return null
+    }
+
+    const isRedirect = response.statusCode >= 300 && response.statusCode < 400
+    if (!isRedirect) {
+      return response
+    }
+
+    const locationHeader = response.headers.location
+    const location = Array.isArray(locationHeader) ? locationHeader[0] : locationHeader
+    if (!location) {
+      return null
+    }
+
+    try {
+      currentUrl = new URL(location, currentUrl)
+    } catch {
+      return null
+    }
+  }
+
+  return null
 }
 
 function pickMetaContent(html: string, name: string): string | null {
@@ -157,6 +259,10 @@ function createYoutubeContent(title: string | null, description: string | null):
   return parts.join("\n\n").slice(0, 1800)
 }
 
+function isYoutubeHostname(hostname: string): boolean {
+  return hostname === "youtube.com" || hostname.endsWith(".youtube.com") || hostname === "youtu.be" || hostname.endsWith(".youtu.be")
+}
+
 export async function POST(request: NextRequest) {
   const limitResult = await checkRateLimitDistributed({
     key: `capture:extract:${resolveClientKey(request.headers)}`,
@@ -188,20 +294,13 @@ export async function POST(request: NextRequest) {
     return fail("URL host is not allowed", 400)
   }
 
-  const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), 10000)
-  const response = await fetch(targetUrl.toString(), {
-    method: "GET",
-    redirect: "follow",
-    signal: controller.signal
-  }).catch(() => null)
-  clearTimeout(timeout)
+  const response = await fetchWithGuards(targetUrl)
 
-  if (!response || !response.ok) {
+  if (!response || response.statusCode < 200 || response.statusCode >= 300) {
     return fail("Failed to fetch URL", 400)
   }
 
-  const html = await response.text()
+  const html = response.body
   const hostname = targetUrl.hostname.toLowerCase()
   const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i)
   const titleFromTag = decodeEntities(titleMatch?.[1]?.trim() ?? "")
@@ -216,7 +315,7 @@ export async function POST(request: NextRequest) {
     pickMetaContent(html, "description") ??
     null
 
-  if (hostname.includes("youtube.com") || hostname.includes("youtu.be")) {
+  if (isYoutubeHostname(hostname)) {
     return ok({
       url: parsed.data.url,
       title,

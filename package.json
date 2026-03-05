@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint . --ext .ts,.tsx --max-warnings=0",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "a11y": "REBAR_E2E_BYPASS_AUTH=true REBAR_E2E_TEST_USER_ID=00000000-0000-0000-0000-000000000001 NEXT_PUBLIC_E2E_BYPASS_AUTH=true pnpm build && pnpm exec puppeteer browsers install chrome && REBAR_E2E_BYPASS_AUTH=true REBAR_E2E_TEST_USER_ID=00000000-0000-0000-0000-000000000001 NEXT_PUBLIC_E2E_BYPASS_AUTH=true start-server-and-test \"next start -p 4173\" http-get://127.0.0.1:4173 \"pa11y-ci --config .pa11yci.json\""
   },
   "dependencies": {
     "@hookform/resolvers": "3.10.0",
@@ -29,13 +30,20 @@
   },
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.19",
+    "@testing-library/react": "^16.3.2",
     "@types/node": "20.17.19",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "@typescript-eslint/parser": "^8.56.1",
     "autoprefixer": "10.4.20",
     "eslint": "^10.0.2",
+    "fast-check": "^4.5.3",
+    "jsdom": "^22.1.0",
+    "pa11y": "^9.1.1",
+    "pa11y-ci": "^4.1.0",
     "postcss": "8.5.3",
+    "puppeteer": "^24.38.0",
+    "start-server-and-test": "^2.1.5",
     "tailwindcss": "3.4.17",
     "typescript": "5.7.3",
     "vitest": "^4.0.18"

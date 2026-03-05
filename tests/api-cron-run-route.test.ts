@@ -18,7 +18,7 @@ vi.mock("@/lib/supabase-admin", () => {
   const from = (table: string) => {
     if (table === "ingest_jobs") {
       return {
-        select: (columns: string, options?: { count?: "exact"; head?: boolean }) => {
+        select: (_columns: string, options?: { count?: "exact"; head?: boolean }) => {
           if (options?.head) {
             return {
               eq: async () => ({ count: 0 })
@@ -94,5 +94,17 @@ describe("POST /api/cron/run", () => {
       cleanup: { deleted: 1, cutoff: expect.any(String) }
     })
     expect(processIngestMock).toHaveBeenCalledWith("user-1", { title: "t" })
+  })
+
+  it("returns failed ingest count when job processing throws", async () => {
+    verifyCronRequestMock.mockReturnValueOnce({ ok: true })
+    processIngestMock.mockRejectedValueOnce(new Error("ingest failed"))
+
+    const response = await POST(new Request("http://localhost/api/cron/run", { method: "POST" }))
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toEqual({
+      ingest: { done: 0, failed: 1, pending: 0 },
+      cleanup: { deleted: 1, cutoff: expect.any(String) }
+    })
   })
 })

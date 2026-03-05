@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import type { ReactNode } from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { isLoopbackHostname } from "@/lib/security/localhost"
 import { getSupabaseBrowser } from "@/lib/supabase-browser"
 import { PageLoading } from "@shared/ui/loading"
 
@@ -19,6 +20,15 @@ export default function AuthGate({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
+    if (
+      process.env.NEXT_PUBLIC_E2E_BYPASS_AUTH === "true" &&
+      typeof window !== "undefined" &&
+      isLoopbackHostname(window.location.hostname)
+    ) {
+      setReady(true)
+      return
+    }
+
     try {
       const supabase = getSupabaseBrowser()
 

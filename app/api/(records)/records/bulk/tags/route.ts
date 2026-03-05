@@ -62,26 +62,36 @@ export async function POST(request: NextRequest) {
   }
 
   if (parsed.data.mode === "replace") {
-    for (const recordId of targetIds) {
-      if (tagIds.length === 0) {
-        const deletedAll = await supabase.from("record_tags").delete().eq("record_id", recordId)
-        if (deletedAll.error) {
-          return fail(deletedAll.error.message, 500)
+    if (tagIds.length === 0) {
+      const deletedAll = await supabase.from("record_tags").delete().in("record_id", targetIds)
+      if (deletedAll.error) {
+        return fail(deletedAll.error.message, 500)
+      }
+    } else {
+      const links: Array<{ record_id: string; tag_id: string }> = []
+      for (const recordId of targetIds) {
+        for (const tagId of tagIds) {
+          links.push({ record_id: recordId, tag_id: tagId })
         }
-        continue
       }
 
-      const upserted = await supabase.from("record_tags").upsert(
-        tagIds.map((tagId) => ({ record_id: recordId, tag_id: tagId })),
-        { onConflict: "record_id,tag_id" }
-      )
+      const upserted = await supabase.from("record_tags").upsert(links, { onConflict: "record_id,tag_id" })
       if (upserted.error) {
         return fail(upserted.error.message, 500)
       }
 
-      const removed = await supabase.from("record_tags").delete().eq("record_id", recordId).not("tag_id", "in", `(${tagIds.join(",")})`)
-      if (removed.error) {
-        return fail(removed.error.message, 500)
+      const tagIdSet = new Set(tagIds)
+      const existingLinks = await supabase.from("record_tags").select("record_id, tag_id").in("record_id", targetIds)
+      if (existingLinks.error) {
+        return fail(existingLinks.error.message, 500)
+      }
+      const staleLinks = existingLinks.data.filter((r) => !tagIdSet.has(r.tag_id))
+      if (staleLinks.length > 0) {
+        const staleTagIds = [...new Set(staleLinks.map((r) => r.tag_id))]
+        const removed = await supabase.from("record_tags").delete().in("record_id", targetIds).in("tag_id", staleTagIds)
+        if (removed.error) {
+          return fail(removed.error.message, 500)
+        }
       }
     }
   } else if (tagIds.length > 0) {

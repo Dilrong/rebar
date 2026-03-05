@@ -123,13 +123,21 @@ export default function SearchPage() {
 
           <section className="border-[3px] md:border-4 border-foreground bg-card p-3 md:p-4 mb-4 md:mb-6 shadow-brutal-sm md:shadow-brutal">
             <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-5">
+              <label htmlFor="search-query" className="sr-only">
+                {t("search.placeholder", "content / source title")}
+              </label>
               <input
+                id="search-query"
                 value={q}
                 onChange={(event) => setQ(event.target.value)}
                 placeholder={t("search.placeholder", "content / source title")}
                 className="min-h-[44px] w-full bg-background border-4 border-foreground text-foreground text-lg p-3 lg:col-span-2 focus:outline-none focus:ring-0 shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] rounded-none"
               />
+              <label htmlFor="search-state" className="sr-only">
+                {t("search.allStates", "All states")}
+              </label>
               <select
+                id="search-state"
                 value={state}
                 onChange={(event) => setState(event.target.value)}
                 className="w-full min-h-[44px] bg-background border-4 border-foreground text-foreground p-3 font-mono text-xs focus:outline-none focus:ring-0 shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] rounded-none"
@@ -141,7 +149,11 @@ export default function SearchPage() {
                 <option value="ARCHIVED">{getStateLabel("ARCHIVED", t)}</option>
                 <option value="TRASHED">{getStateLabel("TRASHED", t)}</option>
               </select>
+              <label htmlFor="search-tag" className="sr-only">
+                {t("search.allTags", "All tags")}
+              </label>
               <select
+                id="search-tag"
                 value={tagId}
                 onChange={(event) => setTagId(event.target.value)}
                 className="w-full min-h-[44px] bg-background border-4 border-foreground text-foreground p-3 font-mono text-xs focus:outline-none focus:ring-0 shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] rounded-none"

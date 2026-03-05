@@ -123,7 +123,7 @@ export async function GET(request: NextRequest) {
 
   let query = supabase
     .from("records")
-    .select("*", { count: "exact" })
+    .select("id, kind, content, url, source_title, favicon_url, state, interval_days, due_at, last_reviewed_at, review_count, created_at, updated_at", { count: "exact" })
     .eq("user_id", userId)
     .order(validSort, { ascending: validOrder === "asc", nullsFirst: validSort === "due_at" })
 

@@ -306,6 +306,9 @@ export const messages: Record<Locale, MessageTable> = {
     "projects.disabledHint": "기본 캡처/리뷰/볼트 흐름은 그대로 사용할 수 있습니다",
     "projects.gotoReview": "리뷰로 이동",
     "projects.gotoLibrary": "볼트로 이동",
+    "error.title": "오류가 발생했습니다",
+    "error.desc": "이 페이지에서 예기치 못한 오류가 발생했습니다.",
+    "error.retry": "다시 시도",
     "common.yes": "예",
     "common.no": "아니오"
   },
@@ -612,6 +615,9 @@ export const messages: Record<Locale, MessageTable> = {
     "projects.disabledHint": "CORE CAPTURE/REVIEW/LIBRARY FLOW IS STILL AVAILABLE",
     "projects.gotoReview": "GO REVIEW",
     "projects.gotoLibrary": "GO LIBRARY",
+    "error.title": "Something went wrong",
+    "error.desc": "An unexpected error occurred on this page.",
+    "error.retry": "Try again",
     "common.yes": "Yes",
     "common.no": "No"
   }

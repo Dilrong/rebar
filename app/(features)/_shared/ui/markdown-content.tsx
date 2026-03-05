@@ -1,7 +1,11 @@
 "use client"
 
-import ReactMarkdown from "react-markdown"
+import dynamic from "next/dynamic"
 import { useEffect, useRef } from "react"
+
+const ReactMarkdown = dynamic(() => import("react-markdown"), {
+    loading: () => <span className="text-muted-foreground text-xs">…</span>
+})
 
 type Highlight = {
     id: string

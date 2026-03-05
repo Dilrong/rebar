@@ -194,14 +194,17 @@ export async function PATCH(
         return fail(upserted.error.message, 500)
       }
 
-      const removeStale = await supabase
-        .from("record_tags")
-        .delete()
-        .eq("record_id", parsedParams.data.id)
-        .not("tag_id", "in", `(${nextTagIds.join(",")})`)
-
-      if (removeStale.error) {
-        return fail(removeStale.error.message, 500)
+      const existingLinks = await supabase.from("record_tags").select("tag_id").eq("record_id", parsedParams.data.id)
+      if (existingLinks.error) {
+        return fail(existingLinks.error.message, 500)
+      }
+      const tagIdSet = new Set(nextTagIds)
+      const staleTagIds = existingLinks.data.map((r) => r.tag_id).filter((id) => !tagIdSet.has(id))
+      if (staleTagIds.length > 0) {
+        const removeStale = await supabase.from("record_tags").delete().eq("record_id", parsedParams.data.id).in("tag_id", staleTagIds)
+        if (removeStale.error) {
+          return fail(removeStale.error.message, 500)
+        }
       }
     } else {
       const removedAll = await supabase

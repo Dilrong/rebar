@@ -7,5 +7,6 @@ export function calcNextInterval(current: number, action: ReviewAction): number 
     return 1
   }
 
-  return Math.min(Math.round(current * 2), MAX_INTERVAL_DAYS)
+  const safe = Math.max(1, Math.round(current))
+  return Math.min(safe * 2, MAX_INTERVAL_DAYS)
 }

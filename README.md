@@ -19,6 +19,7 @@ cp .env.example .env.local
 - `REBAR_CRON_SECRET` (Vercel Cron protection key)
 - `REBAR_ALLOWED_EXTENSION_IDS` (optional, comma-separated production extension IDs)
 - `REBAR_ALLOW_ALL_EXTENSION_ORIGINS` (optional debug override, defaults to false)
+- `REBAR_E2E_BYPASS_AUTH` / `REBAR_E2E_TEST_USER_ID` / `NEXT_PUBLIC_E2E_BYPASS_AUTH` (optional local a11y/e2e auth bypass)
 
 Legacy fallback is supported:
 
@@ -44,8 +45,11 @@ app/
   (features)/
     _shared/                 # feature 공용 UI/Auth/Layout
     capture/
+      _components/           # mode/section 분리 컴포넌트
     review/
+      _components/
     library/
+      _components/           # header/filter/tag/export/grid/pagination 분리
     records/
     search/
     settings/
@@ -106,7 +110,7 @@ lib/
 | Auth/DB | Supabase (Auth + PostgreSQL + RLS) |
 | Styling | Tailwind CSS (Industrial Brutalism) |
 | Deploy | Vercel |
-| Test | Vitest |
+| Test | Vitest + pa11y-ci |
 
 ## Pages
 
@@ -153,6 +157,10 @@ lib/
 - `GET /api/auth/check` — Session authentication status
 - `GET /api/auth/ingest-key` — Ingest key configured status only (`enabled`), never returns secret value
 
+### Settings
+- `GET /api/settings/preferences` — Load server-side user preferences
+- `PATCH /api/settings/preferences` — Persist user preferences (`startPage`)
+
 ### Tags
 - `POST /api/tags` / `GET /api/tags` / `PATCH /api/tags/:id` / `DELETE /api/tags/:id`
 
@@ -195,3 +203,13 @@ Extension does not require API key/user ID input. It sends clips to `/api/captur
 - `docs/project_context.md` — 프로젝트 목적, 원칙, 범위, 우선순위
 - `docs/architecture.md` — 시스템/데이터/API/인증 아키텍처
 - `docs/session_context.md` — 최근 반영 내역, 리스크, 다음 액션
+
+## Verification Commands
+
+- `pnpm typecheck`
+- `pnpm test`
+- `pnpm lint`
+- `pnpm build`
+- `pnpm a11y` (build + start + pa11y-ci 자동 실행)
+
+`pnpm a11y`는 localhost 한정 e2e bypass env를 주입해 보호 페이지(`/capture`, `/library`, `/review`)도 접근성 검사를 수행한다.

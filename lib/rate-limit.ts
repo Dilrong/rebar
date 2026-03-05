@@ -45,15 +45,19 @@ async function upstashCommand(command: Array<string | number>) {
   return payload[0].result
 }
 
+let lastCleanup = 0
+const CLEANUP_INTERVAL_MS = 60_000
+
 export function checkRateLimit(input: RateLimitInput): RateLimitResult {
   const now = Date.now()
 
-  if (store.size > 1000) {
+  if (store.size > 500 || (store.size > 0 && now - lastCleanup > CLEANUP_INTERVAL_MS)) {
     for (const [key, entry] of store) {
       if (entry.resetAt <= now) {
         store.delete(key)
       }
     }
+    lastCleanup = now
   }
 
   const current = store.get(input.key)
@@ -116,7 +120,8 @@ export async function checkRateLimitDistributed(input: RateLimitInput): Promise<
       retryAfterSec,
       remaining: Math.max(0, input.limit - count)
     }
-  } catch {
+  } catch (err) {
+    console.error("[rate-limit] Upstash failed, falling back to in-memory:", err instanceof Error ? err.message : err)
     return checkRateLimit(input)
   }
 }

@@ -8,13 +8,13 @@ export async function proxy(request: NextRequest) {
 
   // ── CORS Preflight ──
   if (request.method === "OPTIONS") {
-    if (!isAllowedOrigin(origin, host)) {
+    if (!origin || !isAllowedOrigin(origin, host)) {
       return new NextResponse(null, { status: 403 })
     }
     return new NextResponse(null, {
       status: 204,
       headers: {
-        "Access-Control-Allow-Origin": origin || "*",
+        "Access-Control-Allow-Origin": origin,
         "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type,Authorization,x-rebar-ingest-key,x-user-id,x-cron-secret",
         "Access-Control-Allow-Credentials": "true",
@@ -55,7 +55,10 @@ export async function proxy(request: NextRequest) {
     })
 
     // Refresh the session — this call updates expired cookies automatically
-    await supabase.auth.getUser()
+    try {
+      await supabase.auth.getUser()
+    } catch {
+    }
   }
 
   // ── Attach CORS headers on response ──

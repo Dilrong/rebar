@@ -1,24 +1,24 @@
 "use client"
 
-import Link from "next/link"
 import { useSearchParams } from "next/navigation"
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react"
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Database, Download, Plus, Tag, Trash2 } from "lucide-react"
 import AuthGate from "@shared/auth/auth-gate"
 import AppNav from "@shared/layout/app-nav"
 import { apiFetch } from "@/lib/client-http"
 import { getSupabaseBrowser } from "@/lib/supabase-browser"
-import { LoadingDots } from "@shared/ui/loading"
 import { useI18n } from "@app-shared/i18n/i18n-provider"
-import { getStateLabel } from "@/lib/i18n/state-label"
 import { EmptyState } from "@shared/ui/empty-state"
 import { ErrorState } from "@shared/ui/error-state"
-import { Skeleton } from "@shared/ui/skeleton"
 import { useDebouncedValue } from "@shared/hooks/use-debounced-value"
+import { LibraryHeader } from "./_components/library-header"
+import { LibraryFiltersToolbar } from "./_components/library-filters-toolbar"
+import { LibrarySelectionToolbar } from "./_components/library-selection-toolbar"
+import { LibraryTagManager } from "./_components/library-tag-manager"
+import { LibraryRecordGrid } from "./_components/library-record-grid"
+import { LibraryPagination } from "./_components/library-pagination"
 
 import type { RecordRow, TagRow } from "@/lib/types"
-import { stripMarkdown } from "@feature-lib/content/strip-markdown"
 
 type RecordsResponse = {
   data: RecordRow[]
@@ -120,13 +120,13 @@ export default function LibraryPage() {
 
   const qc = useQueryClient()
 
-  function prefetchRecord(id: string) {
+  const prefetchRecord = useCallback((id: string) => {
     qc.prefetchQuery({
       queryKey: ["record-detail", id],
       queryFn: () => apiFetch<{ record: RecordRow }>(`/api/records/${id}`),
       staleTime: 1000 * 60 * 5
     })
-  }
+  }, [qc])
 
 
 
@@ -144,8 +144,8 @@ export default function LibraryPage() {
 
   const libraryBackHref = queryString ? `/library?${queryString}` : "/library"
 
-  const toRecordHref = (recordId: string) =>
-    `/records/${recordId}?from=${encodeURIComponent(libraryBackHref)}`
+  const toRecordHref = useCallback((recordId: string) =>
+    `/records/${recordId}?from=${encodeURIComponent(libraryBackHref)}`, [libraryBackHref])
 
   const tags = useQuery({
     queryKey: ["tags"],
@@ -336,10 +336,14 @@ export default function LibraryPage() {
     setState("ALL")
   }
 
+  const handleActivate = useCallback((id: string) => activate.mutate(id), [activate])
+  const handleInboxTodo = useCallback((id: string) => inboxDecision.mutate({ id, decisionType: "ACT", actionType: "TODO" }), [inboxDecision])
+  const handleInboxArchive = useCallback((id: string) => inboxDecision.mutate({ id, decisionType: "ARCHIVE" }), [inboxDecision])
+
   const visibleIds = (records.data?.data ?? []).map((record) => record.id)
-  const toggleSelect = (id: string) => {
+  const toggleSelect = useCallback((id: string) => {
     setSelectedIds((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]))
-  }
+  }, [])
 
   const selectVisible = () => {
     setSelectedIds(visibleIds)
@@ -427,209 +431,58 @@ export default function LibraryPage() {
     }
   }
 
+  const toggleExportMenu = () => {
+    setExportMenuOpen((value) => !value)
+    setExportMenuIndex(0)
+  }
+
+  const openExportMenuFromKeyboard = () => {
+    setExportMenuOpen(true)
+    setExportMenuIndex(0)
+  }
+
   return (
     <div className="min-h-screen p-6 bg-background font-sans selection:bg-accent selection:text-white">
       <AuthGate>
         <main className="max-w-5xl mx-auto animate-fade-in-up pb-24">
           <AppNav />
 
-          <header className="mb-6 md:mb-8 flex flex-col md:flex-row md:items-end justify-between border-b-[3px] md:border-b-4 border-foreground pb-3 md:pb-4 gap-3 md:gap-4">
-            <h1 className="font-black text-4xl md:text-5xl uppercase text-foreground leading-none flex items-center gap-3 md:gap-4">
-              <Database className="w-8 h-8 md:w-10 md:h-10" strokeWidth={3} />
-              {t("library.title", "VAULT")}
-            </h1>
-            <div className="flex items-center gap-2 md:gap-3">
-              <span className="min-h-[44px] flex items-center justify-center font-mono text-xs md:text-sm font-bold bg-foreground text-background px-3 py-2 uppercase">
-                {t("library.rows", "ROWS")}: {records.data?.total || 0}
-              </span>
-              <div ref={exportMenuWrapRef} className="relative">
-                <button
-                  ref={exportTriggerRef}
-                  type="button"
-                  onClick={() => {
-                    setExportMenuOpen((v) => !v)
-                    setExportMenuIndex(0)
-                  }}
-                  onKeyDown={(event) => {
-                    if (event.key === "ArrowDown") {
-                      event.preventDefault()
-                      setExportMenuOpen(true)
-                      setExportMenuIndex(0)
-                    }
-                  }}
-                  disabled={exportPending}
-                  className="min-h-[44px] inline-flex items-center gap-2 border-4 border-foreground bg-background px-4 py-3 font-mono text-xs font-bold uppercase hover:bg-foreground hover:text-background disabled:opacity-60 shadow-brutal-sm transition-transform active:translate-y-[2px] active:translate-x-[2px]"
-                  aria-haspopup="menu"
-                  aria-expanded={exportMenuOpen}
-                  aria-controls="library-export-menu"
-                >
-                  <Download className="h-4 w-4" />
-                  {exportPending ? t("library.exporting", "EXPORTING...") : `${t("library.export", "EXPORT")} ▾`}
-                </button>
-                {exportMenuOpen ? (
-                  <div id="library-export-menu" role="menu" className="absolute right-0 z-20 mt-1 min-w-[180px] border-2 border-foreground bg-background">
-                    <button
-                      ref={(node) => {
-                        exportItemRefs.current[0] = node
-                      }}
-                      type="button"
-                      onClick={() => {
-                        closeExportMenu()
-                        handleExport("markdown")
-                      }}
-                      onKeyDown={handleExportMenuKeyDown}
-                      className="block w-full border-b border-foreground px-3 py-2 text-left font-mono text-xs font-bold uppercase hover:bg-foreground hover:text-background min-h-[44px]"
-                      role="menuitem"
-                    >
-                      Markdown (.md)
-                    </button>
-                    <button
-                      ref={(node) => {
-                        exportItemRefs.current[1] = node
-                      }}
-                      type="button"
-                      onClick={() => {
-                        closeExportMenu()
-                        handleExport("obsidian")
-                      }}
-                      onKeyDown={handleExportMenuKeyDown}
-                      className="block w-full px-3 py-2 text-left font-mono text-xs font-bold uppercase hover:bg-foreground hover:text-background min-h-[44px]"
-                      role="menuitem"
-                    >
-                      Obsidian (frontmatter)
-                    </button>
-                  </div>
-                ) : null}
-              </div>
-              <Link
-                href="/capture"
-                className="max-md:hidden min-h-[44px] inline-flex items-center justify-center gap-2 font-mono text-xs font-bold uppercase border-4 border-foreground px-4 py-3 bg-background hover:bg-foreground hover:text-background shadow-brutal-sm transition-transform active:translate-y-[2px] active:translate-x-[2px]"
-              >
-                <Plus className="w-4 h-4" />
-                {t("library.newRecord", "NEW RECORD")}
-              </Link>
-            </div>
-          </header>
+          <LibraryHeader
+            t={t}
+            totalRows={records.data?.total || 0}
+            exportMenuOpen={exportMenuOpen}
+            exportPending={exportPending}
+            exportMenuWrapRef={exportMenuWrapRef}
+            exportTriggerRef={exportTriggerRef}
+            exportItemRefs={exportItemRefs}
+            onToggleMenu={toggleExportMenu}
+            onOpenMenuFromKeyboard={openExportMenuFromKeyboard}
+            onCloseMenu={closeExportMenu}
+            onExportMarkdown={() => handleExport("markdown")}
+            onExportObsidian={() => handleExport("obsidian")}
+            onMenuItemKeyDown={handleExportMenuKeyDown}
+          />
 
-          <section className="mb-8 border-4 border-foreground bg-card p-4">
-            <div className="flex flex-wrap gap-2 mb-4">
-              <button
-                key="ALL"
-                type="button"
-                onClick={() => setState("ALL")}
-                className={`min-h-[44px] px-4 py-2 border-4 border-foreground font-mono text-xs font-bold uppercase flex items-center justify-center transition-transform active:translate-y-[2px] active:translate-x-[2px] ${state === "ALL" ? "bg-foreground text-background shadow-brutal" : "bg-background text-foreground hover:bg-foreground/10"
-                  }`}
-              >
-                {t("library.allView", "전체보기")}
-              </button>
-              {STATE_TABS.map((tab) => (
-                <button
-                  key={tab}
-                  type="button"
-                  onClick={() => setState(tab)}
-                  className={`min-h-[44px] px-4 py-2 border-4 border-foreground font-mono text-xs font-bold uppercase flex items-center justify-center transition-transform active:translate-y-[2px] active:translate-x-[2px] ${state === tab ? "bg-foreground text-background shadow-brutal" : "bg-background text-foreground hover:bg-foreground/10"
-                    }`}
-                >
-                  {getStateLabel(tab, t)}
-                </button>
-              ))}
-            </div>
-
-            <div className="flex flex-col md:flex-row gap-3">
-              <input
-                type="text"
-                value={q}
-                onChange={(event) => setQ(event.target.value)}
-                placeholder={t("library.searchPlaceholder", "Search content/title")}
-                className="min-h-[44px] bg-background border-4 border-foreground text-foreground px-4 py-3 font-mono text-sm w-full md:w-auto shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] focus:outline-none focus:ring-0 flex-1 rounded-none transition-none"
-              />
-              <div className="grid grid-cols-2 lg:flex lg:flex-row gap-3">
-                <select
-                  value={kind}
-                  onChange={(event) => setKind(event.target.value)}
-                  className="min-h-[44px] bg-background border-4 border-foreground text-foreground px-4 py-2 font-mono text-sm w-full md:w-auto shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] focus:outline-none focus:ring-0 rounded-none transition-none"
-                >
-                  <option value="">{t("library.allKinds", "All kinds")}</option>
-                  <option value="quote">quote</option>
-                  <option value="note">note</option>
-                  <option value="link">link</option>
-                  <option value="ai">ai</option>
-                </select>
-                <select
-                  value={tagId}
-                  onChange={(event) => setTagId(event.target.value)}
-                  className="min-h-[44px] bg-background border-4 border-foreground text-foreground px-4 py-2 font-mono text-sm w-full md:w-auto shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] focus:outline-none focus:ring-0 rounded-none transition-none"
-                >
-                  <option value="">{t("library.allTags", "All tags")}</option>
-                  {(tags.data?.data ?? []).map((tag) => (
-                    <option key={tag.id} value={tag.id}>
-                      #{tag.name}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  value={`${sort}:${order}`}
-                  onChange={(event) => {
-                    const [nextSort, nextOrder] = event.target.value.split(":") as [typeof sort, typeof order]
-                    setSort(nextSort)
-                    setOrder(nextOrder)
-                  }}
-                  className="min-h-[44px] bg-background border-4 border-foreground px-4 py-2 font-mono text-sm text-foreground w-full md:w-auto col-span-2 lg:col-span-1 shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] focus:outline-none focus:ring-0 rounded-none transition-none"
-                >
-                  <option value="created_at:desc">Newest first</option>
-                  <option value="created_at:asc">Oldest first</option>
-                  <option value="review_count:desc">Most reviewed</option>
-                  <option value="due_at:asc">Due soonest</option>
-                </select>
-              </div>
-            </div>
-            <div className="mt-4 flex flex-wrap items-center gap-2">
-              <span className="font-mono text-[10px] font-bold uppercase text-muted-foreground mr-2">{t("library.activeFilters", "Active filters")}</span>
-              <button
-                type="button"
-                onClick={() => setState("ALL")}
-                className="min-h-[44px] flex items-center justify-center border-2 border-foreground px-3 py-2 font-mono text-[10px] font-bold uppercase transition-transform hover:bg-foreground/10 active:translate-y-[2px] active:translate-x-[2px]"
-              >
-                {t("library.state", "State")}: {state === "ALL" ? t("library.allView", "전체보기") : getStateLabel(state, t)}
-              </button>
-              {q ? (
-                <button
-                  type="button"
-                  onClick={() => setQ("")}
-                  className="min-h-[44px] flex items-center justify-center border-2 border-foreground px-3 py-2 font-mono text-[10px] font-bold uppercase transition-transform hover:bg-foreground/10 active:translate-y-[2px] active:translate-x-[2px]"
-                >
-                  {t("library.query", "Search")}: {q} x
-                </button>
-              ) : null}
-              {kind ? (
-                <button
-                  type="button"
-                  onClick={() => setKind("")}
-                  className="min-h-[44px] flex items-center justify-center border-2 border-foreground px-3 py-2 font-mono text-[10px] font-bold uppercase transition-transform hover:bg-foreground/10 active:translate-y-[2px] active:translate-x-[2px]"
-                >
-                  {t("library.kind", "Kind")}: {kind} x
-                </button>
-              ) : null}
-              {tagId ? (
-                <button
-                  type="button"
-                  onClick={() => setTagId("")}
-                  className="min-h-[44px] flex items-center justify-center border-2 border-foreground px-3 py-2 font-mono text-[10px] font-bold uppercase transition-transform hover:bg-foreground/10 active:translate-y-[2px] active:translate-x-[2px]"
-                >
-                  {t("library.tag", "Tag")}: {selectedTagName ? `#${selectedTagName}` : tagId.slice(0, 6)} x
-                </button>
-              ) : null}
-              {(q || kind || tagId || state !== "ALL") ? (
-                <button
-                  type="button"
-                  onClick={clearAllFilters}
-                  className="min-h-[44px] flex items-center justify-center border-4 border-foreground bg-foreground px-3 py-2 font-mono text-[10px] font-bold uppercase text-background hover:bg-background hover:text-foreground transition-transform hover:shadow-brutal-sm active:translate-y-[2px] active:translate-x-[2px]"
-                >
-                  {t("library.clearAll", "Clear all")}
-                </button>
-              ) : null}
-            </div>
-          </section>
+          <LibraryFiltersToolbar
+            t={t}
+            state={state}
+            kind={kind}
+            q={q}
+            tagId={tagId}
+            sort={sort}
+            order={order}
+            selectedTagName={selectedTagName}
+            tags={tags.data?.data ?? []}
+            onStateChange={setState}
+            onKindChange={setKind}
+            onQueryChange={setQ}
+            onTagChange={setTagId}
+            onSortOrderChange={(nextSort, nextOrder) => {
+              setSort(nextSort)
+              setOrder(nextOrder)
+            }}
+            onClearAllFilters={clearAllFilters}
+          />
 
           {state === "INBOX" ? (
             <section className="mb-6 border-4 border-foreground bg-card p-4">
@@ -640,115 +493,36 @@ export default function LibraryPage() {
             </section>
           ) : null}
 
-          {selectedIds.length > 0 ? (
-            <section className="mb-8 border-4 border-foreground bg-card p-4">
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <p className="font-mono text-xs font-bold uppercase">{selectedIds.length} {t("library.selected", "선택됨")}</p>
-                <div className="flex items-center gap-2">
-                  <button type="button" onClick={selectVisible} className="min-h-[44px] border-4 border-foreground px-3 py-2 font-mono text-xs font-bold uppercase hover:bg-foreground hover:text-background transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm">
-                    {t("library.selectVisible", "보이는 항목 선택")}
-                  </button>
-                  <button type="button" onClick={clearSelection} className="min-h-[44px] border-4 border-foreground px-3 py-2 font-mono text-xs font-bold uppercase hover:bg-foreground hover:text-background transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm">
-                    {t("library.clearSelection", "선택 해제")}
-                  </button>
-                </div>
-              </div>
-              <div className="mb-3 flex flex-wrap items-center gap-2">
-                <button type="button" onClick={() => applyBulkState("ACTIVE")} className="min-h-[44px] border-4 border-foreground bg-background px-3 py-2 font-mono text-xs font-bold uppercase hover:bg-foreground hover:text-background transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm">
-                  {t("library.bulk.activate", "활성화")}
-                </button>
-                <button type="button" onClick={() => applyBulkState("PINNED")} className="min-h-[44px] border-4 border-foreground bg-background px-3 py-2 font-mono text-xs font-bold uppercase hover:bg-foreground hover:text-background transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm">
-                  {t("library.bulk.pin", "핀 고정")}
-                </button>
-                <button type="button" onClick={() => applyBulkState("ARCHIVED")} className="min-h-[44px] border-4 border-foreground bg-background px-3 py-2 font-mono text-xs font-bold uppercase hover:bg-foreground hover:text-background transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm">
-                  {t("library.bulk.archive", "보관")}
-                </button>
-                <button type="button" onClick={() => applyBulkState("TRASHED")} className="min-h-[44px] border-4 border-foreground bg-background px-3 py-2 font-mono text-xs font-bold uppercase hover:bg-foreground hover:text-background transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm text-destructive hover:bg-destructive">
-                  {t("library.bulk.trash", "휴지통")}
-                </button>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <select
-                  value={bulkTagIds[0] ?? ""}
-                  onChange={(event) => setBulkTagIds(event.target.value ? [event.target.value] : [])}
-                  className="min-h-[44px] border-4 border-foreground bg-background px-3 py-2 font-mono text-xs focus:outline-none focus:ring-0 shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] rounded-none"
-                >
-                  <option value="">{t("library.bulk.tagPlaceholder", "태그 선택")}</option>
-                  {(tags.data?.data ?? []).map((tag) => (
-                    <option key={tag.id} value={tag.id}>#{tag.name}</option>
-                  ))}
-                </select>
-                <button type="button" onClick={() => applyBulkTags("add")} className="min-h-[44px] border-4 border-foreground px-3 py-2 font-mono text-xs font-bold uppercase hover:bg-foreground hover:text-background transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm">
-                  {t("library.bulk.addTag", "태그 추가")}
-                </button>
-                <button type="button" onClick={() => applyBulkTags("replace")} className="min-h-[44px] border-4 border-foreground px-3 py-2 font-mono text-xs font-bold uppercase hover:bg-foreground hover:text-background transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm">
-                  {t("library.bulk.replaceTags", "태그 교체")}
-                </button>
-              </div>
-            </section>
-          ) : null}
+          <LibrarySelectionToolbar
+            t={t}
+            selectedCount={selectedIds.length}
+            tags={tags.data?.data ?? []}
+            bulkTagId={bulkTagIds[0] ?? ""}
+            onSelectVisible={selectVisible}
+            onClearSelection={clearSelection}
+            onApplyBulkState={applyBulkState}
+            onBulkTagIdChange={(tagIdValue) => setBulkTagIds(tagIdValue ? [tagIdValue] : [])}
+            onApplyBulkTags={applyBulkTags}
+          />
 
-          <section className="mb-10 border-4 border-foreground bg-card p-4">
-            <div className="flex items-center gap-2 mb-4 font-mono text-xs font-bold uppercase">
-              <Tag className="w-4 h-4" /> {t("library.tagManager", "Tag Manager")}
-            </div>
-            <div className="flex flex-col md:flex-row gap-3 mb-6">
-              <input
-                value={newTagName}
-                onChange={(event) => setNewTagName(event.target.value)}
-                placeholder={t("library.newTag", "new tag")}
-                className="min-h-[44px] bg-background border-4 border-foreground text-foreground px-4 py-2 font-mono text-sm w-full md:w-auto flex-1 focus:outline-none focus:ring-0 shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] rounded-none"
-              />
-              <button
-                type="button"
-                onClick={() => createTag.mutate(newTagName.trim())}
-                disabled={!newTagName.trim() || createTag.isPending}
-                className="min-h-[44px] flex items-center justify-center px-4 py-2 border-4 border-foreground font-mono text-xs font-bold uppercase bg-background text-foreground w-full md:w-auto hover:bg-foreground hover:text-background transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm"
-              >
-                {createTag.isPending ? <LoadingDots /> : t("library.create", "Create")}
-              </button>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              {(tags.data?.data ?? []).map((tag) => (
-                <div key={tag.id} className="min-h-[44px] inline-flex items-center justify-between gap-3 border-4 border-foreground pl-3 pr-1 py-1 bg-background flex-grow md:flex-grow-0 shadow-brutal-sm">
-                  {editingTagId === tag.id ? (
-                    <input
-                      value={editingTagName}
-                      onChange={(event) => setEditingTagName(event.target.value)}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter") submitRenameTag(tag.id)
-                        if (event.key === "Escape") setEditingTagId(null)
-                      }}
-                      onBlur={() => submitRenameTag(tag.id)}
-                      autoFocus
-                      className="bg-background border-b-2 border-foreground font-mono text-xs font-bold w-[120px] focus:outline-none"
-                    />
-                  ) : (
-                    <span className="font-mono text-xs font-bold truncate max-w-[150px]">#{tag.name}</span>
-                  )}
-                  <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => handleRenameTag(tag)}
-                      className="min-h-[32px] min-w-[32px] flex items-center justify-center font-mono text-[10px] font-bold uppercase border-2 border-transparent hover:border-foreground hover:bg-muted"
-                    >
-                      {t("library.tagEdit", "편집")}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => deleteTag.mutate(tag.id)}
-                      className="min-h-[32px] min-w-[32px] flex items-center justify-center font-mono text-[10px] font-bold uppercase border-2 border-transparent hover:border-foreground hover:bg-muted hover:text-destructive"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-            {createTag.error ? <p className="font-mono text-xs text-destructive mt-2">{createTag.error.message}</p> : null}
-            {renameTag.error ? <p className="font-mono text-xs text-destructive mt-2">{renameTag.error.message}</p> : null}
-            {deleteTag.error ? <p className="font-mono text-xs text-destructive mt-2">{deleteTag.error.message}</p> : null}
-          </section>
+          <LibraryTagManager
+            t={t}
+            tags={tags.data?.data ?? []}
+            newTagName={newTagName}
+            editingTagId={editingTagId}
+            editingTagName={editingTagName}
+            createPending={createTag.isPending}
+            createError={createTag.error?.message ?? null}
+            renameError={renameTag.error?.message ?? null}
+            deleteError={deleteTag.error?.message ?? null}
+            onNewTagNameChange={setNewTagName}
+            onCreateTag={() => createTag.mutate(newTagName.trim())}
+            onStartRenameTag={handleRenameTag}
+            onEditingTagNameChange={setEditingTagName}
+            onSubmitRenameTag={submitRenameTag}
+            onCancelRenameTag={() => setEditingTagId(null)}
+            onDeleteTag={(id) => deleteTag.mutate(id)}
+          />
 
           {records.isFetching ? (
             <p className="mb-4 font-mono text-[10px] font-bold uppercase text-muted-foreground">
@@ -756,137 +530,29 @@ export default function LibraryPage() {
             </p>
           ) : null}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {records.isLoading ? (
-              <>
-                {[1, 2, 3, 4, 5, 6].map((i) => (
-                  <Skeleton key={i} className="h-48 md:h-72 w-full" />
-                ))}
-              </>
-            ) : null}
+          <LibraryRecordGrid
+            t={t}
+            isLoading={records.isLoading}
+            records={allRecords}
+            selectedIds={selectedIds}
+            onToggleSelected={toggleSelect}
+            onPrefetch={prefetchRecord}
+            toRecordHref={toRecordHref}
+            activatePendingRecordId={activate.isPending ? activate.variables ?? null : null}
+            inboxPending={inboxDecision.isPending}
+            inboxPendingRecordId={inboxDecision.variables?.id ?? null}
+            inboxPendingDecisionType={inboxDecision.variables?.decisionType ?? null}
+            onActivate={handleActivate}
+            onInboxTodo={handleInboxTodo}
+            onInboxArchive={handleInboxArchive}
+          />
 
-            {!records.isLoading && (allRecords).map((record) => (
-              <div
-                key={record.id}
-                onMouseEnter={() => prefetchRecord(record.id)}
-                onFocus={() => prefetchRecord(record.id)}
-                className="group flex h-48 flex-col border-[3px] md:border-4 border-foreground bg-card p-4 md:p-6 shadow-brutal-sm md:shadow-brutal hover:bg-foreground hover:text-background active:translate-x-1 active:translate-y-1 active:shadow-none transition-all md:h-72"
-              >
-                <div className="flex justify-between items-start mb-3 md:mb-4">
-                  <div className="flex gap-2">
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.includes(record.id)}
-                      onChange={(e) => {
-                        e.stopPropagation()
-                        toggleSelect(record.id)
-                      }}
-                      className="min-h-[32px] min-w-[32px] md:min-h-[44px] md:min-w-[44px] border-4 border-foreground focus:ring-0 checked:bg-foreground checked:text-background appearance-none"
-                    />
-                    <span className="font-mono text-[10px] font-bold border-2 border-current px-1.5 py-0.5 uppercase h-fit mt-1 hidden md:block group-hover:border-background">
-                      {record.kind}
-                    </span>
-                    <span
-                      className={`font-mono text-[10px] font-bold border-2 px-1.5 py-0.5 uppercase h-fit mt-1 hidden md:block ${record.state === "INBOX"
-                        ? "border-accent text-accent group-hover:border-background group-hover:text-background"
-                        : "border-current group-hover:border-background"
-                        }`}
-                    >
-                      {getStateLabel(record.state, t)}
-                    </span>
-                  </div>
-
-                  {record.state === "INBOX" ? (
-                    <div className="flex flex-wrap items-center justify-end gap-1">
-                      <button
-                        onClick={(event) => {
-                          event.preventDefault()
-                          activate.mutate(record.id)
-                        }}
-                        className="min-h-[44px] border-2 border-accent px-2 py-1 font-mono text-[10px] font-bold uppercase text-accent transition-transform active:translate-y-[2px] active:translate-x-[2px] hover:bg-accent hover:text-white group-hover:border-background group-hover:text-foreground group-hover:bg-background group-hover:hover:bg-accent group-hover:hover:text-white"
-                        title={t("library.inboxAction.activate", "ACTIVATE")}
-                        type="button"
-                        disabled={activate.isPending || inboxDecision.isPending}
-                      >
-                        {activate.isPending && activate.variables === record.id ? <LoadingDots /> : t("library.inboxAction.activate", "ACTIVATE")}
-                      </button>
-                      <button
-                        onClick={(event) => {
-                          event.preventDefault()
-                          inboxDecision.mutate({ id: record.id, decisionType: "ACT", actionType: "TODO" })
-                        }}
-                        className="min-h-[44px] border-2 border-foreground px-2 py-1 font-mono text-[10px] font-bold uppercase transition-transform active:translate-y-[2px] active:translate-x-[2px] hover:bg-foreground hover:text-background group-hover:border-background group-hover:text-foreground group-hover:bg-background"
-                        title={t("library.inboxAction.todo", "TODO")}
-                        type="button"
-                        disabled={activate.isPending || inboxDecision.isPending}
-                      >
-                        {inboxDecision.isPending &&
-                          inboxDecision.variables?.id === record.id &&
-                          inboxDecision.variables?.decisionType === "ACT" ? (
-                          <LoadingDots />
-                        ) : (
-                          t("library.inboxAction.todo", "TODO")
-                        )}
-                      </button>
-                      <button
-                        onClick={(event) => {
-                          event.preventDefault()
-                          inboxDecision.mutate({ id: record.id, decisionType: "ARCHIVE" })
-                        }}
-                        className="min-h-[44px] border-2 border-foreground px-2 py-1 font-mono text-[10px] font-bold uppercase transition-transform active:translate-y-[2px] active:translate-x-[2px] hover:bg-foreground hover:text-background group-hover:border-background group-hover:text-foreground group-hover:bg-background"
-                        title={t("library.inboxAction.archive", "ARCHIVE")}
-                        type="button"
-                        disabled={activate.isPending || inboxDecision.isPending}
-                      >
-                        {inboxDecision.isPending &&
-                          inboxDecision.variables?.id === record.id &&
-                          inboxDecision.variables?.decisionType === "ARCHIVE" ? (
-                          <LoadingDots />
-                        ) : (
-                          t("library.inboxAction.archive", "ARCHIVE")
-                        )}
-                      </button>
-                    </div>
-                  ) : null}
-                </div>
-
-                <Link href={toRecordHref(record.id)} className="flex-1 overflow-hidden flex flex-col">
-                  <p className="font-bold text-base md:text-lg leading-tight line-clamp-5 flex-1 mb-4">
-                    {stripMarkdown(record.content)}
-                  </p>
-
-                  {record.source_title && (
-                    <div className="mt-auto flex items-center gap-1.5 font-mono text-[10px] uppercase font-bold text-muted-foreground group-hover:text-background/70 truncate border-t-2 border-border/50 group-hover:border-background/30 pt-2">
-                      {record.favicon_url && (
-                        <img
-                          src={record.favicon_url}
-                          alt=""
-                          width={12}
-                          height={12}
-                          className="w-3 h-3 flex-shrink-0 object-contain"
-                          onError={(e) => { (e.target as HTMLImageElement).style.display = "none" }}
-                        />
-                      )}
-                      {record.source_title}
-                    </div>
-                  )}
-                </Link>
-              </div>
-            ))}
-          </div>
-
-          {cursor ? (
-            <div className="mt-8 flex justify-center">
-              <button
-                type="button"
-                onClick={loadMore}
-                disabled={records.isFetching}
-                className="min-h-[44px] border-4 border-foreground bg-background px-8 py-3 font-mono text-sm font-bold uppercase hover:bg-foreground hover:text-background shadow-brutal-sm transition-colors disabled:opacity-60"
-              >
-                {records.isFetching ? t("library.loadingMore", "LOADING...") : `${t("library.loadMore", "더 불러오기")} ↓`}
-              </button>
-            </div>
-          ) : null}
+          <LibraryPagination
+            t={t}
+            hasNext={Boolean(cursor)}
+            isFetching={records.isFetching}
+            onLoadMore={loadMore}
+          />
 
           {records.isSuccess && !records.isLoading && allRecords.length === 0 ? (
             <EmptyState

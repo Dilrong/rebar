@@ -11,7 +11,8 @@ export default defineConfig({
     }
   },
   test: {
+    pool: "threads",
     environment: "node",
-    include: ["tests/**/*.test.ts"]
+    include: ["tests/**/*.test.ts", "tests/**/*.test.tsx"]
   }
 })

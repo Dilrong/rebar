@@ -129,9 +129,11 @@ export default function ReviewHistoryPage() {
 
           <section className="mb-6 border-4 border-foreground bg-card p-4">
             <div className="flex flex-wrap gap-3 items-end">
-              <label className="font-mono text-xs font-bold uppercase">
+              <label htmlFor="history-action" className="font-mono text-xs font-bold uppercase">
                 {t("history.action", "Action")}
                 <select
+                  id="history-action"
+                  aria-label={t("history.action", "Action")}
                   value={action}
                   onChange={(event) => {
                     setAction(event.target.value)
@@ -145,9 +147,11 @@ export default function ReviewHistoryPage() {
                   <option value="undo">UNDO</option>
                 </select>
               </label>
-              <label className="font-mono text-xs font-bold uppercase">
+              <label htmlFor="history-decision-type" className="font-mono text-xs font-bold uppercase">
                 {t("history.decision", "결정")}
                 <select
+                  id="history-decision-type"
+                  aria-label={t("history.decision", "결정")}
                   value={decisionType}
                   onChange={(event) => {
                     setDecisionType(event.target.value)
@@ -161,9 +165,11 @@ export default function ReviewHistoryPage() {
                   <option value="DEFER">DEFER</option>
                 </select>
               </label>
-              <label className="font-mono text-xs font-bold uppercase">
+              <label htmlFor="history-action-type" className="font-mono text-xs font-bold uppercase">
                 {t("history.actionType", "실행 타입")}
                 <select
+                  id="history-action-type"
+                  aria-label={t("history.actionType", "실행 타입")}
                   value={actionType}
                   onChange={(event) => {
                     setActionType(event.target.value)
@@ -177,9 +183,11 @@ export default function ReviewHistoryPage() {
                   <option value="TODO">TODO</option>
                 </select>
               </label>
-              <label className="font-mono text-xs font-bold uppercase">
+              <label htmlFor="history-defer-reason" className="font-mono text-xs font-bold uppercase">
                 {t("history.deferReason", "보류 사유")}
                 <select
+                  id="history-defer-reason"
+                  aria-label={t("history.deferReason", "보류 사유")}
                   value={deferReason}
                   onChange={(event) => {
                     setDeferReason(event.target.value)
@@ -193,9 +201,11 @@ export default function ReviewHistoryPage() {
                   <option value="NO_TIME">NO_TIME</option>
                 </select>
               </label>
-              <label className="font-mono text-xs font-bold uppercase">
+              <label htmlFor="history-from" className="font-mono text-xs font-bold uppercase">
                 {t("history.from", "From")}
                 <input
+                  id="history-from"
+                  aria-label={t("history.from", "From")}
                   type="date"
                   value={from}
                   onChange={(event) => {
@@ -205,9 +215,11 @@ export default function ReviewHistoryPage() {
                   className="block mt-1 min-h-[44px] bg-background border-2 border-foreground text-foreground px-2 py-2 font-mono text-xs w-full"
                 />
               </label>
-              <label className="font-mono text-xs font-bold uppercase">
+              <label htmlFor="history-to" className="font-mono text-xs font-bold uppercase">
                 {t("history.to", "To")}
                 <input
+                  id="history-to"
+                  aria-label={t("history.to", "To")}
                   type="date"
                   value={to}
                   onChange={(event) => {
@@ -243,7 +255,7 @@ export default function ReviewHistoryPage() {
 
           {history.error ? (
             <div className="space-y-2">
-              <div className="bg-destructive text-white p-4 font-mono text-xs font-bold uppercase border-4 border-foreground">
+              <div className="bg-destructive text-destructive-foreground p-4 font-mono text-xs font-bold uppercase border-4 border-foreground">
                 ERR: {history.error.message}
               </div>
               <button

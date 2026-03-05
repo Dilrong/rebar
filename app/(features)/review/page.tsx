@@ -1,21 +1,19 @@
 "use client"
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import Link from "next/link"
 import { useEffect, useRef, useState } from "react"
 import AuthGate from "@shared/auth/auth-gate"
 import AppNav from "@shared/layout/app-nav"
 import { useI18n } from "@app-shared/i18n/i18n-provider"
 import { apiFetch } from "@/lib/client-http"
-import { MarkdownContent } from "@shared/ui/markdown-content"
-import { getStateLabel } from "@/lib/i18n/state-label"
 import type { RecordRow } from "@/lib/types"
-import { Archive, PauseCircle, PlayCircle, RotateCcw } from "lucide-react"
-import { LoadingDots } from "@shared/ui/loading"
 import { EmptyState } from "@shared/ui/empty-state"
-import { ErrorState } from "@shared/ui/error-state"
 import { LoadingState } from "@shared/ui/loading-state"
 import { Toast } from "@shared/ui/toast"
+import { ReviewStatsPanel } from "./_components/review-stats-panel"
+import { ReviewUpNext } from "./_components/review-up-next"
+import { ReviewHeader } from "./_components/review-header"
+import { ReviewCurrentCard } from "./_components/review-current-card"
 
 type ReviewTodayResponse = {
   data: RecordRow[]
@@ -51,9 +49,6 @@ type UndoBufferEntry = {
   index: number
 }
 
-const actionButtonClass =
-  "min-h-[44px] border-4 border-foreground px-2 font-mono text-xs font-bold uppercase transition-transform active:translate-y-[2px] active:translate-x-[2px] hover:bg-foreground hover:text-background focus-visible:outline-none focus-visible:ring-0 shadow-brutal-sm"
-
 export default function ReviewPage() {
   const { t } = useI18n()
   const queryClient = useQueryClient()
@@ -72,7 +67,7 @@ export default function ReviewPage() {
   const today = useQuery({
     queryKey: ["review-today"],
     queryFn: () => apiFetch<ReviewTodayResponse>("/api/review/today?n=20"),
-    staleTime: 1000 * 30 // 30 seconds
+    staleTime: 1000 * 60 * 2 // 2 minutes — data changes only after user actions
   })
 
   const mutation = useMutation<
@@ -318,29 +313,14 @@ export default function ReviewPage() {
         <main className="max-w-5xl w-full mx-auto flex-1 flex flex-col animate-fade-in-up">
           <AppNav />
 
-          <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between border-4 border-foreground bg-card p-4 shadow-brutal gap-4">
-            <span className="font-mono text-sm font-bold tracking-widest uppercase text-foreground">
-              {t("review.workload", "TODAY'S REVIEW")}
-            </span>
-            <div className="flex flex-wrap items-center gap-2">
-              <Link
-                href="/review/history"
-                className="min-h-[44px] flex items-center justify-center font-mono text-xs font-bold uppercase border-4 border-foreground px-4 py-3 bg-background hover:bg-foreground hover:text-background shadow-brutal-sm transition-transform active:translate-y-[2px] active:translate-x-[2px]"
-              >
-                {t("review.history", "HISTORY")}
-              </Link>
-              <div className="min-h-[44px] flex items-center justify-center font-mono text-sm font-bold bg-foreground text-background px-4 py-3 shadow-brutal-sm">
-                {t("review.remaining", "REMAINING")}: {today.data?.total || 0}
-              </div>
-            </div>
-          </div>
+          <ReviewHeader t={t} remaining={today.data?.total || 0} />
 
-          <div className="mb-6 grid grid-cols-2 gap-2 border-[3px] md:border-4 border-foreground bg-card p-4 md:p-6 md:grid-cols-4 shadow-brutal-sm md:shadow-brutal">
-            <p className="font-mono text-xs font-bold uppercase">REVIEWED: {stats.data?.today_reviewed ?? 0}</p>
-            <p className="font-mono text-xs font-bold uppercase">REMAINING: {stats.data?.today_remaining ?? 0}</p>
-            <p className="font-mono text-xs font-bold uppercase">STREAK: {stats.data?.streak_days ?? 0}d</p>
-            <p className="font-mono text-xs font-bold uppercase">TOTAL: {stats.data?.total_records ?? 0}</p>
-          </div>
+          <ReviewStatsPanel
+            reviewed={stats.data?.today_reviewed ?? 0}
+            remaining={stats.data?.today_remaining ?? 0}
+            streakDays={stats.data?.streak_days ?? 0}
+            totalRecords={stats.data?.total_records ?? 0}
+          />
 
           {today.isLoading ? <LoadingState label={t("review.fetching", "Fetching blocks...")} /> : null}
 
@@ -353,184 +333,28 @@ export default function ReviewPage() {
             />
           )}
 
-          {first && (
-            <div className="relative flex w-full flex-1 flex-col border-[3px] md:border-4 border-foreground bg-card p-4 sm:p-6 shadow-brutal-sm md:shadow-brutal md:p-10" key={first.id}>
-              <div className="flex-1 flex flex-col py-4 md:py-6">
-                <div className="flex flex-wrap items-center gap-2 mb-6 md:mb-8 border-b-2 border-foreground pb-4">
-                  <span className="bg-muted text-muted-foreground font-mono text-xs font-bold px-2 py-1 uppercase border-2 border-muted-foreground">ID: {first.id.substring(0, 8)}</span>
-                  {first.source_title && (
-                    <span className="font-mono text-xs font-bold text-foreground bg-accent/20 px-2 py-1 uppercase truncate border-2 border-accent">
-                      REF: {first.source_title}
-                    </span>
-                  )}
-                </div>
-
-                <div className="flex-1 flex flex-col overflow-y-auto">
-                  <MarkdownContent
-                    content={first.content}
-                    className="text-lg md:text-2xl leading-[1.6]"
-                  />
-                </div>
-              </div>
-
-              <div className="mt-8 border-t-4 border-foreground pt-6">
-                <p className="mb-3 font-mono text-xs font-bold uppercase text-muted-foreground">
-                  {t("review.shortcutHint", "A: Archive · S: Act · D: Defer · U: Undo · Esc: Close panels")}
-                </p>
-
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                  <button
-                    type="button"
-                    onClick={() => mutation.mutate({ id: first.id, decisionType: "ARCHIVE" })}
-                    disabled={mutation.isPending}
-                    aria-label="보관"
-                    className="min-h-[64px] border-4 border-foreground bg-accent px-4 py-3 text-left text-white transition-transform active:translate-y-[4px] active:translate-x-[4px] disabled:opacity-50 focus-visible:outline-none focus-visible:ring-0 shadow-brutal active:shadow-none hover:bg-foreground"
-                  >
-                    <span className="flex items-center gap-2 font-black text-base uppercase">
-                      {mutation.isPending && mutation.variables?.decisionType === "ARCHIVE" ? <LoadingDots /> : <Archive className="h-5 w-5" />}
-                      {t("review.triage.archive", "보관")}
-                    </span>
-                    <span className="mt-1 block font-mono text-[11px] uppercase opacity-90">{t("review.triage.archiveHelp", "즉시 다음 문서")}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={toggleActPanel}
-                    disabled={mutation.isPending}
-                    aria-label={t("review.triage.act", "실행")}
-                    aria-expanded={actExpanded}
-                    className={`min-h-[64px] border-4 border-foreground px-4 py-3 text-left transition-transform active:translate-y-[4px] active:translate-x-[4px] disabled:opacity-50 focus-visible:outline-none focus-visible:ring-0 shadow-brutal active:shadow-none ${actExpanded ? "bg-foreground text-background shadow-none translate-x-[4px] translate-y-[4px]" : "bg-background text-foreground hover:bg-foreground/10"}`}
-                  >
-                    <span className="flex items-center gap-2 font-black text-base uppercase">
-                      <PlayCircle className="h-5 w-5" /> {t("review.triage.act", "실행")}
-                    </span>
-                    <span className="mt-1 block font-mono text-[11px] uppercase text-muted-foreground">{t("review.triage.actHelp", "실험·공유·할일")}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={toggleDeferPanel}
-                    disabled={mutation.isPending}
-                    aria-label={t("review.triage.defer", "보류")}
-                    aria-expanded={deferExpanded}
-                    className={`min-h-[64px] border-4 border-foreground px-4 py-3 text-left transition-transform active:translate-y-[4px] active:translate-x-[4px] disabled:opacity-50 focus-visible:outline-none focus-visible:ring-0 shadow-brutal active:shadow-none ${deferExpanded ? "bg-foreground text-background shadow-none translate-x-[4px] translate-y-[4px]" : "bg-background text-foreground hover:bg-foreground/10"}`}
-                  >
-                    <span className="flex items-center gap-2 font-black text-base uppercase">
-                      <PauseCircle className="h-5 w-5" /> {t("review.triage.defer", "보류")}
-                    </span>
-                    <span className="mt-1 block font-mono text-[11px] uppercase text-muted-foreground">{t("review.triage.deferHelp", "리뷰 큐 이동")}</span>
-                  </button>
-                </div>
-
-                {actExpanded ? (
-                  <div className="mt-3 border-4 border-foreground bg-card p-3 shadow-brutal-sm">
-                    <p className="font-mono text-xs font-bold uppercase text-muted-foreground">{t("review.triage.actSelect", "실행 타입 선택")}</p>
-                    <div className="mt-2 grid grid-cols-3 gap-2">
-                      <button
-                        type="button"
-                        className={actionButtonClass}
-                        onClick={() => mutation.mutate({ id: first.id, decisionType: "ACT", actionType: "EXPERIMENT" })}
-                        disabled={mutation.isPending}
-                      >
-                        {t("review.actionType.experiment", "실험")}
-                      </button>
-                      <button
-                        type="button"
-                        className={actionButtonClass}
-                        onClick={() => mutation.mutate({ id: first.id, decisionType: "ACT", actionType: "SHARE" })}
-                        disabled={mutation.isPending}
-                      >
-                        {t("review.actionType.share", "공유")}
-                      </button>
-                      <button
-                        type="button"
-                        className={actionButtonClass}
-                        onClick={() => mutation.mutate({ id: first.id, decisionType: "ACT", actionType: "TODO" })}
-                        disabled={mutation.isPending}
-                      >
-                        {t("review.actionType.todo", "할일")}
-                      </button>
-                    </div>
-                  </div>
-                ) : null}
-
-                {deferExpanded ? (
-                  <div className="mt-3 border-4 border-foreground bg-card p-3 shadow-brutal-sm">
-                    <p className="font-mono text-xs font-bold uppercase text-muted-foreground">{t("review.triage.deferSelect", "보류 이유 선택")}</p>
-                    <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-3">
-                      <button
-                        type="button"
-                        className={actionButtonClass}
-                        onClick={() => mutation.mutate({ id: first.id, decisionType: "DEFER", deferReason: "NEED_INFO" })}
-                        disabled={mutation.isPending}
-                      >
-                        {t("review.deferReason.needInfo", "정보부족")}
-                      </button>
-                      <button
-                        type="button"
-                        className={actionButtonClass}
-                        onClick={() => mutation.mutate({ id: first.id, decisionType: "DEFER", deferReason: "LOW_CONFIDENCE" })}
-                        disabled={mutation.isPending}
-                      >
-                        {t("review.deferReason.lowConfidence", "중요도불명")}
-                      </button>
-                      <button
-                        type="button"
-                        className={actionButtonClass}
-                        onClick={() => mutation.mutate({ id: first.id, decisionType: "DEFER", deferReason: "NO_TIME" })}
-                        disabled={mutation.isPending}
-                      >
-                        {t("review.deferReason.noTime", "시간없음")}
-                      </button>
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-
-              {mutation.error ? (
-                <div className="mt-4 space-y-2">
-                  <ErrorState message={mutation.error.message} />
-                  <button
-                    type="button"
-                    className="inline-flex min-h-[44px] items-center gap-2 border-4 border-foreground px-3 py-2 font-mono text-xs font-bold uppercase hover:bg-foreground hover:text-background focus-visible:outline-none focus-visible:ring-0 transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm"
-                    onClick={() => {
-                      mutation.reset()
-                      today.refetch()
-                    }}
-                  >
-                    <RotateCcw className="h-4 w-4" /> {t("review.retry", "다시 시도")}
-                  </button>
-                </div>
-              ) : null}
-            </div>
-          )}
-
-          {nextQueue.length > 0 ? (
-            <section className="mt-8 border-4 border-foreground bg-card shadow-brutal">
-              <details open className="group">
-                <summary className="flex cursor-pointer items-center justify-between border-b-4 border-foreground p-4 md:p-6 font-black text-xl uppercase select-none list-none">
-                  <span className="flex items-center gap-3">
-                    <span className="border-l-4 border-accent pl-4">{t("review.upNext", "UP NEXT")}</span>
-                    <span className="font-mono text-sm text-muted-foreground">({nextQueue.length})</span>
-                  </span>
-                  <span className="font-mono text-xs text-muted-foreground group-open:hidden">▼ SHOW</span>
-                  <span className="font-mono text-xs text-muted-foreground hidden group-open:inline">▲ HIDE</span>
-                </summary>
-                <div className="space-y-0 p-4 md:p-6 pt-0 md:pt-0">
-                  {nextQueue.map((record) => (
-                    <Link
-                      key={record.id}
-                      href={`/records/${record.id}?from=${encodeURIComponent(reviewBackHref)}`}
-                      className="block min-h-[44px] border-2 border-foreground px-4 py-3 mt-3 hover:bg-foreground hover:text-background transition-colors"
-                    >
-                      <p className="font-mono text-xs font-bold uppercase mb-2">{record.kind} · {getStateLabel(record.state, t)}</p>
-                      <p className="font-semibold text-sm line-clamp-2">{record.content}</p>
-                    </Link>
-                  ))}
-                </div>
-              </details>
-            </section>
+          {first ? (
+            <ReviewCurrentCard
+              t={t}
+              record={first}
+              mutationPending={mutation.isPending}
+              archivePending={mutation.isPending && mutation.variables?.decisionType === "ARCHIVE"}
+              actExpanded={actExpanded}
+              deferExpanded={deferExpanded}
+              errorMessage={mutation.error?.message ?? null}
+              onArchive={() => mutation.mutate({ id: first.id, decisionType: "ARCHIVE" })}
+              onToggleAct={toggleActPanel}
+              onToggleDefer={toggleDeferPanel}
+              onSelectAct={(actionType) => mutation.mutate({ id: first.id, decisionType: "ACT", actionType })}
+              onSelectDefer={(deferReason) => mutation.mutate({ id: first.id, decisionType: "DEFER", deferReason })}
+              onRetry={() => {
+                mutation.reset()
+                today.refetch()
+              }}
+            />
           ) : null}
+
+          <ReviewUpNext queue={nextQueue} reviewBackHref={reviewBackHref} t={t} />
         </main>
       </AuthGate>
       {undoTargetId ? (

@@ -9,7 +9,7 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin"
 const ParamsSchema = z.object({ id: z.string().uuid() })
 const CreateAnnotationSchema = z.object({
   kind: z.enum(["highlight", "comment", "correction"]),
-  body: z.string().min(1),
+  body: z.string().min(1).max(10_000),
   anchor: z.string().optional()
 })
 
