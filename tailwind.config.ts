@@ -87,6 +87,25 @@ const config = {
                     "0%, 100%": { opacity: "1" },
                     "50%": { opacity: "0.2" },
                 },
+                "marquee": {
+                    "0%": { transform: "translateX(0%)" },
+                    "100%": { transform: "translateX(-100%)" },
+                },
+                "accordion-down": {
+                    from: { height: "0" },
+                    to: { height: "var(--radix-accordion-content-height)" },
+                },
+                "accordion-up": {
+                    from: { height: "var(--radix-accordion-content-height)" },
+                    to: { height: "0" },
+                },
+                "glitch": {
+                    "0%, 100%": { transform: "translate(0)" },
+                    "20%": { transform: "translate(-2px, 2px)" },
+                    "40%": { transform: "translate(-2px, -2px)" },
+                    "60%": { transform: "translate(2px, 2px)" },
+                    "80%": { transform: "translate(2px, -2px)" },
+                },
             },
             animation: {
                 "fade-in-up": "fade-in-up 0.4s ease-out forwards",
@@ -94,6 +113,10 @@ const config = {
                 "slide-in-right": "slide-in-right 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards",
                 "slide-out-right": "slide-out-right 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards",
                 "pulse-brutal": "pulse-brutal 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+                "marquee": "marquee 25s linear infinite",
+                "accordion-down": "accordion-down 0.2s ease-out",
+                "accordion-up": "accordion-up 0.2s ease-out",
+                "glitch": "glitch 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) both infinite",
             },
         },
     },
