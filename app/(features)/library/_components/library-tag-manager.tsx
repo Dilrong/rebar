@@ -53,13 +53,13 @@ export function LibraryTagManager({
           value={newTagName}
           onChange={(event) => onNewTagNameChange(event.target.value)}
           placeholder={t("library.newTag", "new tag")}
-          className="min-h-[44px] bg-background border-4 border-foreground text-foreground px-4 py-2 font-mono text-sm w-full md:w-auto flex-1 focus:outline-none focus:ring-0 shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] rounded-none"
+          className="min-h-[44px] bg-background border-4 border-foreground text-foreground px-4 py-2 font-mono text-sm w-full md:w-auto flex-1 focus:outline-none focus:ring-0 rounded-none shadow-brutal-sm focus:shadow-none focus:translate-x-1 focus:translate-y-1 transition-all duration-200"
         />
         <button
           type="button"
           onClick={onCreateTag}
           disabled={!newTagName.trim() || createPending}
-          className="min-h-[44px] flex items-center justify-center px-4 py-2 border-4 border-foreground font-mono text-xs font-bold uppercase bg-background text-foreground w-full md:w-auto hover:bg-foreground hover:text-background transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm"
+          className="min-h-[44px] flex items-center justify-center px-4 py-2 border-4 border-foreground font-mono text-xs font-bold uppercase bg-background text-foreground w-full md:w-auto hover:bg-foreground hover:text-background transition-all duration-200 shadow-brutal-sm hover:shadow-none hover:translate-x-1 hover:translate-y-1 active:translate-y-1 active:translate-x-1"
         >
           {createPending ? <LoadingDots /> : t("library.create", "Create")}
         </button>
@@ -92,14 +92,14 @@ export function LibraryTagManager({
               <button
                 type="button"
                 onClick={() => onStartRenameTag(tag)}
-                className="min-h-[32px] min-w-[32px] flex items-center justify-center font-mono text-[10px] font-bold uppercase border-2 border-transparent hover:border-foreground hover:bg-muted"
+                className="min-h-[32px] min-w-[32px] flex items-center justify-center font-mono text-[10px] font-bold uppercase border-2 border-transparent hover:border-foreground hover:bg-foreground hover:text-background transition-colors"
               >
                 {t("library.tagEdit", "편집")}
               </button>
               <button
                 type="button"
                 onClick={() => onDeleteTag(tag.id)}
-                className="min-h-[32px] min-w-[32px] flex items-center justify-center font-mono text-[10px] font-bold uppercase border-2 border-transparent hover:border-foreground hover:bg-muted hover:text-destructive"
+                className="min-h-[32px] min-w-[32px] flex items-center justify-center font-mono text-[10px] font-bold uppercase border-2 border-transparent hover:border-destructive hover:bg-destructive hover:text-white transition-colors text-destructive"
               >
                 <Trash2 className="w-3 h-3" />
               </button>

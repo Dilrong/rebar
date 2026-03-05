@@ -101,28 +101,32 @@ export default function HomePage() {
     <div className="min-h-screen flex flex-col p-4 md:p-6 bg-background font-sans">
       <main className="max-w-5xl w-full mx-auto mt-8 md:mt-24 space-y-8 md:space-y-12 animate-fade-in-up">
 
-        <header className="space-y-4 md:space-y-6 border-l-4 md:border-l-8 border-accent pl-4 md:pl-6 py-2">
-          <h1 className="font-black text-5xl sm:text-6xl md:text-8xl tracking-tighter uppercase text-foreground leading-[0.9] break-words">
+        <header className="space-y-4 md:space-y-6 border-l-4 md:border-l-8 border-accent pl-4 md:pl-6 py-2 relative">
+          <div className="absolute -left-[4px] md:-left-[8px] top-0 bottom-0 w-[4px] md:w-[8px] bg-accent animate-pulse-brutal" aria-hidden="true" />
+          <h1 className="font-black text-5xl sm:text-6xl md:text-8xl tracking-tighter uppercase text-foreground leading-[0.9] break-words text-glitch cursor-default transition-all">
             {t("home.title.line1", "DATA")}<br />{t("home.title.line2", "INFRASTRUCTURE")}.
           </h1>
-          <p className="text-lg md:text-2xl font-mono text-muted-foreground uppercase tracking-wider font-bold max-w-2xl bg-foreground text-background inline-block px-3 py-1">
+          <p className="text-lg md:text-2xl font-mono text-muted-foreground uppercase tracking-wider font-bold max-w-2xl bg-foreground text-background inline-block px-3 py-1 shadow-brutal-sm">
             {t("home.subtitle", "SSOT // SYSTEM.READY")}
           </p>
         </header>
 
         {onboarding.show ? (
-          <section className="border-[3px] md:border-4 border-foreground bg-card p-4 md:p-6 shadow-brutal-sm md:shadow-brutal">
+          <section className="border-[3px] md:border-4 border-foreground bg-card p-4 md:p-6 shadow-brutal-sm md:shadow-brutal transition-transform hover:-translate-y-1">
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="font-black text-2xl uppercase">{t("home.onboarding.title", "2-MIN ONBOARDING")}</p>
-                <p className="font-mono text-[11px] font-bold uppercase text-muted-foreground">
+                <p className="font-black text-2xl uppercase flex items-center gap-2">
+                  <span className="bg-accent text-accent-foreground px-2 py-0.5 text-sm align-middle">NEW</span>
+                  {t("home.onboarding.title", "2-MIN ONBOARDING")}
+                </p>
+                <p className="font-mono text-[11px] font-bold uppercase text-muted-foreground mt-1">
                   {t("home.onboarding.desc", "캡처 → 리뷰 → 인박스 정리까지 한 번에 완료")}
                 </p>
               </div>
               <button
                 type="button"
                 onClick={dismissOnboarding}
-                className="min-h-[44px] border-2 border-foreground bg-background px-3 py-2 font-mono text-xs font-bold uppercase hover:bg-foreground hover:text-background"
+                className="min-h-[44px] border-2 border-transparent hover:border-foreground bg-background px-3 py-2 font-mono text-xs font-bold uppercase hover:bg-foreground hover:text-background transition-colors focus-ring"
               >
                 {t("home.onboarding.dismiss", "닫기")}
               </button>
@@ -132,31 +136,31 @@ export default function HomePage() {
               {onboarding.steps.map((step) => (
                 <div
                   key={step.key}
-                  className={`min-h-[44px] border-2 px-3 py-2 font-mono text-xs font-bold uppercase ${step.done
-                    ? "border-foreground bg-foreground text-background"
+                  className={`min-h-[44px] border-2 px-3 py-2 font-mono text-xs font-bold uppercase transition-all ${step.done
+                    ? "border-foreground bg-foreground text-background shadow-[inset_4px_4px_0_0_rgba(255,255,255,0.2)]"
                     : "border-foreground bg-background text-foreground"
                     }`}
                 >
-                  <span className="mr-2">{step.done ? "[x]" : "[ ]"}</span>
+                  <span className="mr-2 inline-block font-black">{step.done ? "[X]" : "[ ]"}</span>
                   {step.label}
                 </div>
               ))}
             </div>
 
-            <div className="mt-4 flex flex-col gap-3 border-t-2 border-foreground pt-4 sm:flex-row sm:items-center sm:justify-between">
-              <p className="font-mono text-xs font-bold uppercase text-muted-foreground">
+            <div className="mt-4 flex flex-col gap-3 border-t-4 border-foreground pt-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="font-mono text-xs font-bold uppercase text-foreground bg-accent/20 px-2 py-1">
                 {t("home.onboarding.progress", "진행률")}: {onboarding.doneCount}/{onboarding.total}
               </p>
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Link
                   href="/capture"
-                  className="min-h-[44px] border-2 border-foreground bg-background px-4 py-2 font-mono text-xs font-bold uppercase hover:bg-foreground hover:text-background"
+                  className="min-h-[44px] border-2 border-foreground bg-background px-4 py-2 font-mono text-xs font-bold uppercase hover:bg-foreground hover:text-background transition-colors focus-ring inline-flex items-center justify-center shadow-brutal-sm active:translate-x-1 active:translate-y-1 active:shadow-none"
                 >
                   {t("home.onboarding.goCapture", "캡처 열기")}
                 </Link>
                 <Link
                   href="/review"
-                  className="min-h-[44px] border-2 border-foreground bg-accent px-4 py-2 font-mono text-xs font-bold uppercase text-white hover:bg-foreground"
+                  className="min-h-[44px] border-2 border-foreground bg-accent px-4 py-2 font-mono text-xs font-bold uppercase text-white hover:bg-foreground transition-colors focus-ring inline-flex items-center justify-center shadow-brutal-sm active:translate-x-1 active:translate-y-1 active:shadow-none"
                 >
                   {t("home.onboarding.goReview", "리뷰 열기")}
                 </Link>
@@ -169,20 +173,21 @@ export default function HomePage() {
 
           <Link
             href="/review"
-            className="group block border-[3px] md:border-4 border-foreground bg-card p-5 md:p-8 hover:bg-accent hover:text-white transition-colors shadow-brutal-sm md:shadow-brutal active:translate-x-2 active:translate-y-2 active:shadow-none"
+            className="group relative block border-[3px] md:border-4 border-foreground bg-card p-5 md:p-8 hover:bg-accent hover:text-white transition-all duration-200 shadow-brutal-sm md:shadow-brutal active:translate-x-2 active:translate-y-2 active:shadow-none overflow-hidden"
           >
-            <div className="flex justify-between items-start mb-8">
+            <div className="absolute -right-[20%] -top-[20%] opacity-5 w-64 h-64 bg-foreground rounded-full blur-3xl group-hover:bg-white transition-all duration-500 pointer-events-none" aria-hidden="true" />
+            <div className="flex justify-between items-start mb-8 relative z-10">
               <CheckSquare className="w-10 h-10 group-hover:animate-pulse" strokeWidth={2.5} />
-              <span className="font-mono text-xs font-bold bg-foreground text-background px-2 py-1">{t("home.badge.review", "REVIEW")}</span>
+              <span className="font-mono text-xs font-bold bg-foreground text-background px-2 py-1 border-2 border-transparent group-hover:border-white">{t("home.badge.review", "REVIEW")}</span>
             </div>
-            <h2 className="font-black text-4xl uppercase mb-3">{t("home.review.title", "Review")}</h2>
-            <p className="font-mono text-sm opacity-80 uppercase font-bold mb-4">{t("home.review.desc", "Execute daily focus routine.")}</p>
+            <h2 className="font-black text-4xl sm:text-5xl uppercase mb-3 relative z-10 transition-transform group-hover:translate-x-1">{t("home.review.title", "Review")}</h2>
+            <p className="font-mono text-sm opacity-80 uppercase font-bold mb-4 relative z-10">{t("home.review.desc", "Execute daily focus routine.")}</p>
             {remaining !== null && (
-              <div className="flex items-center gap-3 mt-auto pt-4 border-t-2 border-current/30">
-                <span className="font-mono text-2xl font-black">{remaining}</span>
+              <div className="flex items-center gap-3 mt-auto pt-4 border-t-4 border-current/30 relative z-10">
+                <span className="font-mono text-3xl font-black">{remaining}</span>
                 <span className="font-mono text-xs font-bold uppercase opacity-80">{t("home.review.remaining", "남은 리뷰")}</span>
                 {streak !== null && streak > 0 && (
-                  <span className="ml-auto font-mono text-xs font-bold uppercase bg-current/10 px-2 py-1">{streak}d 🔥</span>
+                  <span className="ml-auto font-mono text-xs font-bold uppercase border-2 border-current px-2 py-1">{streak}d 🔥</span>
                 )}
               </div>
             )}
@@ -191,24 +196,24 @@ export default function HomePage() {
           <div className="flex flex-col gap-4 md:gap-6">
             <Link
               href="/capture"
-              className="group flex-1 flex flex-col border-[3px] md:border-4 border-foreground bg-card p-5 md:p-6 hover:bg-foreground hover:text-background transition-colors shadow-brutal-sm md:shadow-brutal active:translate-x-1.5 active:translate-y-1.5 active:shadow-none"
+              className="group relative flex-1 flex flex-col border-[3px] md:border-4 border-foreground bg-card p-5 md:p-6 hover:bg-foreground hover:text-background transition-all duration-200 shadow-brutal-sm md:shadow-brutal active:translate-x-1.5 active:translate-y-1.5 active:shadow-none overflow-hidden"
             >
-              <div className="flex justify-between items-start mb-6">
-                <Terminal className="w-8 h-8" strokeWidth={2.5} />
-                <span className="font-mono text-xs font-bold border-2 border-current px-2 py-0.5">{t("home.badge.capture", "CAPTURE")}</span>
+              <div className="flex justify-between items-start mb-6 relative z-10">
+                <Terminal className="w-8 h-8 group-hover:text-accent transition-colors" strokeWidth={2.5} />
+                <span className="font-mono text-xs font-bold border-2 border-current px-2 py-0.5 group-hover:border-accent group-hover:text-accent transition-colors">{t("home.badge.capture", "CAPTURE")}</span>
               </div>
-              <h2 className="font-black text-2xl uppercase mt-auto">{t("home.capture.title", "Capture")}</h2>
+              <h2 className="font-black text-3xl uppercase mt-auto relative z-10 transition-transform group-hover:translate-x-1">{t("home.capture.title", "Capture")}</h2>
             </Link>
 
             <Link
               href="/library"
-              className="group flex-1 flex flex-col border-[3px] md:border-4 border-foreground bg-card p-5 md:p-6 hover:bg-foreground hover:text-background transition-colors shadow-brutal-sm md:shadow-brutal active:translate-x-1.5 active:translate-y-1.5 active:shadow-none"
+              className="group relative flex-1 flex flex-col border-[3px] md:border-4 border-foreground bg-card p-5 md:p-6 hover:bg-foreground hover:text-background transition-all duration-200 shadow-brutal-sm md:shadow-brutal active:translate-x-1.5 active:translate-y-1.5 active:shadow-none overflow-hidden"
             >
-              <div className="flex justify-between items-start mb-6">
-                <Database className="w-8 h-8" strokeWidth={2.5} />
-                <span className="font-mono text-xs font-bold border-2 border-current px-2 py-0.5">{t("home.badge.library", "LIBRARY")}</span>
+              <div className="flex justify-between items-start mb-6 relative z-10">
+                <Database className="w-8 h-8 group-hover:text-accent transition-colors" strokeWidth={2.5} />
+                <span className="font-mono text-xs font-bold border-2 border-current px-2 py-0.5 group-hover:border-accent group-hover:text-accent transition-colors">{t("home.badge.library", "LIBRARY")}</span>
               </div>
-              <h2 className="font-black text-2xl uppercase mt-auto">{t("home.library.title", "Vault")}</h2>
+              <h2 className="font-black text-3xl uppercase mt-auto relative z-10 transition-transform group-hover:translate-x-1">{t("home.library.title", "Vault")}</h2>
             </Link>
           </div>
 

@@ -21,35 +21,35 @@ export function CaptureImportModeTabs({ importMode, setImportMode, t }: CaptureI
         <button
           type="button"
           onClick={() => setImportMode("manual")}
-          className={`min-h-[44px] flex-none px-4 py-2 text-center font-mono text-xs font-bold uppercase transition-transform active:translate-y-[2px] active:translate-x-[2px] border-r-4 border-foreground ${importMode === "manual" ? "bg-foreground text-background" : "text-foreground hover:bg-foreground/10"}`}
+          className={`min-h-[44px] flex-none px-4 py-2 text-center font-mono text-xs font-bold uppercase transition-all duration-200 hover:bg-foreground hover:text-background border-r-4 border-foreground ${importMode === "manual" ? "bg-foreground text-background" : "text-foreground"}`}
         >
           {t("capture.modeManual", "MANUAL")}
         </button>
         <button
           type="button"
           onClick={() => setImportMode("url")}
-          className={`min-h-[44px] flex-none px-4 py-2 text-center font-mono text-xs font-bold uppercase transition-transform active:translate-y-[2px] active:translate-x-[2px] border-r-4 border-foreground ${importMode === "url" ? "bg-foreground text-background" : "text-foreground hover:bg-foreground/10"}`}
+          className={`min-h-[44px] flex-none px-4 py-2 text-center font-mono text-xs font-bold uppercase transition-all duration-200 hover:bg-foreground hover:text-background border-r-4 border-foreground ${importMode === "url" ? "bg-foreground text-background" : "text-foreground"}`}
         >
           {t("capture.modeUrl", "URL")}
         </button>
         <button
           type="button"
           onClick={() => setImportMode("batch")}
-          className={`min-h-[44px] flex-none px-4 py-2 text-center font-mono text-xs font-bold uppercase transition-transform active:translate-y-[2px] active:translate-x-[2px] border-r-4 border-foreground ${importMode === "batch" ? "bg-foreground text-background" : "text-foreground hover:bg-foreground/10"}`}
+          className={`min-h-[44px] flex-none px-4 py-2 text-center font-mono text-xs font-bold uppercase transition-all duration-200 hover:bg-foreground hover:text-background border-r-4 border-foreground ${importMode === "batch" ? "bg-foreground text-background" : "text-foreground"}`}
         >
           {t("capture.modeBatch", "BATCH")}
         </button>
         <button
           type="button"
           onClick={() => setImportMode("csv")}
-          className={`min-h-[44px] flex-none px-4 py-2 text-center font-mono text-xs font-bold uppercase transition-transform active:translate-y-[2px] active:translate-x-[2px] border-r-4 border-foreground ${importMode === "csv" ? "bg-foreground text-background" : "text-foreground hover:bg-foreground/10"}`}
+          className={`min-h-[44px] flex-none px-4 py-2 text-center font-mono text-xs font-bold uppercase transition-all duration-200 hover:bg-foreground hover:text-background border-r-4 border-foreground ${importMode === "csv" ? "bg-foreground text-background" : "text-foreground"}`}
         >
           {t("capture.modeCsv", "CSV")}
         </button>
         <button
           type="button"
           onClick={() => setImportMode("ocr")}
-          className={`min-h-[44px] flex-none px-4 py-2 text-center font-mono text-xs font-bold uppercase transition-transform active:translate-y-[2px] active:translate-x-[2px] ${importMode === "ocr" ? "bg-foreground text-background" : "text-foreground hover:bg-foreground/10"}`}
+          className={`min-h-[44px] flex-none px-4 py-2 text-center font-mono text-xs font-bold uppercase transition-all duration-200 hover:bg-foreground hover:text-background ${importMode === "ocr" ? "bg-foreground text-background" : "text-foreground"}`}
         >
           {t("capture.modeOcr", "OCR")}
         </button>

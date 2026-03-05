@@ -58,11 +58,11 @@ export function QuickSearchDialog({
         aria-modal="true"
         aria-labelledby="quick-search-title"
         aria-describedby="quick-search-description"
-        className="mt-16 w-full max-w-2xl border-4 border-foreground bg-card p-4 shadow-brutal"
+        className="mt-16 w-full max-w-2xl border-4 border-foreground bg-card bg-noise p-4 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.1)]"
       >
         <div className="mb-3 flex flex-col sm:flex-row items-start sm:items-center justify-between border-b-2 border-foreground pb-2 gap-2">
           <p id="quick-search-title" className="font-mono text-xs font-bold uppercase">QUICK SEARCH (⌘K / Ctrl+K)</p>
-          <button type="button" onClick={onClose} className="min-h-[44px] flex items-center justify-center border-2 border-foreground px-4 py-2 font-mono text-xs font-bold uppercase w-full sm:w-auto hover:bg-foreground hover:text-background active:translate-y-[2px] active:translate-x-[2px] active:shadow-none transition-all">
+          <button type="button" onClick={onClose} className="min-h-[44px] flex items-center justify-center border-2 border-foreground px-4 py-2 font-mono text-xs font-bold uppercase w-full sm:w-auto hover:bg-foreground hover:text-background active:translate-y-1 active:translate-x-1 shadow-brutal-sm hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all duration-200">
             CLOSE
           </button>
         </div>
@@ -79,7 +79,7 @@ export function QuickSearchDialog({
           onChange={(event) => onQueryChange(event.target.value)}
           onKeyDown={onInputKeyDown}
           placeholder="검색어 입력..."
-          className="mb-3 w-full border-2 border-foreground bg-background p-3 font-mono text-sm min-h-[44px]"
+          className="mb-3 w-full border-2 border-foreground bg-background p-3 font-mono text-sm min-h-[44px] focus:outline-none focus:ring-0 shadow-brutal-sm focus:shadow-none focus:translate-x-1 focus:translate-y-1 transition-all duration-200"
           role="combobox"
           aria-expanded={results.length > 0}
           aria-controls="quick-search-results"
@@ -97,7 +97,7 @@ export function QuickSearchDialog({
               onClick={onClose}
               onMouseEnter={() => onActiveIndexChange(index)}
               className={cn(
-                "block border-2 min-h-[44px] border-foreground px-3 py-2 hover:bg-foreground hover:text-background active:translate-y-[2px] active:translate-x-[2px] active:shadow-none transition-all",
+                "block border-2 min-h-[44px] border-foreground px-3 py-2 hover:bg-foreground hover:text-background active:translate-y-1 active:translate-x-1 transition-all duration-200",
                 activeIndex === index && "bg-foreground text-background"
               )}
             >

@@ -28,10 +28,10 @@ export function NavMobileTop({
   onToggleTheme
 }: NavMobileTopProps) {
   return (
-    <nav className="flex md:hidden sticky top-0 z-30 bg-background mb-4 flex-row items-center justify-between border-b-[3px] border-foreground py-2 px-3 gap-2 shadow-brutal-sm">
+    <nav className="flex md:hidden sticky top-0 z-30 bg-background bg-noise mb-4 flex-row items-center justify-between border-b-[3px] border-foreground py-2 px-3 gap-2 shadow-brutal-sm">
       <Link
         href={homeHref}
-        className="rotate-[-2deg] self-start border-2 border-foreground bg-accent px-2 py-0.5 mt-0.5 font-black text-xl uppercase tracking-tighter text-white shadow-brutal-sm transition-transform hover:rotate-0"
+        className="rotate-[-2deg] self-start border-[3px] border-foreground bg-accent px-2 py-0.5 mt-0.5 font-black text-xl uppercase tracking-tighter text-white shadow-brutal transition-all duration-200 hover:rotate-0 hover:translate-x-1 hover:translate-y-1 hover:shadow-none"
       >
         REBAR_
       </Link>
@@ -41,7 +41,7 @@ export function NavMobileTop({
           onClick={onSync}
           disabled={syncFetching}
           className={cn(
-            "min-h-[36px] min-w-[36px] flex items-center justify-center border-2 border-foreground bg-background p-1.5 shadow-brutal-sm active:translate-y-[2px] active:translate-x-[2px] active:shadow-none transition-all",
+            "min-h-[36px] min-w-[36px] flex items-center justify-center border-2 border-foreground bg-background p-1.5 shadow-brutal-sm active:translate-y-1 active:translate-x-1 active:shadow-none transition-all duration-200",
             syncError ? "text-destructive" : syncFetching ? "text-accent" : "text-foreground"
           )}
           title={syncStatusLabel}
@@ -52,21 +52,21 @@ export function NavMobileTop({
           <Link
             href="/settings"
             title={authEmail}
-            className="min-h-[36px] min-w-[36px] flex items-center justify-center border-2 border-foreground bg-background p-1.5 shadow-brutal-sm text-foreground active:translate-y-[2px] active:translate-x-[2px] active:shadow-none transition-all"
+            className="min-h-[36px] min-w-[36px] flex items-center justify-center border-2 border-foreground bg-background p-1.5 shadow-brutal-sm text-foreground active:translate-y-1 active:translate-x-1 active:shadow-none transition-all duration-200 hover:bg-foreground hover:text-background"
           >
             <User className="h-4 w-4" strokeWidth={3} />
           </Link>
         ) : (
           <Link
             href="/signup"
-            className="min-h-[36px] flex items-center justify-center border-2 border-foreground bg-background px-2 py-1 font-mono text-[10px] font-bold text-foreground shadow-brutal-sm active:translate-y-[2px] active:translate-x-[2px] active:shadow-none transition-all"
+            className="min-h-[36px] flex items-center justify-center border-2 border-foreground bg-background px-2 py-1 font-mono text-[10px] font-bold text-foreground shadow-brutal-sm active:translate-y-1 active:translate-x-1 active:shadow-none transition-all duration-200 hover:bg-foreground hover:text-background"
           >
             AUTH
           </Link>
         )}
         <button
           onClick={onToggleTheme}
-          className="min-h-[36px] min-w-[36px] flex items-center justify-center border-2 border-foreground bg-background p-1.5 shadow-brutal-sm text-foreground active:translate-y-[2px] active:translate-x-[2px] active:shadow-none transition-all"
+          className="min-h-[36px] min-w-[36px] flex items-center justify-center border-2 border-foreground bg-background p-1.5 shadow-brutal-sm text-foreground active:translate-y-1 active:translate-x-1 active:shadow-none transition-all duration-200 hover:bg-foreground hover:text-background"
           aria-label={t("nav.theme")}
           type="button"
         >

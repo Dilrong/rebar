@@ -41,7 +41,7 @@ export function CaptureManualForm({
           <select
             id="capture-kind"
             {...form.register("kind")}
-            className="min-h-[44px] w-full bg-background border-4 border-foreground text-foreground p-4 focus:outline-none focus:ring-0 shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] transition-none appearance-none cursor-pointer font-bold uppercase rounded-none"
+            className="min-h-[44px] w-full bg-background border-4 border-foreground text-foreground p-4 focus:outline-none focus:ring-0 shadow-brutal-sm focus:shadow-none focus:translate-x-1 focus:translate-y-1 transition-all duration-200 appearance-none cursor-pointer font-bold uppercase rounded-none"
           >
             <option value="quote">{t("capture.kind.quote", "Quote / Highlight")}</option>
             <option value="note">{t("capture.kind.note", "Personal Note")}</option>
@@ -60,7 +60,7 @@ export function CaptureManualForm({
           id="capture-content"
           rows={6}
           placeholder={t("capture.contentPlaceholder", "Paste your content")}
-          className="w-full bg-background border-4 border-foreground text-foreground text-lg md:text-xl p-4 focus:outline-none focus:ring-0 shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] transition-none resize-y placeholder:text-muted-foreground/50 rounded-none"
+          className="w-full bg-background border-4 border-foreground text-foreground text-lg md:text-xl p-4 focus:outline-none focus:ring-0 shadow-brutal-sm focus:shadow-none focus:translate-x-1 focus:translate-y-1 transition-all duration-200 resize-y placeholder:text-muted-foreground/50 rounded-none"
           {...form.register("content")}
           autoFocus
         />
@@ -72,7 +72,7 @@ export function CaptureManualForm({
           <input
             id="capture-meta-url"
             placeholder="https://..."
-            className="min-h-[44px] w-full bg-background border-4 border-foreground text-foreground p-3 focus:outline-none focus:ring-0 shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] transition-none placeholder:text-muted-foreground/40 font-mono text-sm rounded-none"
+            className="min-h-[44px] w-full bg-background border-4 border-foreground text-foreground p-3 focus:outline-none focus:ring-0 shadow-brutal-sm focus:shadow-none focus:translate-x-1 focus:translate-y-1 transition-all duration-200 placeholder:text-muted-foreground/40 font-mono text-sm rounded-none"
             {...form.register("url")}
           />
         </div>
@@ -82,7 +82,7 @@ export function CaptureManualForm({
           <input
             id="capture-meta-ref"
             placeholder="SOURCE IDENTIFIER"
-            className="min-h-[44px] w-full bg-background border-4 border-foreground text-foreground p-3 focus:outline-none focus:ring-0 shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] transition-none placeholder:text-muted-foreground/40 font-mono text-sm uppercase rounded-none"
+            className="min-h-[44px] w-full bg-background border-4 border-foreground text-foreground p-3 focus:outline-none focus:ring-0 shadow-brutal-sm focus:shadow-none focus:translate-x-1 focus:translate-y-1 transition-all duration-200 placeholder:text-muted-foreground/40 font-mono text-sm uppercase rounded-none"
             {...form.register("source_title")}
           />
         </div>
@@ -112,7 +112,7 @@ export function CaptureManualForm({
                 />
                 <label
                   htmlFor={inputId}
-                  className={`min-h-[44px] px-4 py-2 border-4 font-mono text-xs font-bold uppercase flex items-center justify-center transition-transform active:translate-y-[2px] active:translate-x-[2px] hover:bg-foreground hover:text-background shadow-brutal-sm cursor-pointer ${checked
+                  className={`min-h-[44px] px-4 py-2 border-4 font-mono text-xs font-bold uppercase flex items-center justify-center transition-all duration-200 active:translate-y-1 active:translate-x-1 hover:bg-foreground hover:text-background shadow-brutal-sm hover:shadow-none hover:translate-x-1 hover:translate-y-1 cursor-pointer ${checked
                     ? "border-foreground bg-foreground text-background"
                     : "border-foreground bg-background text-foreground"
                     }`}
@@ -150,13 +150,13 @@ export function CaptureManualForm({
                 type="button"
                 onClick={onMergeDuplicate}
                 disabled={mutationPending}
-                className="min-h-[44px] flex items-center justify-center border-4 border-foreground bg-foreground px-4 py-2 font-mono text-xs font-bold uppercase text-background transition-transform active:translate-y-[2px] active:translate-x-[2px] hover:bg-background hover:text-foreground hover:shadow-brutal-sm shadow-brutal"
+                className="min-h-[44px] flex items-center justify-center border-4 border-foreground bg-foreground px-4 py-2 font-mono text-xs font-bold uppercase text-background transition-all duration-200 active:translate-y-1 active:translate-x-1 hover:bg-background hover:text-foreground shadow-brutal hover:shadow-none hover:translate-x-1 hover:translate-y-1"
               >
                 {t("capture.mergeDuplicate", "중복 병합 저장")}
               </button>
               <Link
                 href={`/records/${duplicateRecordId}?from=${encodeURIComponent("/capture")}`}
-                className="min-h-[44px] flex items-center justify-center border-4 border-foreground bg-background px-4 py-2 font-mono text-xs font-bold uppercase text-foreground transition-transform active:translate-y-[2px] active:translate-x-[2px] hover:bg-foreground hover:text-background hover:shadow-brutal"
+                className="min-h-[44px] flex items-center justify-center border-4 border-foreground bg-background px-4 py-2 font-mono text-xs font-bold uppercase text-foreground transition-all duration-200 active:translate-y-1 active:translate-x-1 hover:bg-foreground hover:text-background shadow-brutal hover:shadow-none hover:translate-x-1 hover:translate-y-1"
               >
                 {t("capture.openExisting", "기존 항목 보기")}
               </Link>
@@ -174,7 +174,7 @@ export function CaptureManualForm({
         <button
           type="submit"
           disabled={mutationPending}
-          className="w-full mt-4 bg-foreground text-background font-black text-xl uppercase py-5 border-4 border-foreground hover:bg-accent hover:border-accent hover:text-accent-foreground transition-transform active:translate-y-[4px] active:translate-x-[4px] disabled:opacity-50 disabled:cursor-not-allowed rounded-none shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.1)] active:shadow-none"
+          className="w-full mt-4 bg-foreground text-background font-black text-xl uppercase py-5 border-4 border-foreground hover:bg-accent hover:border-accent hover:text-accent-foreground transition-all duration-200 active:translate-y-1 active:translate-x-1 hover:translate-y-1 hover:translate-x-1 hover:shadow-none disabled:opacity-50 disabled:cursor-not-allowed rounded-none shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.1)] active:shadow-none group"
         >
           {mutationPending ? (
             <div className="flex items-center justify-center gap-3">

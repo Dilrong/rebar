@@ -41,6 +41,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="ko" suppressHydrationWarning>
       <body className={`${inter.variable} ${mono.variable}`}>
+        <div className="bg-noise pointer-events-none fixed inset-0 z-[9999] opacity-[0.04] mix-blend-multiply dark:opacity-[0.06] dark:mix-blend-screen" aria-hidden="true" />
         <Providers>{children}</Providers>
       </body>
     </html>

@@ -48,9 +48,10 @@ export const LibraryRecordCard = memo(function LibraryRecordCard({
     <div
       onMouseEnter={handlePrefetch}
       onFocus={handlePrefetch}
-      className="group flex h-48 flex-col border-[3px] md:border-4 border-foreground bg-card p-4 md:p-6 shadow-brutal-sm md:shadow-brutal hover:bg-foreground hover:text-background active:translate-x-1 active:translate-y-1 active:shadow-none transition-all md:h-72"
+      className="group flex h-48 flex-col border-[3px] md:border-4 border-foreground bg-card p-4 md:p-6 shadow-brutal hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.1)] active:translate-x-1 active:translate-y-1 active:shadow-none transition-all duration-200 md:h-72 bg-noise relative overflow-hidden text-foreground hover:bg-foreground hover:text-background"
     >
-      <div className="flex justify-between items-start mb-3 md:mb-4">
+      <div className="absolute top-0 right-0 w-24 h-24 bg-background opacity-5 md:opacity-10 group-hover:opacity-20 transition-opacity pointer-events-none" style={{ clipPath: 'polygon(100% 0, 0 0, 100% 100%)' }} />
+      <div className="flex justify-between items-start mb-3 md:mb-4 relative z-10">
         <div className="flex gap-2">
           <input
             id={`library-select-${id}`}
@@ -65,13 +66,13 @@ export const LibraryRecordCard = memo(function LibraryRecordCard({
           <label htmlFor={`library-select-${id}`} className="sr-only">
             Select record {id}
           </label>
-          <span className="font-mono text-[10px] font-bold border-2 border-current px-1.5 py-0.5 uppercase h-fit mt-1 hidden md:block group-hover:border-background">
+          <span className="font-mono text-[10px] font-bold border-2 border-current px-1.5 py-0.5 uppercase h-fit mt-1 hidden md:block group-hover:border-background shadow-[2px_2px_0px_0px_currentColor] group-hover:shadow-[2px_2px_0px_0px_var(--background)] transition-all">
             {record.kind}
           </span>
           <span
-            className={`font-mono text-[10px] font-bold border-2 px-1.5 py-0.5 uppercase h-fit mt-1 hidden md:block ${record.state === "INBOX"
-              ? "border-accent text-accent group-hover:border-background group-hover:text-background"
-              : "border-current group-hover:border-background"
+            className={`font-mono text-[10px] font-bold border-2 px-1.5 py-0.5 uppercase h-fit mt-1 hidden md:block transition-all ${record.state === "INBOX"
+              ? "border-accent text-accent shadow-[2px_2px_0px_0px_theme(colors.accent.DEFAULT)] group-hover:border-background group-hover:text-background group-hover:shadow-[2px_2px_0px_0px_var(--background)]"
+              : "border-current shadow-[2px_2px_0px_0px_currentColor] group-hover:border-background group-hover:shadow-[2px_2px_0px_0px_var(--background)]"
               }`}
           >
             {getStateLabel(record.state, t)}
@@ -111,8 +112,8 @@ export const LibraryRecordCard = memo(function LibraryRecordCard({
         ) : null}
       </div>
 
-      <Link href={toRecordHref(id)} className="flex-1 overflow-hidden flex flex-col">
-        <p className="font-bold text-base md:text-lg leading-tight line-clamp-5 flex-1 mb-4">
+      <Link href={toRecordHref(id)} className="flex-1 overflow-hidden flex flex-col relative z-10">
+        <p className="font-bold text-base md:text-lg leading-tight line-clamp-5 flex-1 mb-4 group-hover:text-glitch transition-all">
           {stripMarkdown(record.content)}
         </p>
 

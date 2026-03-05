@@ -31,13 +31,13 @@ export function CaptureUrlSection({
           value={externalUrl}
           onChange={(event) => onExternalUrlChange(event.target.value)}
           placeholder="https://..."
-          className="min-h-[44px] w-full bg-background border-4 border-foreground text-foreground px-4 py-3 font-mono text-sm focus:outline-none focus:ring-0 shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] placeholder:text-muted-foreground/50 rounded-none transition-none"
+          className="min-h-[44px] w-full bg-background border-4 border-foreground text-foreground px-4 py-3 font-mono text-sm focus:outline-none focus:ring-0 shadow-brutal-sm focus:shadow-none focus:translate-x-1 focus:translate-y-1 transition-all duration-200 placeholder:text-muted-foreground/50 rounded-none"
         />
         <button
           type="button"
           onClick={onImport}
           disabled={!externalUrl || importPending}
-          className="min-h-[44px] px-4 py-3 border-4 border-foreground font-mono text-xs font-bold uppercase bg-background text-foreground min-w-[100px] flex items-center justify-center hover:bg-foreground hover:text-background transition-all active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm"
+          className="min-h-[44px] px-4 py-3 border-4 border-foreground font-mono text-xs font-bold uppercase bg-background text-foreground min-w-[100px] flex items-center justify-center hover:bg-foreground hover:text-background transition-all duration-200 active:translate-y-1 active:translate-x-1 shadow-brutal-sm hover:translate-x-1 hover:translate-y-1 hover:shadow-none"
         >
           {importPending ? <LoadingDots /> : t("capture.import", "IMPORT")}
         </button>

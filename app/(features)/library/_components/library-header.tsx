@@ -35,14 +35,16 @@ export function LibraryHeader({
   onMenuItemKeyDown
 }: LibraryHeaderProps) {
   return (
-    <header className="mb-6 md:mb-8 flex flex-col md:flex-row md:items-end justify-between border-b-[3px] md:border-b-4 border-foreground pb-3 md:pb-4 gap-3 md:gap-4">
-      <h1 className="font-black text-4xl md:text-5xl uppercase text-foreground leading-none flex items-center gap-3 md:gap-4">
-        <Database className="w-8 h-8 md:w-10 md:h-10" strokeWidth={3} />
-        {t("library.title", "VAULT")}
+    <header className="mb-6 md:mb-8 flex flex-col md:flex-row md:items-end justify-between border-[3px] md:border-4 border-foreground pb-4 p-4 md:p-6 bg-noise relative overflow-hidden shadow-brutal-sm md:shadow-brutal gap-4 md:gap-6 bg-card transition-all duration-300">
+      <div className="absolute top-0 right-0 w-16 h-16 md:w-24 md:h-24 bg-accent opacity-20 pointer-events-none" style={{ clipPath: 'polygon(100% 0, 0 0, 100% 100%)' }} />
+      <h1 className="font-black text-4xl sm:text-5xl uppercase text-foreground leading-none flex items-center gap-3 relative z-10 transition-transform hover:translate-x-1 cursor-default">
+        <Database className="w-8 h-8 md:w-10 md:h-10 text-accent" strokeWidth={3} />
+        <span className="text-glitch transition-all">{t("library.title", "VAULT")}</span>
       </h1>
-      <div className="flex items-center gap-2 md:gap-3">
-        <span className="min-h-[44px] flex items-center justify-center font-mono text-xs md:text-sm font-bold bg-foreground text-background px-3 py-2 uppercase">
-          {t("library.rows", "ROWS")}: {totalRows}
+      <div className="flex flex-wrap items-center gap-2 md:gap-3 relative z-10">
+        <span className="min-h-[44px] flex flex-col md:flex-row md:items-center justify-center font-mono text-xs md:text-sm font-bold border-[3px] md:border-4 border-foreground text-foreground bg-background px-3 py-1 shadow-brutal-sm uppercase">
+          <span className="opacity-80 text-[10px] md:mr-2 tracking-widest">{t("library.rows", "ROWS")}:</span>
+          <span className="font-black text-lg leading-none">{totalRows}</span>
         </span>
         <LibraryExportMenu
           t={t}

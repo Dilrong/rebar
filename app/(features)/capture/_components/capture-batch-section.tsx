@@ -38,14 +38,14 @@ export function CaptureBatchSection({
         <div className="flex flex-wrap items-center gap-2">
           <Link
             href="/api/capture/ingest"
-            className="min-h-[44px] flex items-center justify-center border-4 border-foreground px-4 py-2 font-mono text-[10px] font-bold uppercase hover:bg-foreground hover:text-background transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm"
+            className="min-h-[44px] flex items-center justify-center border-4 border-foreground px-4 py-2 font-mono text-[10px] font-bold uppercase hover:bg-foreground hover:text-background transition-all duration-200 active:translate-y-1 active:translate-x-1 shadow-brutal-sm hover:shadow-none hover:translate-x-1 hover:translate-y-1"
             target="_blank"
           >
             API
           </Link>
           <Link
             href="/api/capture/guide"
-            className="min-h-[44px] flex items-center justify-center border-4 border-foreground px-4 py-2 font-mono text-[10px] font-bold uppercase hover:bg-foreground hover:text-background transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm"
+            className="min-h-[44px] flex items-center justify-center border-4 border-foreground px-4 py-2 font-mono text-[10px] font-bold uppercase hover:bg-foreground hover:text-background transition-all duration-200 active:translate-y-1 active:translate-x-1 shadow-brutal-sm hover:shadow-none hover:translate-x-1 hover:translate-y-1"
             target="_blank"
           >
             {t("capture.guide", "GUIDE")}
@@ -64,7 +64,7 @@ export function CaptureBatchSection({
           "capture.ingestPlaceholder",
           '[{"content":"...","title":"...","url":"https://...","tags":["book","idea"]}]'
         )}
-        className="w-full bg-background border-4 border-foreground text-foreground p-3 font-mono text-xs focus:outline-none focus:ring-0 shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] rounded-none resize-y transition-none"
+        className="w-full bg-background border-4 border-foreground text-foreground p-3 font-mono text-xs focus:outline-none focus:ring-0 shadow-brutal-sm focus:shadow-none focus:translate-x-1 focus:translate-y-1 transition-all duration-200 rounded-none resize-y"
       />
       <div className="mt-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <p className="font-mono text-[10px] font-bold text-muted-foreground">
@@ -74,7 +74,7 @@ export function CaptureBatchSection({
           type="button"
           onClick={onRunBatchImport}
           disabled={!externalJson.trim() || ingestPending}
-          className="min-h-[44px] flex items-center justify-center border-4 border-foreground bg-background px-4 py-2 font-mono text-xs font-bold uppercase disabled:opacity-60 hover:bg-foreground hover:text-background transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm w-full sm:w-auto"
+          className="min-h-[44px] flex items-center justify-center border-4 border-foreground bg-background px-4 py-2 font-mono text-xs font-bold uppercase disabled:opacity-60 hover:bg-foreground hover:text-background transition-all duration-200 active:translate-y-1 active:translate-x-1 shadow-brutal-sm hover:shadow-none hover:translate-x-1 hover:translate-y-1 w-full sm:w-auto"
         >
           {ingestPending ? t("capture.ingesting", "IMPORTING...") : t("capture.ingestRun", "BATCH IMPORT")}
         </button>
@@ -99,7 +99,7 @@ content-type: application/json
           <p className="mb-3 font-mono text-[10px] font-bold uppercase">{t("capture.shareTitle", "SHARE WEBHOOK (KAKAO/TELEGRAM)")}</p>
           <Link
             href="/share"
-            className="min-h-[44px] mb-4 inline-flex items-center justify-center border-4 border-foreground px-4 py-2 font-mono text-[10px] font-bold uppercase hover:bg-foreground hover:text-background transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm"
+            className="min-h-[44px] mb-4 inline-flex items-center justify-center border-4 border-foreground px-4 py-2 font-mono text-[10px] font-bold uppercase hover:bg-foreground hover:text-background transition-all duration-200 active:translate-y-1 active:translate-x-1 shadow-brutal-sm hover:shadow-none hover:translate-x-1 hover:translate-y-1"
           >
             {t("capture.sharePage", "OPEN MOBILE SHARE PAGE")}
           </Link>
@@ -121,7 +121,7 @@ content-type: application/json
               type="button"
               onClick={onRetryAll}
               disabled={pendingJobsTotal === 0 || retryAllPending}
-              className="min-h-[44px] flex items-center justify-center border-4 border-foreground bg-foreground px-4 py-2 font-mono text-[10px] font-bold uppercase text-background disabled:opacity-60 transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm"
+              className="min-h-[44px] flex items-center justify-center border-4 border-foreground bg-foreground px-4 py-2 font-mono text-[10px] font-bold uppercase text-background disabled:opacity-60 transition-all duration-200 active:translate-y-1 active:translate-x-1 shadow-brutal-sm hover:shadow-none hover:translate-x-1 hover:translate-y-1 hover:bg-background hover:text-foreground"
             >
               {t("capture.retryRun", "RETRY ALL")}
             </button>
@@ -129,7 +129,7 @@ content-type: application/json
               type="button"
               onClick={onClearRetry}
               disabled={pendingJobsTotal === 0 || clearRetryPending}
-              className="min-h-[44px] flex items-center justify-center border-4 border-foreground bg-background px-4 py-2 font-mono text-[10px] font-bold uppercase disabled:opacity-60 hover:bg-foreground hover:text-background transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm"
+              className="min-h-[44px] flex items-center justify-center border-4 border-foreground bg-background px-4 py-2 font-mono text-[10px] font-bold uppercase disabled:opacity-60 hover:bg-foreground hover:text-background transition-all duration-200 active:translate-y-1 active:translate-x-1 shadow-brutal-sm hover:shadow-none hover:translate-x-1 hover:translate-y-1"
             >
               {t("capture.retryClear", "CLEAR")}
             </button>

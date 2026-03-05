@@ -34,7 +34,7 @@ export function CaptureOcrSection({
         type="file"
         accept="image/*"
         onChange={onOcrFileChange}
-        className="min-h-[44px] w-full bg-background border-4 border-foreground text-foreground p-3 font-mono text-xs rounded-none shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] focus:outline-none focus:ring-0 cursor-pointer"
+        className="min-h-[44px] w-full bg-background border-4 border-foreground text-foreground p-3 font-mono text-xs rounded-none shadow-brutal-sm focus:outline-none focus:ring-0 cursor-pointer focus:shadow-none focus:translate-x-1 focus:translate-y-1 transition-all duration-200 file:mr-4 file:py-2 file:px-4 file:border-4 file:border-foreground file:text-xs file:font-bold file:uppercase file:bg-foreground file:text-background hover:file:bg-background hover:file:text-foreground file:transition-all file:duration-200 file:cursor-pointer"
       />
       {ocrFileName ? (
         <p className="mt-3 font-mono text-xs text-foreground">{t("capture.ocrSelected", "Selected image")}: {ocrFileName}</p>
@@ -47,7 +47,7 @@ export function CaptureOcrSection({
           type="button"
           onClick={onSubmit}
           disabled={!hasOcrFile || ocrPending}
-          className="min-h-[44px] w-full sm:w-auto flex items-center justify-center border-4 border-foreground bg-background px-4 py-2 font-mono text-xs font-bold uppercase disabled:opacity-60 hover:bg-foreground hover:text-background transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm"
+          className="min-h-[44px] w-full sm:w-auto flex items-center justify-center border-4 border-foreground bg-background px-4 py-2 font-mono text-xs font-bold uppercase disabled:opacity-60 hover:bg-foreground hover:text-background transition-all duration-200 active:translate-y-1 active:translate-x-1 shadow-brutal-sm hover:shadow-none hover:translate-x-1 hover:translate-y-1"
         >
           {ocrPending ? t("capture.ocrRunning", "READING...") : t("capture.ocrRun", "EXTRACT TEXT")}
         </button>
