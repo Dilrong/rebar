@@ -1,29 +1,26 @@
-import { DEFAULT_SETTINGS } from "./shared.js"
+import { DEFAULT_SETTINGS, isValidUrl, normalizeUrl, errorMessage } from "./shared.js"
 import { initI18n, t } from "./i18n.js"
 
 const form = {
   rebarUrl: document.getElementById("rebarUrl"),
   defaultTags: document.getElementById("defaultTags")
 }
-
 const saveButton = document.getElementById("save")
 const testConnButton = document.getElementById("testConn")
 const statusEl = document.getElementById("status")
 
 function setStatus(message, tone = "normal") {
   statusEl.textContent = message
-  statusEl.className = ""
-  if (tone === "error") statusEl.classList.add("is-error")
-  else if (tone === "success") statusEl.classList.add("is-success")
+  statusEl.className = tone !== "normal" ? `is-${tone}` : ""
 }
 
-function isValidUrl(value) {
-  try {
-    const url = new URL(value)
-    return url.protocol === "http:" || url.protocol === "https:"
-  } catch {
-    return false
+function getFormUrl() {
+  const url = normalizeUrl(form.rebarUrl.value) || DEFAULT_SETTINGS.rebarUrl
+  if (!isValidUrl(url)) {
+    setStatus(t("ext.opt.invalidUrl"), "error")
+    return null
   }
+  return url
 }
 
 async function load() {
@@ -33,46 +30,33 @@ async function load() {
 }
 
 async function save() {
-  let urlStr = form.rebarUrl.value.trim() || DEFAULT_SETTINGS.rebarUrl
-  // clean up URL, remove trailing slash
-  urlStr = urlStr.replace(/\/+$/, "")
+  const urlStr = getFormUrl()
+  if (!urlStr) return
 
-  if (!isValidUrl(urlStr)) {
-    setStatus(t("ext.opt.invalidUrl"), "error")
-    return
+  saveButton.disabled = true
+  try {
+    await chrome.storage.sync.set({
+      rebarUrl: urlStr,
+      defaultTags: form.defaultTags.value.trim() || DEFAULT_SETTINGS.defaultTags
+    })
+    setStatus(t("ext.opt.saved"), "success")
+  } finally {
+    saveButton.disabled = false
   }
-
-  const payload = {
-    rebarUrl: urlStr,
-    defaultTags: form.defaultTags.value.trim() || DEFAULT_SETTINGS.defaultTags
-  }
-
-  await chrome.storage.sync.set(payload)
-  setStatus(t("ext.opt.saved"), "success")
 }
 
 async function testConnection() {
-  let urlStr = form.rebarUrl.value.trim() || DEFAULT_SETTINGS.rebarUrl
-  urlStr = urlStr.replace(/\/+$/, "")
-
-  if (!isValidUrl(urlStr)) {
-    setStatus(t("ext.opt.invalidUrl"), "error")
-    return
-  }
+  const urlStr = getFormUrl()
+  if (!urlStr) return
 
   testConnButton.disabled = true
   setStatus(t("ext.status.checking"))
 
   try {
     const res = await fetch(`${urlStr}/api/auth/check`, { credentials: "include" })
-
-    if (res.ok) {
-      setStatus(t("ext.opt.connOk"), "success")
-    } else if (res.status === 401) {
-      setStatus(t("ext.opt.connNoAuth"), "error")
-    } else {
-      setStatus(t("ext.opt.connFail"), "error")
-    }
+    if (res.ok) setStatus(t("ext.opt.connOk"), "success")
+    else if (res.status === 401) setStatus(t("ext.opt.connNoAuth"), "error")
+    else setStatus(t("ext.opt.connFail"), "error")
   } catch {
     setStatus(t("ext.opt.connFail"), "error")
   } finally {
@@ -80,20 +64,10 @@ async function testConnection() {
   }
 }
 
-saveButton.addEventListener("click", () => {
-  save().catch((error) => {
-    setStatus(error instanceof Error ? error.message : t("ui.error"), "error")
-  })
-})
+const handle = (fn) => () => fn().catch((e) => setStatus(errorMessage(e), "error"))
 
-testConnButton.addEventListener("click", () => {
-  testConnection().catch((error) => {
-    setStatus(error instanceof Error ? error.message : t("ui.error"), "error")
-  })
-})
+saveButton.addEventListener("click", handle(save))
+testConnButton.addEventListener("click", handle(testConnection))
 
-load().catch((error) => {
-  setStatus(error instanceof Error ? error.message : t("ui.error"), "error")
-})
-
+load().catch((e) => setStatus(errorMessage(e), "error"))
 initI18n()

@@ -12,6 +12,9 @@
   --shadow: #111;
   --success: #166534;
   --error: #b91c1c;
+  --font-sans: "Inter", "Helvetica Neue", "Arial Nova", "Segoe UI", sans-serif;
+  --font-mono: "SFMono-Regular", "Cascadia Mono", "IBM Plex Mono", "Consolas", monospace;
+  --noise: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
 }
 
 @media (prefers-color-scheme: dark) {
@@ -28,8 +31,11 @@
 
 body {
   margin: 0;
-  font-family: "Inter", "Noto Sans KR", ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-sans);
   background: var(--bg);
+  background-image: var(--noise);
+  background-blend-mode: overlay;
+  background-attachment: fixed;
   color: var(--fg);
   display: flex;
   justify-content: center;
@@ -49,7 +55,7 @@ body {
 
 h1 {
   margin: 0 0 4px;
-  font-size: 26px;
+  font-size: 28px;
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: -0.05em;
@@ -74,6 +80,7 @@ legend {
   padding: 0 8px;
   font-size: 14px;
   font-weight: 900;
+  font-family: var(--font-mono);
   text-transform: uppercase;
   background: var(--card);
   color: var(--fg);
@@ -86,10 +93,11 @@ legend {
   font-size: 12px;
   line-height: 1.5;
   font-weight: 600;
+  font-family: var(--font-mono);
   color: var(--muted);
   background: var(--bg);
   padding: 10px;
-  border: 3px solid var(--border);
+  border: 4px solid var(--border);
 }
 
 label {
@@ -97,6 +105,7 @@ label {
   margin-bottom: 14px;
   font-size: 12px;
   font-weight: 900;
+  font-family: var(--font-mono);
   text-transform: uppercase;
   color: var(--fg);
 }
@@ -117,24 +126,10 @@ input[type="text"] {
 
 input[type="url"]:focus,
 input[type="text"]:focus {
-  outline: none;
-  box-shadow: 4px 4px 0 var(--shadow);
-}
-
-.checkbox-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 14px 0 0;
-  cursor: pointer;
-}
-
-.checkbox-row input {
-  width: 22px;
-  height: 22px;
-  margin-top: 0;
-  cursor: pointer;
-  accent-color: var(--accent);
+  outline: 4px solid var(--accent);
+  outline-offset: 2px;
+  box-shadow: inset 4px 4px 0 0 var(--shadow);
+  transform: translate(2px, 2px);
 }
 
 /* ── Button row ── */
@@ -149,27 +144,29 @@ input[type="text"]:focus {
   border: 4px solid var(--border);
   padding: 14px;
   font-size: 14px;
-  font-family: inherit;
+  font-family: var(--font-sans);
   font-weight: 900;
   text-transform: uppercase;
   cursor: pointer;
-  box-shadow: 4px 4px 0 var(--shadow);
+  box-shadow: 8px 8px 0 var(--shadow);
   transition: transform 0.08s, box-shadow 0.08s, background 0.15s, color 0.15s;
 }
 
 .save-btn {
-  background: var(--fg);
-  color: var(--bg);
+  background: var(--accent);
+  color: #fff;
 }
 
 .save-btn:hover:not(:disabled) {
-  background: var(--accent);
-  color: #fff;
+  background: var(--fg);
+  color: var(--bg);
   border-color: var(--border);
+  transform: translate(2px, 2px);
+  box-shadow: 6px 6px 0 var(--shadow);
 }
 
 .save-btn:active:not(:disabled) {
-  transform: translate(4px, 4px);
+  transform: translate(8px, 8px);
   box-shadow: 0 0 0 var(--shadow);
 }
 
@@ -181,10 +178,12 @@ input[type="text"]:focus {
 .test-btn:hover:not(:disabled) {
   background: var(--fg);
   color: var(--bg);
+  transform: translate(2px, 2px);
+  box-shadow: 6px 6px 0 var(--shadow);
 }
 
 .test-btn:active:not(:disabled) {
-  transform: translate(4px, 4px);
+  transform: translate(8px, 8px);
   box-shadow: 0 0 0 var(--shadow);
 }
 
@@ -193,6 +192,7 @@ input[type="text"]:focus {
   opacity: 0.45;
   cursor: not-allowed;
   box-shadow: none;
+  transform: none;
 }
 
 /* ── Status ── */
@@ -200,6 +200,7 @@ input[type="text"]:focus {
   margin-top: 20px;
   font-size: 12px;
   font-weight: 900;
+  font-family: var(--font-mono);
   text-transform: uppercase;
   color: var(--fg);
   text-align: center;

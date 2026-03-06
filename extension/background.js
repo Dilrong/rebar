@@ -1,31 +1,25 @@
-import { DEFAULT_SETTINGS, parseTags } from "./shared.js"
+import { DEFAULT_SETTINGS, MSG, parseTags, isValidUrl, normalizeUrl, errorMessage, CONTENT_LIMIT } from "./shared.js"
 import { t } from "./i18n.js"
 
-const MENU_SAVE_HIGHLIGHT = "rebar-save-highlight"
-const MENU_CLIP_ARTICLE = "rebar-clip-article"
-const MENU_OPEN_SETTINGS = "rebar-open-settings"
-
-// ─────────────────────────────────────────────
-// Settings
-// ─────────────────────────────────────────────
+function chromeAsync(fn) {
+  return new Promise((resolve, reject) => {
+    fn((...args) => {
+      if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message))
+      else resolve(...args)
+    })
+  })
+}
 
 async function getSettings() {
   const stored = await chrome.storage.sync.get(DEFAULT_SETTINGS)
-  return {
-    rebarUrl: stored.rebarUrl || DEFAULT_SETTINGS.rebarUrl,
-    defaultTags: stored.defaultTags || DEFAULT_SETTINGS.defaultTags
-  }
+  const rebarUrl = normalizeUrl(stored.rebarUrl || DEFAULT_SETTINGS.rebarUrl)
+  if (!isValidUrl(rebarUrl)) throw new Error(t("ext.opt.invalidUrl"))
+  return { rebarUrl, defaultTags: stored.defaultTags || DEFAULT_SETTINGS.defaultTags }
 }
 
-// ─────────────────────────────────────────────
-// Networking
-// ─────────────────────────────────────────────
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
-function wait(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms))
-}
-
-async function fetchWithRetry(url, options, maxRetries = 2, signal) {
+async function fetchWithRetry(url, options, { maxRetries = 2, signal } = {}) {
   let lastError
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     if (signal?.aborted) throw new DOMException("Cancelled", "AbortError")
@@ -43,7 +37,10 @@ async function fetchWithRetry(url, options, maxRetries = 2, signal) {
     } catch (error) {
       lastError = error
       if (error.name === "AbortError") throw error
-      if (error instanceof TypeError && attempt < maxRetries) { await wait((attempt + 1) * 1000); continue }
+      if (error instanceof TypeError && attempt < maxRetries) {
+        await wait((attempt + 1) * 1000)
+        continue
+      }
       throw error
     }
   }
@@ -51,232 +48,177 @@ async function fetchWithRetry(url, options, maxRetries = 2, signal) {
 }
 
 async function checkAuth(rebarUrl) {
-  try {
-    const res = await fetch(`${rebarUrl}/api/auth/check`, { credentials: "include" })
-    return res.ok
-  } catch {
-    return false
-  }
+  try { return (await fetch(`${rebarUrl}/api/auth/check`, { credentials: "include" })).ok }
+  catch { return false }
 }
 
 async function saveCapture(payload, signal) {
   const settings = await getSettings()
-  const trimmedContent = (payload.content || "").trim()
-  if (!trimmedContent) throw new Error(t("ext.noArticle"))
+  const content = (payload.content || "").trim()
+  if (!content) throw new Error(t("ext.noArticle"))
 
-  const tags = Array.from(new Set([...(payload.tags || []), ...parseTags(settings.defaultTags)]))
+  const tags = [...new Set([...(payload.tags || []), ...parseTags(settings.defaultTags)])]
   const body = {
-    content: trimmedContent,
+    content,
     title: payload.title || undefined,
     url: payload.url || undefined,
+    kind: payload.kind || undefined,
     tags: tags.length > 0 ? tags : undefined
   }
 
   const res = await fetchWithRetry(
     `${settings.rebarUrl}/api/capture/share`,
     { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify(body) },
-    2,
-    signal
+    { signal }
   )
 
   if (!res.ok) {
     if (res.status === 401 || res.status === 403) throw new Error(t("ext.status.authRequired"))
     throw new Error(`${t("ext.saveFailed")}: ${res.status}`)
   }
-
   return res.json()
 }
 
-// ─────────────────────────────────────────────
-// Tab helpers
-// ─────────────────────────────────────────────
-
 function sendBanner(tabId, state, message) {
-  return chrome.tabs.sendMessage(tabId, { type: "SHOW_BANNER", state, message }).catch(() => { })
+  return chrome.tabs.sendMessage(tabId, { type: MSG.SHOW_BANNER, state, message, cancelLabel: t("ui.cancel") })
+    .catch((e) => console.warn("[REBAR] sendBanner:", e.message))
 }
 
-function hideBanner(tabId) {
-  return chrome.tabs.sendMessage(tabId, { type: "HIDE_BANNER" }).catch(() => { })
-}
-
-function sendMessageToTab(tabId, message) {
-  return new Promise((resolve, reject) => {
-    chrome.tabs.sendMessage(tabId, message, (response) => {
-      if (chrome.runtime.lastError) { reject(new Error(chrome.runtime.lastError.message)); return }
-      resolve(response)
-    })
-  })
+function sendToTab(tabId, message) {
+  return chromeAsync((cb) => chrome.tabs.sendMessage(tabId, message, cb))
 }
 
 function injectContentScript(tabId) {
-  return new Promise((resolve, reject) => {
-    chrome.scripting.executeScript({ target: { tabId }, files: ["content.js"] }, () => {
-      if (chrome.runtime.lastError) { reject(new Error(chrome.runtime.lastError.message)); return }
-      resolve()
-    })
-  })
+  return chromeAsync((cb) => chrome.scripting.executeScript({ target: { tabId }, files: ["content.js"] }, cb))
 }
 
-async function tryGetMessage(tabId, type) {
-  try { return await sendMessageToTab(tabId, { type }) }
-  catch { await injectContentScript(tabId); return sendMessageToTab(tabId, { type }) }
+async function queryTab(tabId, type) {
+  try { return await sendToTab(tabId, { type }) }
+  catch { await injectContentScript(tabId); return sendToTab(tabId, { type }) }
 }
 
-function isBlockedPage(url) {
-  if (typeof url !== "string") return true
-  return ["chrome://", "chrome-extension://", "edge://", "about:", "moz-extension://"].some((p) => url.startsWith(p))
-}
+const BLOCKED_PREFIXES = ["chrome://", "chrome-extension://", "edge://", "about:", "moz-extension://"]
+const isBlockedPage = (url) => typeof url !== "string" || BLOCKED_PREFIXES.some((p) => url.startsWith(p))
 
-// ─────────────────────────────────────────────
-// One-click save (Instapaper style)
-// ─────────────────────────────────────────────
-
-// Map tabId → AbortController for cancel support
 const saveControllers = new Map()
 
 async function oneShotSave(tab) {
   const tabId = tab?.id
-  if (!tab || typeof tabId !== "number") return
+  if (!tab || typeof tabId !== "number" || saveControllers.has(tabId)) return
 
   if (isBlockedPage(tab.url)) {
     await sendBanner(tabId, "error", t("ext.blockedPage"))
     return
   }
 
-  // Check auth first
   const settings = await getSettings()
-  const authed = await checkAuth(settings.rebarUrl)
-
-  if (!authed) {
-    // Open login page in new tab
+  if (!(await checkAuth(settings.rebarUrl))) {
     chrome.tabs.create({ url: `${settings.rebarUrl}/signup`, active: true })
     return
   }
 
-  // Show loading banner
+  await injectContentScript(tabId).catch(() => {})
   await sendBanner(tabId, "loading", t("ext.status.saving"))
 
-  // Create abort controller for cancel support
   const controller = new AbortController()
   saveControllers.set(tabId, controller)
 
   try {
-    const response = await tryGetMessage(tabId, "GET_ARTICLE")
-    const payload = response?.payload
+    const { payload } = await queryTab(tabId, MSG.GET_ARTICLE)
     if (!payload?.content) throw new Error(t("ext.noArticle"))
-
     if (controller.signal.aborted) return
 
     await saveCapture(payload, controller.signal)
     await sendBanner(tabId, "success", t("ext.savedSuccess"))
   } catch (error) {
-    if (error?.name === "AbortError") return // User cancelled — banner already gone
-    await sendBanner(tabId, "error", error instanceof Error ? error.message : t("ui.error"))
+    if (error?.name === "AbortError") return
+    await sendBanner(tabId, "error", errorMessage(error))
   } finally {
     saveControllers.delete(tabId)
   }
 }
 
-// ─────────────────────────────────────────────
-// Context menus
-// ─────────────────────────────────────────────
-
-function removeAllContextMenus() {
-  return new Promise((resolve) => { chrome.contextMenus.removeAll(() => resolve()) })
-}
-
-function createContextMenu(options) {
-  return new Promise((resolve, reject) => {
-    chrome.contextMenus.create(options, () => {
-      if (chrome.runtime.lastError) { reject(new Error(chrome.runtime.lastError.message)); return }
-      resolve()
-    })
-  })
-}
+const MENU_SAVE_HIGHLIGHT = "rebar-save-highlight"
+const MENU_CLIP_ARTICLE = "rebar-clip-article"
+const MENU_OPEN_SETTINGS = "rebar-open-settings"
 
 async function ensureContextMenus() {
   try {
-    await removeAllContextMenus()
-    await createContextMenu({ id: MENU_SAVE_HIGHLIGHT, title: "Save Highlight to REBAR", contexts: ["selection"] })
-    await createContextMenu({ id: MENU_CLIP_ARTICLE, title: "Clip Article to REBAR", contexts: ["page"] })
-    await createContextMenu({ id: MENU_OPEN_SETTINGS, title: "REBAR Settings…", contexts: ["action"] })
-  } catch { }
+    await chromeAsync((cb) => chrome.contextMenus.removeAll(cb))
+    const create = (opts) => chromeAsync((cb) => chrome.contextMenus.create(opts, cb))
+    await create({ id: MENU_SAVE_HIGHLIGHT, title: t("ext.highlightBtn"), contexts: ["selection"] })
+    await create({ id: MENU_CLIP_ARTICLE, title: t("ext.articleBtn"), contexts: ["page"] })
+    await create({ id: MENU_OPEN_SETTINGS, title: t("ext.openSettings"), contexts: ["action"] })
+  } catch (e) { console.warn("[REBAR] ensureContextMenus:", e.message) }
 }
 
-// ─────────────────────────────────────────────
-// Badge helpers
-// ─────────────────────────────────────────────
-
-function setActionStatus(text, color, title) {
-  chrome.action.setBadgeBackgroundColor({ color }).catch(() => { })
-  chrome.action.setBadgeText({ text }).catch(() => { })
-  chrome.action.setTitle({ title }).catch(() => { })
+function flashBadge(text, color, title) {
+  chrome.action.setBadgeBackgroundColor({ color }).catch(() => {})
+  chrome.action.setBadgeText({ text }).catch(() => {})
+  chrome.action.setTitle({ title }).catch(() => {})
   setTimeout(() => {
-    chrome.action.setBadgeText({ text: "" }).catch(() => { })
-    chrome.action.setTitle({ title: "Save to REBAR" }).catch(() => { })
+    chrome.action.setBadgeText({ text: "" }).catch(() => {})
+    chrome.action.setTitle({ title: "Save to REBAR" }).catch(() => {})
   }, 3000)
 }
 
-// ─────────────────────────────────────────────
-// Listeners
-// ─────────────────────────────────────────────
+const menuHandlers = {
+  [MENU_OPEN_SETTINGS]() {
+    chrome.runtime.openOptionsPage()
+  },
+  [MENU_SAVE_HIGHLIGHT](info, tab) {
+    const content = (info.selectionText || "").replace(/\s+/g, " ").trim().slice(0, CONTENT_LIMIT)
+    if (!content) { flashBadge("ERR", "#991b1b", t("ext.noHighlight")); return }
+    saveCapture({ content, title: tab.title || "", url: info.pageUrl || tab.url || "", kind: "quote", tags: ["highlight"] }, null)
+      .then(() => flashBadge("OK", "#166534", t("ext.savedSuccess")))
+      .catch((e) => flashBadge("ERR", "#991b1b", errorMessage(e)))
+  },
+  [MENU_CLIP_ARTICLE](_info, tab) {
+    oneShotSave(tab).catch((e) => console.warn("[REBAR] clip article:", e.message))
+  }
+}
 
-// 🔑 ONE-CLICK: icon click → immediate save
+const messageHandlers = {
+  [MSG.CANCEL_SAVE](_msg, sender) {
+    const tabId = sender.tab?.id
+    if (tabId !== undefined) {
+      const ctrl = saveControllers.get(tabId)
+      if (ctrl) { ctrl.abort(); saveControllers.delete(tabId) }
+    }
+    return { ok: true }
+  },
+  [MSG.SAVE_CAPTURE](msg) {
+    return saveCapture(msg.payload, null).then((data) => ({ ok: true, data }))
+  },
+  [MSG.GET_SETTINGS]() {
+    return getSettings().then((settings) => ({ ok: true, settings }))
+  }
+}
+
 chrome.action.onClicked.addListener((tab) => {
-  oneShotSave(tab).catch(() => { })
+  oneShotSave(tab).catch((e) => console.warn("[REBAR] oneShotSave:", e.message))
 })
 
-chrome.runtime.onInstalled.addListener(() => { ensureContextMenus().catch(() => { }) })
-chrome.runtime.onStartup.addListener(() => { ensureContextMenus().catch(() => { }) })
-ensureContextMenus().catch(() => { })
+chrome.runtime.onInstalled.addListener(() => ensureContextMenus().catch(() => {}))
+chrome.runtime.onStartup.addListener(() => ensureContextMenus().catch(() => {}))
+ensureContextMenus().catch(() => {})
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (!tab) return
-
-  if (info.menuItemId === MENU_OPEN_SETTINGS) {
-    chrome.runtime.openOptionsPage()
-    return
-  }
-
-  if (info.menuItemId === MENU_SAVE_HIGHLIGHT) {
-    const content = (info.selectionText || "").replace(/\s+/g, " ").trim()
-    if (!content) { setActionStatus("ERR", "#991b1b", "No text selected"); return }
-    saveCapture({ content, title: tab?.title || "", url: info.pageUrl || tab?.url || "", kind: "quote", tags: ["highlight"] }, null)
-      .then(() => setActionStatus("OK", "#166534", "Saved highlight to REBAR"))
-      .catch((error) => { const msg = error instanceof Error ? error.message : "Save failed"; setActionStatus("ERR", "#991b1b", msg) })
-    return
-  }
-
-  if (info.menuItemId === MENU_CLIP_ARTICLE) {
-    oneShotSave(tab).catch(() => { })
-  }
+  menuHandlers[info.menuItemId]?.(info, tab)
 })
 
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  // Cancel from in-page banner cancel button
-  if (message?.type === "CANCEL_SAVE") {
-    const tabId = _sender.tab?.id
-    if (tabId !== undefined) {
-      const controller = saveControllers.get(tabId)
-      if (controller) { controller.abort(); saveControllers.delete(tabId) }
-    }
-    sendResponse({ ok: true })
-    return true
-  }
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  const handler = messageHandlers[message?.type]
+  if (!handler) return false
 
-  if (message?.type === "SAVE_CAPTURE") {
-    saveCapture(message.payload, null)
-      .then((data) => sendResponse({ ok: true, data }))
-      .catch((error) => sendResponse({ ok: false, error: error instanceof Error ? error.message : "Unknown error" }))
-    return true
+  const result = handler(message, sender)
+  if (result instanceof Promise) {
+    result
+      .then((data) => sendResponse(data))
+      .catch((e) => sendResponse({ ok: false, error: errorMessage(e) }))
+  } else {
+    sendResponse(result)
   }
-
-  if (message?.type === "GET_SETTINGS") {
-    getSettings()
-      .then((settings) => sendResponse({ ok: true, settings }))
-      .catch((error) => sendResponse({ ok: false, error: error instanceof Error ? error.message : "Unknown error" }))
-    return true
-  }
-
-  return false
+  return true
 })

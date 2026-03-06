@@ -28,7 +28,7 @@ export function NavMobileTop({
   onToggleTheme
 }: NavMobileTopProps) {
   return (
-    <nav className="sticky top-0 z-30 mb-4 flex items-center gap-2 border-b-[3px] border-foreground bg-background bg-noise px-3 py-2 shadow-brutal-sm md:hidden">
+    <nav className="md:hidden sticky top-0 z-40 w-screen -ml-[calc(50vw-50%)] -mt-4 mb-6 flex items-center gap-2 border-b-[3px] border-foreground bg-background bg-noise px-4 py-2 pt-[calc(0.5rem+env(safe-area-inset-top))] shadow-[0_8px_0_0_rgba(0,0,0,1)] dark:shadow-[0_8px_0_0_rgba(255,255,255,0.05)]">
       <Link
         href={homeHref}
         className="mt-0.5 inline-flex min-h-[44px] shrink-0 items-center rotate-[-2deg] self-start border-[3px] border-foreground bg-accent px-2 py-0.5 font-black text-xl uppercase tracking-tighter text-white shadow-brutal transition-all duration-200 hover:rotate-0 hover:translate-x-1 hover:translate-y-1 hover:shadow-none"
