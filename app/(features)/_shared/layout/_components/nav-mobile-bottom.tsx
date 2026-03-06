@@ -8,12 +8,12 @@ type NavMobileBottomProps = {
 
 export function NavMobileBottom({ pathname }: NavMobileBottomProps) {
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 border-t-[3px] border-foreground bg-background bg-noise shadow-[0_-8px_0_0_rgba(0,0,0,1)] dark:shadow-[0_-8px_0_0_rgba(255,255,255,0.05)] pb-[env(safe-area-inset-bottom)]">
-      <div className="flex flex-row items-center justify-around px-1 py-1 relative">
+    <div className="md:hidden fixed bottom-0 left-[calc(50%-50vw)] right-[calc(50%-50vw)] z-40 border-t-[3px] border-foreground bg-background bg-noise shadow-[0_-8px_0_0_rgba(0,0,0,1)] dark:shadow-[0_-8px_0_0_rgba(255,255,255,0.05)] pb-[env(safe-area-inset-bottom)]">
+      <div className="relative grid min-h-[72px] grid-cols-4 items-end">
         <Link
           href="/library"
           className={cn(
-            "flex flex-col items-center justify-center p-3 min-w-[64px] transition-all duration-200 active:translate-y-1",
+            "flex min-h-[72px] w-full flex-col items-center justify-center px-2 py-3 transition-all duration-200 active:translate-y-1",
             pathname.includes("/library") ? "text-accent text-glitch" : "text-muted-foreground hover:text-foreground"
           )}
         >
@@ -24,7 +24,7 @@ export function NavMobileBottom({ pathname }: NavMobileBottomProps) {
         <Link
           href="/review"
           className={cn(
-            "flex flex-col items-center justify-center p-3 min-w-[64px] transition-all duration-200 active:translate-y-1",
+            "flex min-h-[72px] w-full flex-col items-center justify-center px-2 py-3 transition-all duration-200 active:translate-y-1",
             pathname.includes("/review") ? "text-accent text-glitch" : "text-muted-foreground hover:text-foreground"
           )}
         >
@@ -34,7 +34,7 @@ export function NavMobileBottom({ pathname }: NavMobileBottomProps) {
 
         <Link
           href="/capture"
-          className="flex flex-col flex-1 items-center justify-center relative -top-5"
+          className="relative -top-5 flex min-h-[72px] w-full flex-col items-center justify-center"
           aria-label="Capture"
         >
           <div className={cn(
@@ -49,7 +49,7 @@ export function NavMobileBottom({ pathname }: NavMobileBottomProps) {
         <Link
           href="/search"
           className={cn(
-            "flex flex-col items-center justify-center p-3 min-w-[64px] transition-all duration-200 active:translate-y-1",
+            "flex min-h-[72px] w-full flex-col items-center justify-center px-2 py-3 transition-all duration-200 active:translate-y-1",
             pathname.includes("/search") ? "text-accent text-glitch" : "text-muted-foreground hover:text-foreground"
           )}
         >

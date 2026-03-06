@@ -44,6 +44,7 @@ export default function SearchPage() {
   const [toDate, setToDate] = useState("")
   const [semantic, setSemantic] = useState(false)
   const [didInitFromUrl, setDidInitFromUrl] = useState(false)
+  const controlClassName = "min-h-[44px] w-full min-w-0 rounded-none border-4 border-foreground bg-background p-3 font-mono text-xs text-foreground shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] focus:outline-none focus:ring-0 dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)]"
 
   useEffect(() => {
     const queryQ = searchParams.get("q") ?? ""
@@ -62,13 +63,15 @@ export default function SearchPage() {
     setDidInitFromUrl(true)
   }, [searchParams])
 
-  const hasBaseFilters = Boolean(debouncedQ.trim() || state || tagId || fromDate || toDate)
+  const hasActiveFilters = Boolean(q.trim() || state || tagId || fromDate || toDate)
+  const hasCommittedFilters = Boolean(debouncedQ.trim() || state || tagId || fromDate || toDate)
+  const semanticButtonDisabled = !hasActiveFilters && !semantic
 
   useEffect(() => {
-    if (!hasBaseFilters && semantic) {
+    if (!hasActiveFilters && semantic) {
       setSemantic(false)
     }
-  }, [hasBaseFilters, semantic])
+  }, [hasActiveFilters, semantic])
 
   const currentParams = searchParams.toString()
 
@@ -83,7 +86,7 @@ export default function SearchPage() {
     if (tagId) params.set("tag_id", tagId)
     if (fromDate) params.set("from", fromDate)
     if (toDate) params.set("to", toDate)
-    if (semantic && hasBaseFilters) params.set("semantic", "1")
+    if (semantic && hasCommittedFilters) params.set("semantic", "1")
 
     const nextParams = params.toString()
     if (nextParams === currentParams) {
@@ -92,7 +95,7 @@ export default function SearchPage() {
 
     const nextHref = nextParams ? `${pathname}?${nextParams}` : pathname
     router.replace(nextHref, { scroll: false })
-  }, [currentParams, debouncedQ, didInitFromUrl, fromDate, hasBaseFilters, pathname, router, semantic, state, tagId, toDate])
+  }, [currentParams, debouncedQ, didInitFromUrl, fromDate, hasCommittedFilters, pathname, router, semantic, state, tagId, toDate])
 
   const tags = useQuery({
     queryKey: ["tags"],
@@ -107,9 +110,9 @@ export default function SearchPage() {
     if (tagId) params.set("tag_id", tagId)
     if (fromDate) params.set("from", fromDate)
     if (toDate) params.set("to", toDate)
-    if (semantic && hasBaseFilters) params.set("semantic", "1")
+    if (semantic && hasCommittedFilters) params.set("semantic", "1")
     return params.toString()
-  }, [debouncedQ, fromDate, hasBaseFilters, semantic, state, tagId, toDate])
+  }, [debouncedQ, fromDate, hasCommittedFilters, semantic, state, tagId, toDate])
 
   const result = useQuery({
     queryKey: ["search", queryString],
@@ -155,7 +158,7 @@ export default function SearchPage() {
                 value={q}
                 onChange={(event) => setQ(event.target.value)}
                 placeholder={t("search.placeholder", "content / source title")}
-                className="min-h-[44px] w-full bg-background border-4 border-foreground p-3 text-base text-foreground shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] rounded-none focus:outline-none focus:ring-0 lg:col-span-2 md:text-lg"
+                className={`${controlClassName} placeholder:font-mono placeholder:text-xs placeholder:text-muted-foreground lg:col-span-2`}
               />
               <label htmlFor="search-state" className="sr-only">
                 {t("search.allStates", "All states")}
@@ -164,7 +167,7 @@ export default function SearchPage() {
                 id="search-state"
                 value={state}
                 onChange={(event) => setState(event.target.value)}
-                className="w-full min-h-[44px] bg-background border-4 border-foreground text-foreground p-3 font-mono text-xs focus:outline-none focus:ring-0 shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] rounded-none"
+                className={controlClassName}
               >
                 <option value="">{t("search.allStates", "All states")}</option>
                 <option value="INBOX">{getStateLabel("INBOX", t)}</option>
@@ -180,14 +183,14 @@ export default function SearchPage() {
                 id="search-tag"
                 value={tagId}
                 onChange={(event) => setTagId(event.target.value)}
-                className="w-full min-h-[44px] bg-background border-4 border-foreground text-foreground p-3 font-mono text-xs focus:outline-none focus:ring-0 shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] rounded-none"
+                className={controlClassName}
               >
                 <option value="">{t("search.allTags", "All tags")}</option>
                 {(tags.data?.data ?? []).map((tag) => (
                   <option key={tag.id} value={tag.id}>#{tag.name}</option>
                 ))}
               </select>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:col-span-1">
+              <div className="grid min-w-0 grid-cols-1 gap-2 lg:col-span-1">
                 <div className="w-full min-w-0">
                   <label htmlFor="search-from-date" className="mb-1 block font-mono text-[10px] font-bold uppercase text-muted-foreground">
                     {t("history.from", "From")}
@@ -197,7 +200,7 @@ export default function SearchPage() {
                     type="date"
                     value={fromDate}
                     onChange={(event) => setFromDate(event.target.value)}
-                    className="min-h-[44px] w-full bg-background border-4 border-foreground text-foreground p-3 font-mono text-xs focus:outline-none focus:ring-0 shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] rounded-none"
+                    className={controlClassName}
                   />
                 </div>
                 <div className="w-full min-w-0">
@@ -209,7 +212,7 @@ export default function SearchPage() {
                     type="date"
                     value={toDate}
                     onChange={(event) => setToDate(event.target.value)}
-                    className="min-h-[44px] w-full bg-background border-4 border-foreground text-foreground p-3 font-mono text-xs focus:outline-none focus:ring-0 shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] rounded-none"
+                    className={controlClassName}
                   />
                 </div>
               </div>
@@ -217,15 +220,16 @@ export default function SearchPage() {
             <div className="mt-3 flex flex-wrap items-center gap-2 border-t-2 border-foreground pt-3">
               <button
                 type="button"
+                aria-pressed={semantic}
                 onClick={() => {
-                  if (!hasBaseFilters && !semantic) {
+                  if (semanticButtonDisabled) {
                     return
                   }
 
                   setSemantic((prev) => !prev)
                 }}
-                disabled={!hasBaseFilters && !semantic}
-                className={`min-h-[44px] border-4 px-3 py-2 font-mono text-xs font-bold uppercase transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm ${semantic
+                disabled={semanticButtonDisabled}
+                className={`min-h-[44px] border-4 px-3 py-2 font-mono text-xs font-bold uppercase transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:bg-background disabled:hover:text-foreground ${semantic
                   ? "border-foreground bg-foreground text-background"
                   : "border-foreground bg-background text-foreground hover:bg-foreground hover:text-background"
                   }`}
@@ -236,7 +240,7 @@ export default function SearchPage() {
                 <p className="font-mono text-[10px] font-bold uppercase text-muted-foreground">
                   {t("search.semanticHint", "의미 기반 유사도 우선으로 결과를 정렬합니다")}
                 </p>
-              ) : !hasBaseFilters ? (
+              ) : !hasActiveFilters ? (
                 <p className="font-mono text-[10px] font-bold uppercase text-muted-foreground">
                   {t("search.semanticNeedsFilter", "검색어 또는 필터를 먼저 지정하세요")}
                 </p>
