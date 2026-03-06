@@ -4,13 +4,17 @@ import { getUserId } from "@/lib/auth"
 import { fail, internalError, ok, rateLimited } from "@/lib/http"
 import { checkRateLimitDistributed, resolveClientKey } from "@/lib/rate-limit"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
-import { parseStartPage, type StartPage } from "@feature-lib/settings/preferences"
+import { parseStartPage, parseFontFamily, type StartPage, type FontFamily } from "@feature-lib/settings/preferences"
 
 const UpdatePreferencesSchema = z.object({
-  startPage: z.enum(["/review", "/capture", "/library", "/search"])
+  startPage: z.enum(["/review", "/capture", "/library", "/search"]).optional(),
+  fontFamily: z.enum(["sans", "mono"]).optional()
+}).refine((value) => value.startPage !== undefined || value.fontFamily !== undefined, {
+  message: "At least one preference is required"
 })
 
 const DEFAULT_START_PAGE: StartPage = "/library"
+const DEFAULT_FONT_FAMILY: FontFamily = "sans"
 
 export async function GET(request: NextRequest) {
   const limitResult = await checkRateLimitDistributed({
@@ -30,7 +34,7 @@ export async function GET(request: NextRequest) {
   const supabase = getSupabaseAdmin()
   const result = await supabase
     .from("user_preferences")
-    .select("start_page")
+    .select("start_page, font_family")
     .eq("user_id", userId)
     .maybeSingle()
 
@@ -39,7 +43,9 @@ export async function GET(request: NextRequest) {
   }
 
   const startPage = parseStartPage(result.data?.start_page) ?? DEFAULT_START_PAGE
-  return ok({ startPage })
+  const fontFamily = parseFontFamily(result.data?.font_family) ?? DEFAULT_FONT_FAMILY
+
+  return ok({ startPage, fontFamily })
 }
 
 export async function PATCH(request: NextRequest) {
@@ -64,21 +70,49 @@ export async function PATCH(request: NextRequest) {
   }
 
   const supabase = getSupabaseAdmin()
+
+  // First get existing preferences to merge
+  const existingResult = await supabase
+    .from("user_preferences")
+    .select("start_page, font_family")
+    .eq("user_id", userId)
+    .maybeSingle()
+
+  let startPageToSave = parsed.data.startPage
+  let fontFamilyToSave = parsed.data.fontFamily
+
+  if (existingResult?.error) {
+    return internalError("settings", existingResult.error)
+  }
+
+  const existingData = existingResult?.data
+  if (existingData) {
+    if (startPageToSave === undefined) startPageToSave = parseStartPage(existingData.start_page) ?? DEFAULT_START_PAGE
+    if (fontFamilyToSave === undefined) fontFamilyToSave = parseFontFamily(existingData.font_family) ?? DEFAULT_FONT_FAMILY
+  }
+
   const result = await supabase
     .from("user_preferences")
     .upsert(
       {
         user_id: userId,
-        start_page: parsed.data.startPage
+        start_page: startPageToSave ?? DEFAULT_START_PAGE,
+        font_family: fontFamilyToSave ?? DEFAULT_FONT_FAMILY
       },
       { onConflict: "user_id" }
     )
-    .select("start_page")
+    .select("start_page, font_family")
     .single()
 
   if (result.error) {
     return internalError("settings", result.error)
   }
 
-  return ok({ startPage: result.data.start_page })
+  const nextStartPage = parseStartPage(result.data?.start_page) ?? startPageToSave ?? DEFAULT_START_PAGE
+  const nextFontFamily = parseFontFamily(result.data?.font_family) ?? fontFamilyToSave ?? DEFAULT_FONT_FAMILY
+
+  return ok({
+    startPage: nextStartPage,
+    fontFamily: nextFontFamily
+  })
 }

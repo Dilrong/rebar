@@ -9,14 +9,20 @@ const upsertSingleMock = vi.fn<() => Promise<unknown>>()
 
 const ALLOWED_START_PAGES = ["/review", "/capture", "/library", "/search"]
 const ALLOWED_START_PAGE_SET = new Set(ALLOWED_START_PAGES)
+const ALLOWED_FONT_FAMILIES = ["sans", "mono"]
+const ALLOWED_FONT_FAMILY_SET = new Set(ALLOWED_FONT_FAMILIES)
 
-function isValidStartPagePayload(value: unknown): boolean {
+function isValidPreferencesPayload(value: unknown): boolean {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     return false
   }
 
   const startPage = (value as { startPage?: unknown }).startPage
-  return typeof startPage === "string" && ALLOWED_START_PAGE_SET.has(startPage)
+  const fontFamily = (value as { fontFamily?: unknown }).fontFamily
+  const hasValidStartPage = typeof startPage === "string" && ALLOWED_START_PAGE_SET.has(startPage)
+  const hasValidFontFamily = typeof fontFamily === "string" && ALLOWED_FONT_FAMILY_SET.has(fontFamily)
+
+  return hasValidStartPage || hasValidFontFamily
 }
 
 vi.mock("@/lib/auth", () => ({
@@ -90,7 +96,7 @@ describe("/api/settings/preferences property tests", () => {
         )
 
         expect(response.status).toBe(200)
-        await expect(response.json()).resolves.toEqual({ startPage })
+        await expect(response.json()).resolves.toEqual({ startPage, fontFamily: "sans" })
       }),
       { numRuns: 40 }
     )
@@ -106,7 +112,7 @@ describe("/api/settings/preferences property tests", () => {
           const response = await GET(new NextRequest("http://localhost/api/settings/preferences", { method: "GET" }))
 
           expect(response.status).toBe(200)
-          await expect(response.json()).resolves.toEqual({ startPage: "/library" })
+          await expect(response.json()).resolves.toEqual({ startPage: "/library", fontFamily: "sans" })
         }
       ),
       { numRuns: 60 }
@@ -116,7 +122,7 @@ describe("/api/settings/preferences property tests", () => {
   it("rejects arbitrary non-conforming JSON payloads", async () => {
     await fc.assert(
       fc.asyncProperty(fc.jsonValue(), async (payload) => {
-        fc.pre(!isValidStartPagePayload(payload))
+        fc.pre(!isValidPreferencesPayload(payload))
 
         const response = await PATCH(
           new NextRequest("http://localhost/api/settings/preferences", {

@@ -56,7 +56,7 @@ describe("/api/settings/preferences", () => {
     const response = await GET(new NextRequest("http://localhost/api/settings/preferences", { method: "GET" }))
 
     expect(response.status).toBe(200)
-    await expect(response.json()).resolves.toEqual({ startPage: "/library" })
+    await expect(response.json()).resolves.toEqual({ startPage: "/library", fontFamily: "sans" })
   })
 
   it("persists and returns selected start page", async () => {
@@ -71,6 +71,6 @@ describe("/api/settings/preferences", () => {
     )
 
     expect(response.status).toBe(200)
-    await expect(response.json()).resolves.toEqual({ startPage: "/review" })
+    await expect(response.json()).resolves.toEqual({ startPage: "/review", fontFamily: "sans" })
   })
 })
