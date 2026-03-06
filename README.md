@@ -200,6 +200,7 @@ Extension does not require API key/user ID input. It sends clips to `/api/captur
 
 ## Docs
 
+- `db/README.md` — DB schema snapshot vs incremental migration usage guide
 - `docs/project_context.md` — 프로젝트 목적, 원칙, 범위, 우선순위
 - `docs/architecture.md` — 시스템/데이터/API/인증 아키텍처
 - `docs/session_context.md` — 최근 반영 내역, 리스크, 다음 액션

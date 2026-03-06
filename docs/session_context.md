@@ -15,10 +15,12 @@ This document tracks recent implementation context, completed rounds, and next a
 - Tag-filter ownership checks enforced on export/list/search flows
 - Extension UX improved (loading states, connectivity messaging, options validation)
 - Retry behavior improved for transient network and rate-limit scenarios
+- Import model now preserves source provenance, current note separation, note history, and ingest event snapshots
+- DB migration source of truth clarified under `db/migrations/` with timestamped filenames
 
 ## Current Implementation Snapshot
 
-- Capture paths support web/manual, batch ingest, share endpoint, and extension clipping
+- Capture paths support web/manual, batch ingest, share endpoint, and extension clipping through a shared ingest model
 - Review loop and history endpoints are active
 - Library filtering and record detail flows are active
 - Export, cron maintenance, and MCP read-only paths are present
@@ -168,6 +170,17 @@ This document tracks recent implementation context, completed rounds, and next a
 - **Test updates**: `tests/proxy.test.ts` updated to expect 403 for origin-less OPTIONS; `tests/auth.test.ts` updated with explicit x-forwarded-host spoofing rejection test
 - Full verification pass: typecheck ✓, 165 tests ✓
 
+### Round 18 (Completed) — Import Provenance and DB Migration Cleanup
+
+- **Data model**: added `sources`, `record_note_versions`, and `record_ingest_events` to preserve provenance and note history
+- **Data model**: `records` now carry `source_id`, `current_note`, `note_updated_at`, and `adopted_from_ai`
+- **Import pipeline**: manual/CSV/JSON/share capture paths now normalize through the same source-aware ingest flow
+- **Dedup semantics**: dedupe moved from global `content_hash` to source-aware `user_id + source_id + content_hash`
+- **UX**: record detail now shows `current_note` separately and exposes note history in the history panel
+- **Search/Export**: `current_note` participates in search/export output alongside canonical content/source metadata
+- **DB ops**: canonical migration path documented in `db/README.md`; migration filenames normalized to sortable timestamp form
+- Full verification pass: typecheck ✓, lint ✓, tests 190 ✓
+
 ## Active Risk Watchlist
 
 - Keep semantic search path aligned with actual DB capabilities
@@ -177,12 +190,15 @@ This document tracks recent implementation context, completed rounds, and next a
 - Continue reducing oversized pages (`review`, `records/[id]`, `app-nav`) to lower regression risk
 - Keep component boundaries coherent as `records/[id]` and `app-nav` evolve
 - Investigate `/settings` pa11y navigation hang in headless CI environment
+- Watch for drift between runtime DB state and `db/schema.sql` after future migrations
+- Review whether legacy SQL RPC functions should eventually be made source-aware or retired completely
 
 ## Recommended Next Actions
 
 - Expand property-based coverage to undo/history mutation paths and retry-job mutation APIs
 - Add deterministic repro instrumentation for pa11y `/settings` timeout (capture console/network traces in CI)
 - Add deeper RTL coverage around `review` defer/act panel keyboard flows and focus management
+- Consider follow-up schema/API work for explicit source editing flows instead of treating source title/url as record-level fields in the UI
 
 ## Handoff Checklist
 

@@ -2,6 +2,7 @@ import { z } from "zod"
 
 export const RecordKindSchema = z.enum(["quote", "note", "link", "ai"])
 export const TagNameSchema = z.string().min(1).max(50)
+export const SourceTypeSchema = z.enum(["book", "article", "service", "manual", "ai", "unknown"])
 
 export const RecordStateSchema = z.enum([
   "INBOX",
@@ -23,6 +24,10 @@ export const CreateRecordSchema = z
     content: z.string().min(1),
     url: z.string().url().optional(),
     source_title: z.string().min(1).optional(),
+    source_type: SourceTypeSchema.optional(),
+    source_service: z.string().min(1).max(200).optional(),
+    source_identity: z.string().min(1).max(500).optional(),
+    adopted_from_ai: z.boolean().optional(),
     tag_ids: z.array(z.string().uuid()).optional(),
     on_duplicate: z.enum(["error", "merge"]).optional()
   })

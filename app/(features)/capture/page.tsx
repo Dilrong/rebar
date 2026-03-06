@@ -33,12 +33,22 @@ type ExtractResponse = {
 
 type IngestItemInput = {
   content: string
+  note?: string
   title?: string
   source_title?: string
+  book_title?: string
+  book_author?: string
+  author?: string
   url?: string
   source_url?: string
   tags?: string[]
   kind?: "quote" | "note" | "link" | "ai"
+  source_type?: "book" | "article" | "service" | "manual" | "ai" | "unknown"
+  source_service?: string
+  source_identity?: string
+  external_source_id?: string
+  external_item_id?: string
+  adopted_from_ai?: boolean
 }
 
 type IngestResponse = {
@@ -123,16 +133,26 @@ function toIngestItem(value: unknown): IngestItemInput | null {
     asString(value.content) ??
     asString(value.text) ??
     asString(value.highlight) ??
-    asString(value.note) ??
     asString(value.summary)
+  const note = asString(value.note)
 
-  if (!content) {
+  const resolvedContent = content ?? note
+
+  if (!resolvedContent) {
     return null
   }
 
-  const item: IngestItemInput = { content }
+  const item: IngestItemInput = { content: resolvedContent }
 
-  const title = asString(value.title) ?? asString(value.source_title) ?? asString(value.book_title)
+  const bookTitle = asString(value.book_title) ?? asString(value.bookTitle)
+  const bookAuthor = asString(value.book_author) ?? asString(value.bookAuthor) ?? asString(value.bookauthor)
+  const title = asString(value.title) ?? asString(value.source_title)
+  if (bookTitle) {
+    item.book_title = bookTitle
+  }
+  if (bookAuthor) {
+    item.book_author = bookAuthor
+  }
   if (title) {
     item.source_title = title
   }
@@ -142,9 +162,54 @@ function toIngestItem(value: unknown): IngestItemInput | null {
     item.url = url
   }
 
+  const author = asString(value.author)
+  if (author) {
+    item.author = author
+  }
+
   const tags = normalizeTags(value.tags)
   if (tags) {
     item.tags = tags
+  }
+
+  const sourceType = asString(value.source_type) ?? asString(value.sourceType)
+  if (
+    sourceType === "book" ||
+    sourceType === "article" ||
+    sourceType === "service" ||
+    sourceType === "manual" ||
+    sourceType === "ai" ||
+    sourceType === "unknown"
+  ) {
+    item.source_type = sourceType
+  }
+
+  const sourceService = asString(value.source_service) ?? asString(value.service) ?? asString(value.provider)
+  if (sourceService) {
+    item.source_service = sourceService
+  }
+
+  const sourceIdentity = asString(value.source_identity) ?? asString(value.sourceIdentity)
+  if (sourceIdentity) {
+    item.source_identity = sourceIdentity
+  }
+
+  const externalSourceId = asString(value.external_source_id) ?? asString(value.externalSourceId)
+  if (externalSourceId) {
+    item.external_source_id = externalSourceId
+  }
+
+  const externalItemId = asString(value.external_item_id) ?? asString(value.externalItemId)
+  if (externalItemId) {
+    item.external_item_id = externalItemId
+  }
+
+  if (typeof value.adopted_from_ai === "boolean") {
+    item.adopted_from_ai = value.adopted_from_ai
+  }
+
+  if (content && note) {
+    item.note = note
   }
 
   return item
@@ -249,10 +314,7 @@ function parseCsvItems(raw: string): IngestItemInput[] {
 
     const highlight = firstNonEmpty(row.get("content"), row.get("text"), row.get("highlight"))
     const note = firstNonEmpty(row.get("note"))
-    const content =
-      highlight && note
-        ? `${highlight}\n\nNote: ${note}`
-        : highlight || note
+    const content = highlight || note
 
     if (!content) {
       continue
@@ -266,24 +328,25 @@ function parseCsvItems(raw: string): IngestItemInput[] {
 
     const bookTitle = firstNonEmpty(row.get("booktitle"), row.get("title"), row.get("sourcetitle"))
     const bookAuthor = firstNonEmpty(row.get("bookauthor"), row.get("author"))
-    const sourceTitle =
-      bookTitle && bookAuthor
-        ? `${bookTitle} - ${bookAuthor}`
-        : bookTitle || bookAuthor || ""
-
     const url = firstNonEmpty(row.get("url"), row.get("sourceurl"))
 
     const rawKind = firstNonEmpty(row.get("kind")).toLowerCase()
     const kind: IngestItemInput["kind"] | undefined =
       rawKind === "quote" || rawKind === "note" || rawKind === "link" || rawKind === "ai"
         ? rawKind
-        : "quote"
+        : highlight
+          ? "quote"
+          : "note"
 
     const item: IngestItemInput = {
       content,
-      source_title: sourceTitle || undefined,
+      note: highlight && note ? note : undefined,
+      source_title: !bookTitle && !bookAuthor ? firstNonEmpty(row.get("title"), row.get("sourcetitle")) || undefined : undefined,
+      book_title: bookTitle || undefined,
+      book_author: bookAuthor || undefined,
       url: url || undefined,
       kind,
+      source_type: bookTitle || bookAuthor ? "book" : url ? "article" : "unknown",
       tags: tags.length > 0 ? tags : undefined
     }
 
@@ -434,7 +497,7 @@ export default function CapturePage() {
   })
 
   const ingestMutation = useMutation({
-    mutationFn: async (payload: { items: IngestItemInput[] }) =>
+    mutationFn: async (payload: { items: IngestItemInput[]; import_channel?: "csv" | "json" }) =>
       apiFetch<IngestResponse>("/api/capture/ingest", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -561,7 +624,7 @@ export default function CapturePage() {
       setPendingIngestCount(items.length)
 
       ingestMutation.mutate(
-        { items },
+        { items, import_channel: "json" },
         {
           onError: (error) =>
             enqueueRetryMutation.mutate({
@@ -591,7 +654,7 @@ export default function CapturePage() {
       setPendingIngestCount(items.length)
 
       ingestMutation.mutate(
-        { items },
+        { items, import_channel: "csv" },
         {
           onError: (error) =>
             enqueueRetryMutation.mutate({

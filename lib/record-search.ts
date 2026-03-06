@@ -33,7 +33,7 @@ export function applyRecordSearchFilter<T extends SearchQueryBuilder<T>>(query: 
   }
 
   const escaped = searchQuery.replace(/[\\%_]/g, "\\$&").replace(/[,]/g, "")
-  return query.or(`content.ilike.%${escaped}%,source_title.ilike.%${escaped}%`)
+  return query.or(`content.ilike.%${escaped}%,source_title.ilike.%${escaped}%,current_note.ilike.%${escaped}%`)
 }
 
 export function isTextSearchUnavailable(error: { message?: string } | null | undefined): boolean {

@@ -36,7 +36,7 @@ export async function POST(
   const supabase = getSupabaseAdmin()
   const recordResult = await supabase
     .from("records")
-    .select("id,content,source_title")
+    .select("id,content,current_note,source_title")
     .eq("id", parsed.data.id)
     .eq("user_id", userId)
     .single()
@@ -90,7 +90,10 @@ export async function POST(
   const assist = generateRecordAssist({
     content: recordResult.data.content,
     sourceTitle: recordResult.data.source_title,
-    annotations: annotationsResult.data.map((row) => row.body),
+    annotations: [
+      ...(recordResult.data.current_note ? [recordResult.data.current_note] : []),
+      ...annotationsResult.data.map((row) => row.body)
+    ],
     tags
   })
 

@@ -9,7 +9,7 @@ import AppNav from "@shared/layout/app-nav"
 import { useI18n } from "@app-shared/i18n/i18n-provider"
 import { apiFetch } from "@/lib/client-http"
 import { getStateLabel } from "@/lib/i18n/state-label"
-import type { AnnotationRow, RecordRow, TagRow } from "@/lib/types"
+import type { AnnotationRow, RecordNoteVersionRow, RecordRow, TagRow } from "@/lib/types"
 import { Link as LinkIcon, Hash, ArrowLeftSquare } from "lucide-react"
 import { LoadingSpinner } from "@shared/ui/loading"
 import { Toast } from "@shared/ui/toast"
@@ -23,6 +23,7 @@ import { RecordHistoryPanel } from "../_components/record-history-panel"
 type DetailResponse = {
   record: RecordRow
   annotations: AnnotationRow[]
+  note_versions: RecordNoteVersionRow[]
   tags: Pick<TagRow, "id" | "name">[]
 }
 
@@ -543,6 +544,18 @@ export default function RecordDetailPage() {
                     />
                   </div>
 
+                  {detail.data.record.current_note ? (
+                    <div className="mt-8 border-t-4 border-border pt-6">
+                      <p className="mb-3 font-mono text-[10px] font-bold uppercase text-muted-foreground">
+                        {t("record.currentNote", "CURRENT NOTE")}
+                      </p>
+                      <MarkdownContent
+                        content={detail.data.record.current_note}
+                        className="text-base leading-[1.7] sm:text-lg"
+                      />
+                    </div>
+                  ) : null}
+
                   {detail.data.record.url && (
                     <div className="mt-10 pt-6 border-t-4 border-border">
                       <a href={detail.data.record.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-[44px] w-full items-center justify-center border-2 border-foreground bg-muted px-3 py-2 font-mono text-sm font-bold uppercase text-foreground transition-colors hover:bg-foreground hover:text-background sm:w-auto sm:justify-start">
@@ -624,6 +637,7 @@ export default function RecordDetailPage() {
                   <RecordHistoryPanel
                     t={t}
                     annotations={detail.data.annotations}
+                    noteVersions={detail.data.note_versions}
                     updateRecordError={updateRecord.error?.message ?? null}
                     deleteRecordError={deleteRecord.error?.message ?? null}
                   />

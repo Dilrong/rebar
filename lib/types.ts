@@ -1,14 +1,43 @@
 import type { RecordKind, RecordState } from "@/lib/schemas"
 
+export type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: JsonValue | undefined }
+  | JsonValue[]
+
+export type SourceType = "book" | "article" | "service" | "manual" | "ai" | "unknown"
+export type ImportChannel = "manual" | "csv" | "json" | "api" | "share" | "extension" | "url" | "ocr"
+
+export type SourceRow = {
+  id: string
+  user_id: string
+  source_type: SourceType
+  identity_key: string
+  title: string | null
+  author: string | null
+  url: string | null
+  service: string | null
+  external_source_id: string | null
+  created_at: string
+  updated_at: string
+}
+
 export type RecordRow = {
   id: string
   user_id: string
+  source_id: string | null
   kind: RecordKind
   content: string
   content_hash: string
   url: string | null
   source_title: string | null
   favicon_url: string | null
+  current_note: string | null
+  note_updated_at: string | null
+  adopted_from_ai: boolean
   state: RecordState
   interval_days: number
   due_at: string | null
@@ -25,6 +54,28 @@ export type AnnotationRow = {
   kind: "highlight" | "comment" | "correction"
   body: string
   anchor: string | null
+  created_at: string
+}
+
+export type RecordNoteVersionRow = {
+  id: string
+  record_id: string
+  user_id: string
+  body: string
+  import_channel: ImportChannel | null
+  replaced_at: string
+}
+
+export type RecordIngestEventRow = {
+  id: string
+  record_id: string
+  source_id: string
+  user_id: string
+  import_channel: ImportChannel
+  source_snapshot: JsonValue
+  note_snapshot: string | null
+  external_item_id: string | null
+  external_anchor: string | null
   created_at: string
 }
 

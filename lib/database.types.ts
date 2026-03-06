@@ -1,20 +1,17 @@
 import type {
   AnnotationRow,
   IngestJobRow,
+  RecordIngestEventRow,
+  RecordNoteVersionRow,
   RecordRow,
   RecordTagRow,
   ReviewLogRow,
+  SourceRow,
   TagRow,
-  UserPreferencesRow
+  UserPreferencesRow,
+  JsonValue
 } from "@/lib/types"
-
-export type Json =
-  | string
-  | number
-  | boolean
-  | null
-  | { [key: string]: Json | undefined }
-  | Json[]
+export type Json = JsonValue
 
 type TableDefinition<Row, Insert = Partial<Row>, Update = Partial<Row>> = {
   Row: Row
@@ -41,9 +38,12 @@ export type Database = {
     Tables: {
       annotations: TableDefinition<AnnotationRow>
       ingest_jobs: TableDefinition<IngestJobRowWithJson>
+      record_ingest_events: TableDefinition<RecordIngestEventRow>
+      record_note_versions: TableDefinition<RecordNoteVersionRow>
       record_tags: TableDefinition<RecordTagRow>
       records: TableDefinition<RecordRowWithGenerated>
       review_log: TableDefinition<ReviewLogRow>
+      sources: TableDefinition<SourceRow>
       tags: TableDefinition<TagRow>
       user_preferences: TableDefinition<UserPreferencesRow>
     }

@@ -26,15 +26,23 @@ export async function GET() {
           items: [
             {
               content: "string (required)",
+              note: "string (optional, stored separately when paired with content/highlight)",
               title: "string (optional)",
               source_title: "string (optional)",
+              book_title: "string (optional)",
+              book_author: "string (optional)",
               url: "string (optional)",
+              source_type: "book|article|service|manual|ai|unknown (optional)",
+              source_service: "string (optional)",
+              source_identity: "string (optional)",
               tags: ["string"],
-              kind: "quote|note|link|ai (optional)"
+              kind: "quote|note|link|ai (optional)",
+              adopted_from_ai: "boolean (optional)"
             }
           ],
           default_kind: "quote|note|link|ai (optional)",
-          default_tags: ["string"]
+          default_tags: ["string"],
+          import_channel: "csv|json|api (optional)"
         },
         limit: "max 300 items/request"
       },

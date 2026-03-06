@@ -18,6 +18,7 @@ function toObsidianFrontmatter(record: {
   state: string
   source_title: string | null
   url: string | null
+  adopted_from_ai: boolean
   created_at: string
   updated_at: string
 },
@@ -35,6 +36,9 @@ tagNames: string[]) {
   }
   if (record.url) {
     lines.push(`url: "${record.url.replace(/"/g, "\\\"")}"`)
+  }
+  if (record.adopted_from_ai) {
+    lines.push("adopted_from_ai: true")
   }
   if (tagNames.length > 0) {
     lines.push(`tags: [${tagNames.map((name) => `"${name.replace(/"/g, "\\\"")}"`).join(", ")}]`)
@@ -205,6 +209,12 @@ export async function GET(request: NextRequest) {
     sections.push(record.content)
     sections.push("")
 
+    if (record.current_note) {
+      sections.push("Note:")
+      sections.push(record.current_note)
+      sections.push("")
+    }
+
     const names = tagMap.get(record.id) ?? []
     if (names.length > 0) {
       sections.push(`Tags: ${names.map((name) => `#${escapeMarkdown(name)}`).join(" ")}`)
@@ -212,6 +222,10 @@ export async function GET(request: NextRequest) {
 
     if (record.url) {
       sections.push(`URL: ${record.url}`)
+    }
+
+    if (record.adopted_from_ai) {
+      sections.push("Provenance: adopted-from-ai")
     }
 
     sections.push("")
@@ -226,7 +240,8 @@ export async function GET(request: NextRequest) {
       .map((record) => {
         const names = tagMap.get(record.id) ?? []
         const frontmatter = toObsidianFrontmatter(record, names)
-        return `${frontmatter}${record.content}\n`
+        const noteBlock = record.current_note ? `\n\n## Note\n\n${record.current_note}\n` : "\n"
+        return `${frontmatter}${record.content}${noteBlock}`
       })
       .join("\n")
 

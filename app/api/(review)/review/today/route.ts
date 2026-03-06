@@ -27,14 +27,14 @@ export async function GET(request: NextRequest) {
   const [inbox, pinned, active] = await Promise.all([
     supabase
       .from("records")
-      .select("id, kind, content, url, source_title, favicon_url, state, interval_days, due_at, last_reviewed_at, review_count, created_at, updated_at", { count: "exact" })
+      .select("id, user_id, source_id, kind, content, content_hash, url, source_title, favicon_url, current_note, note_updated_at, adopted_from_ai, state, interval_days, due_at, last_reviewed_at, review_count, created_at, updated_at", { count: "exact" })
       .eq("user_id", userId)
       .eq("state", "INBOX")
       .order("created_at", { ascending: false })
       .range(0, n - 1),
     supabase
       .from("records")
-      .select("id, kind, content, url, source_title, favicon_url, state, interval_days, due_at, last_reviewed_at, review_count, created_at, updated_at", { count: "exact" })
+      .select("id, user_id, source_id, kind, content, content_hash, url, source_title, favicon_url, current_note, note_updated_at, adopted_from_ai, state, interval_days, due_at, last_reviewed_at, review_count, created_at, updated_at", { count: "exact" })
       .eq("user_id", userId)
       .eq("state", "PINNED")
       .lte("due_at", now)
@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
       .range(0, n - 1),
     supabase
       .from("records")
-      .select("id, kind, content, url, source_title, favicon_url, state, interval_days, due_at, last_reviewed_at, review_count, created_at, updated_at", { count: "exact" })
+      .select("id, user_id, source_id, kind, content, content_hash, url, source_title, favicon_url, current_note, note_updated_at, adopted_from_ai, state, interval_days, due_at, last_reviewed_at, review_count, created_at, updated_at", { count: "exact" })
       .eq("user_id", userId)
       .eq("state", "ACTIVE")
       .lte("due_at", now)

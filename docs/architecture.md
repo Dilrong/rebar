@@ -14,7 +14,7 @@ User/Agent -> Capture APIs/UI -> SSOT DB -> Review Loop -> User
 - Next.js app (App Router): pages, API routes, server actions
 - Feature-local component decomposition (`app/(features)/*/_components`) for large UI surfaces
 - Supabase Auth: session and identity
-- Supabase PostgreSQL: records, review logs, tags, ingest jobs
+- Supabase PostgreSQL: records, sources, review logs, tags, ingest jobs, ingest provenance
 - Extension client (`extension/`): clipping + authenticated save
 - Export/MCP read interfaces for external tooling
 
@@ -22,13 +22,32 @@ User/Agent -> Capture APIs/UI -> SSOT DB -> Review Loop -> User
 
 ### Core Tables
 
-- `records`: immutable core content + state + scheduling fields
+- `sources`: user-owned provenance objects for books/articles/manual/AI/service origins
+- `records`: atomic captured units with immutable core content, current note, state, and scheduling fields
+- `record_note_versions`: historical snapshots of replaced `records.current_note` values
+- `record_ingest_events`: append-only import provenance (`import_channel`, source snapshot, note snapshot, external ids/anchors)
 - `annotations`: additive notes/corrections/highlights per record
 - `review_log`: append-only review events
 - `tags`: user tags
 - `record_tags`: many-to-many mapping
 - `ingest_jobs`: failed ingest retry queue
 - `user_preferences`: persisted per-user UI preferences (e.g. start page)
+
+### Import Model
+
+- `record` is the primary user-facing unit: the smallest thing worth re-reading
+- `source` is distinct from `record` and captures shared provenance metadata
+- Import paths (manual/CSV/JSON/share) normalize into the same ingest pipeline
+- Highlight text is stored in `records.content`; paired note text is stored separately in `records.current_note`
+- Replaced notes are preserved in `record_note_versions`
+- Every ingest appends a `record_ingest_events` row so source/note snapshots remain recoverable
+
+### Deduplication
+
+- Dedup is source-aware, not global
+- Effective identity is `user_id + source_id + content_hash`
+- Same text from different sources creates different records
+- Same text from the same source merges into the same record and can update the current note while preserving note history
 
 ### Record State Machine
 
@@ -101,14 +120,16 @@ Allowed states: `INBOX`, `ACTIVE`, `PINNED`, `ARCHIVED`, `TRASHED`
 
 ## Operational Notes
 
-- Dedup uses SHA-256 `content_hash`
+- Dedup uses SHA-256 `content_hash`, scoped by `source_id`
 - Review scheduling uses interval progression with upper bound
 - Retry and cleanup cron routes protect data consistency and lifecycle
+- Export and search now include `records.current_note` alongside canonical content/source metadata
+- `db/migrations/` is the migration source of truth; `db/schema.sql` is the current schema snapshot
 - Quality gates include typecheck, test, lint, build, and pa11y-ci accessibility checks
 
 ## Near-Term Architecture Direction
 
 - Strengthen search stack (FTS-first, optional semantic path)
-- Keep batch ingest and retry processing efficient
+- Keep batch ingest and retry processing efficient while preserving provenance/history fidelity
 - Expand API/integration tests around high-risk routes
 - Preserve simple, explicit ownership and state transition rules

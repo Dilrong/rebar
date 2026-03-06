@@ -54,6 +54,7 @@ const STOP_WORDS = new Set([
 type SemanticRow = {
   id: string
   content: string
+  current_note: string | null
   source_title: string | null
   created_at: string
   [key: string]: unknown
@@ -80,6 +81,7 @@ function semanticScore(row: SemanticRow, query: string): { score: number; matche
   }
 
   const content = normalizeText(row.content)
+  const currentNote = normalizeText(row.current_note ?? "")
   const source = normalizeText(row.source_title ?? "")
   const phrase = normalizeText(query)
   let score = 0
@@ -94,6 +96,9 @@ function semanticScore(row: SemanticRow, query: string): { score: number; matche
     if (content.includes(token)) {
       tokenScore += 3
     }
+    if (currentNote.includes(token)) {
+      tokenScore += 2
+    }
     if (` ${content} `.includes(` ${token} `)) {
       tokenScore += 1
     }
@@ -107,6 +112,9 @@ function semanticScore(row: SemanticRow, query: string): { score: number; matche
   if (phrase.length >= 4) {
     if (content.includes(phrase)) {
       score += 6
+    }
+    if (currentNote.includes(phrase)) {
+      score += 4
     }
     if (source.includes(phrase)) {
       score += 6
@@ -216,7 +224,7 @@ export async function GET(request: NextRequest) {
 
   let query = supabase
     .from("records")
-    .select("id, kind, content, url, source_title, favicon_url, state, interval_days, due_at, last_reviewed_at, review_count, created_at, updated_at")
+    .select("id, user_id, source_id, kind, content, content_hash, url, source_title, favicon_url, current_note, note_updated_at, adopted_from_ai, state, interval_days, due_at, last_reviewed_at, review_count, created_at, updated_at")
     .eq("user_id", userId)
     .neq("state", "TRASHED")
     .order("created_at", { ascending: false })

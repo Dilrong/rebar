@@ -4,7 +4,7 @@ import { getUserId, isValidOrigin } from "@/lib/auth"
 import { fail, ok, rateLimited } from "@/lib/http"
 import { processIngest } from "@feature-lib/capture/ingest"
 import { checkRateLimitDistributed, resolveClientKey } from "@/lib/rate-limit"
-import { RecordKindSchema, TagNameSchema } from "@/lib/schemas"
+import { RecordKindSchema, SourceTypeSchema, TagNameSchema } from "@/lib/schemas"
 
 const ShareBodySchema = z
   .object({
@@ -15,6 +15,10 @@ const ShareBodySchema = z
     url: z.string().url().optional(),
     tags: z.array(TagNameSchema).optional(),
     kind: RecordKindSchema.optional(),
+    source_type: SourceTypeSchema.optional(),
+    source_service: z.string().max(200).optional(),
+    source_identity: z.string().max(500).optional(),
+    adopted_from_ai: z.boolean().optional(),
     default_kind: RecordKindSchema.optional(),
     default_tags: z.array(TagNameSchema).optional()
   })
@@ -54,7 +58,11 @@ export async function POST(request: NextRequest) {
         source_title: parsed.data.source_title,
         url: parsed.data.url,
         tags: parsed.data.tags,
-        kind: parsed.data.kind
+        kind: parsed.data.kind,
+        source_type: parsed.data.source_type,
+        source_service: parsed.data.source_service,
+        source_identity: parsed.data.source_identity,
+        adopted_from_ai: parsed.data.adopted_from_ai
       }
     ],
     default_kind: parsed.data.default_kind,
@@ -67,7 +75,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const result = await processIngest(userId, ingestBody)
+    const result = await processIngest(userId, ingestBody, { importChannel: "share" })
     return ok(result)
   } catch (error) {
     return fail(error instanceof Error ? error.message : "Ingest failed", 500)

@@ -5,7 +5,7 @@ const getUserIdMock = vi.fn<(headers: Headers, options?: { allowIngestKey?: bool
 const isValidOriginMock = vi.fn<(headers: Headers) => boolean>()
 const rateLimitMock = vi.fn<() => Promise<{ ok: boolean; retryAfterSec: number; remaining: number }>>()
 const processIngestMock = vi.fn<
-  (userId: string, payload: { items: Array<Record<string, unknown>>; default_kind?: string; default_tags?: string[] }) =>
+  (userId: string, payload: { items: Array<Record<string, unknown>>; default_kind?: string; default_tags?: string[] }, options?: Record<string, unknown>) =>
     Promise<{ created: number; ids: string[]; skipped_empty: number; skipped_duplicate: number; total: number }>
 >()
 
@@ -22,8 +22,9 @@ vi.mock("@/lib/rate-limit", () => ({
 vi.mock("@feature-lib/capture/ingest", () => ({
   processIngest: (
     userId: string,
-    payload: { items: Array<Record<string, unknown>>; default_kind?: string; default_tags?: string[] }
-  ) => processIngestMock(userId, payload)
+    payload: { items: Array<Record<string, unknown>>; default_kind?: string; default_tags?: string[] },
+    options?: Record<string, unknown>
+  ) => processIngestMock(userId, payload, options)
 }))
 
 import { routePostCaptureShare as POST } from "./helpers/routes"
@@ -75,11 +76,17 @@ describe("POST /api/capture/share", () => {
           source_title: undefined,
           url: "https://example.com/article",
           tags: ["alpha"],
-          kind: undefined
+          kind: undefined,
+          source_type: undefined,
+          source_service: undefined,
+          source_identity: undefined,
+          adopted_from_ai: undefined
         }
       ],
       default_kind: undefined,
       default_tags: ["beta"]
+    }, {
+      importChannel: "share"
     })
   })
 

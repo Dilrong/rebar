@@ -3,9 +3,34 @@ import { NextRequest } from "next/server"
 
 const getUserIdMock = vi.fn<(headers: Headers) => Promise<string | null>>()
 const rateLimitMock = vi.fn<() => Promise<{ ok: boolean; retryAfterSec: number; remaining: number }>>()
+const processIngestMock = vi.fn<
+  (userId: string, payload: { items: Array<Record<string, unknown>> }, options?: Record<string, unknown>) =>
+    Promise<{ created: number; ids: string[]; skipped_empty: number; skipped_duplicate: number; total: number }>
+>()
 
 const mockState = {
-  ownedTagRows: [] as Array<{ id: string }>,
+  ownedTagRows: [] as Array<{ id: string; name: string }>,
+  selectedRecord: {
+    id: "rec-1",
+    user_id: "user-1",
+    source_id: null,
+    kind: "note",
+    content: "hello",
+    content_hash: "hash-1",
+    url: null,
+    source_title: null,
+    favicon_url: null,
+    current_note: null,
+    note_updated_at: null,
+    adopted_from_ai: false,
+    state: "ACTIVE",
+    interval_days: 1,
+    due_at: null,
+    last_reviewed_at: null,
+    review_count: 0,
+    created_at: "2026-03-06T00:00:00.000Z",
+    updated_at: "2026-03-06T00:00:00.000Z"
+  },
   rpcCalls: [] as Array<{ fn: string; args: Record<string, unknown> }>
 }
 
@@ -16,6 +41,14 @@ vi.mock("@/lib/auth", () => ({
 vi.mock("@/lib/rate-limit", () => ({
   checkRateLimitDistributed: () => rateLimitMock(),
   resolveClientKey: () => "test-client"
+}))
+
+vi.mock("@feature-lib/capture/ingest", () => ({
+  processIngest: (
+    userId: string,
+    payload: { items: Array<Record<string, unknown>> },
+    options?: Record<string, unknown>
+  ) => processIngestMock(userId, payload, options)
 }))
 
 vi.mock("@/lib/supabase-admin", () => ({
@@ -37,12 +70,17 @@ vi.mock("@/lib/supabase-admin", () => ({
             eq: () => ({
               eq: () => ({
                 single: async () => ({
-                  data: { id: "11111111-1111-1111-1111-111111111111", state: "ACTIVE" },
+                  data: mockState.selectedRecord,
                   error: null
                 })
               })
             })
           }),
+          update: () => ({
+            eq: () => ({
+              eq: async () => ({ error: null })
+            })
+          })
         }
       }
 
@@ -79,7 +117,14 @@ describe("records write routes enforce owned tag ids", () => {
     vi.clearAllMocks()
     getUserIdMock.mockResolvedValue("user-1")
     rateLimitMock.mockResolvedValue({ ok: true, retryAfterSec: 1, remaining: 999 })
-    mockState.ownedTagRows = [{ id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa" }]
+    processIngestMock.mockResolvedValue({
+      created: 1,
+      ids: ["rec-1"],
+      skipped_empty: 0,
+      skipped_duplicate: 0,
+      total: 1
+    })
+    mockState.ownedTagRows = [{ id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", name: "owned" }]
     mockState.rpcCalls = []
   })
 
@@ -102,6 +147,7 @@ describe("records write routes enforce owned tag ids", () => {
     expect(response.status).toBe(400)
     await expect(response.json()).resolves.toEqual({ error: "Invalid tag_ids" })
     expect(mockState.rpcCalls).toHaveLength(0)
+    expect(processIngestMock).not.toHaveBeenCalled()
   })
 
   it("rejects record patch when tag_ids include a non-owned tag before updating the record", async () => {
@@ -126,7 +172,7 @@ describe("records write routes enforce owned tag ids", () => {
     expect(mockState.rpcCalls).toHaveLength(0)
   })
 
-  it("creates records through the atomic RPC path", async () => {
+  it("creates records through the ingest pipeline", async () => {
     const response = await POST(
       new NextRequest("http://localhost/api/records", {
         method: "POST",
@@ -140,13 +186,23 @@ describe("records write routes enforce owned tag ids", () => {
     )
 
     expect(response.status).toBe(201)
-    expect(mockState.rpcCalls).toHaveLength(1)
-    expect(mockState.rpcCalls[0]).toMatchObject({
-      fn: "create_record_with_tags",
-      args: {
-        p_user_id: "user-1",
-        p_tag_ids: ["aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"]
-      }
+    expect(processIngestMock).toHaveBeenCalledWith("user-1", {
+      items: [
+        {
+          content: "hello",
+          source_title: undefined,
+          url: undefined,
+          kind: "note",
+          tags: ["owned"],
+          source_type: undefined,
+          source_service: undefined,
+          source_identity: undefined,
+          adopted_from_ai: undefined
+        }
+      ]
+    }, {
+      importChannel: "manual",
+      duplicateMode: "error"
     })
   })
 

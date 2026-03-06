@@ -13,6 +13,7 @@ Rebar is a personal SSOT knowledge pipeline that turns captured data into a long
 - Human-centered vault operations: users decide capture, tagging, review, and organization
 - AI as consumer: AI reads via Export/MCP, does not manage vault state
 - Immutable source: `records.content` is never edited after creation
+- Provenance matters: source metadata and ingest history should be preserved, not flattened away at import time
 - Explicit state machine: records move by defined transitions only
 - Low-friction review: simple actions, repeatable daily flow
 
@@ -36,7 +37,11 @@ Rebar is a personal SSOT knowledge pipeline that turns captured data into a long
 
 ## Key Domain Concepts
 
-- `Record`: canonical captured unit (`quote | note | link | ai`)
+- `Source`: shared provenance object for a book/article/service/manual/AI origin
+- `Record`: canonical captured unit (`quote | note | link | ai`) and the smallest thing worth revisiting
+- `Current Note`: the latest human note attached to a record, stored separately from immutable content
+- `RecordIngestEvent`: append-only import provenance snapshot for each ingest
+- `RecordNoteVersion`: historical note snapshot preserved when the current note changes
 - `Annotation`: additive enrichment for immutable records
 - `ReviewLog`: append-only review audit trail
 - `Tag` and `RecordTag`: user-owned taxonomy
@@ -51,5 +56,6 @@ Rebar is a personal SSOT knowledge pipeline that turns captured data into a long
 
 ## Document Map
 
+- DB schema/migration usage: `db/README.md`
 - Architecture details: `docs/architecture.md`
 - Session progress and action history: `docs/session_context.md`

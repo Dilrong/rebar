@@ -11,6 +11,19 @@ import type { RecordRow } from "@/lib/types"
 
 const ParamsSchema = z.object({ id: z.string().uuid() })
 
+function resolveFaviconUrl(url: string | null): string | null {
+  if (!url) {
+    return null
+  }
+
+  try {
+    const { hostname } = new URL(url)
+    return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(hostname)}&sz=64`
+  } catch {
+    return null
+  }
+}
+
 export async function GET(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
@@ -51,14 +64,20 @@ export async function GET(
     return internalError("record.get", recordResult.error)
   }
 
-  const [annotationsResult, linksResult] = await Promise.all([
+  const [annotationsResult, linksResult, noteVersionsResult] = await Promise.all([
     supabase
       .from("annotations")
       .select("*")
       .eq("record_id", parsed.data.id)
       .eq("user_id", userId)
       .order("created_at", { ascending: true }),
-    supabase.from("record_tags").select("tag_id").eq("record_id", parsed.data.id)
+    supabase.from("record_tags").select("tag_id").eq("record_id", parsed.data.id),
+    supabase
+      .from("record_note_versions")
+      .select("*")
+      .eq("record_id", parsed.data.id)
+      .eq("user_id", userId)
+      .order("replaced_at", { ascending: false })
   ])
 
   if (annotationsResult.error) {
@@ -67,6 +86,10 @@ export async function GET(
 
   if (linksResult.error) {
     return internalError("record.get", linksResult.error)
+  }
+
+  if (noteVersionsResult.error) {
+    return internalError("record.get", noteVersionsResult.error)
   }
 
   const tagIds = linksResult.data.map((item) => item.tag_id)
@@ -90,6 +113,7 @@ export async function GET(
   return ok({
     record: recordResult.data,
     annotations: annotationsResult.data,
+    note_versions: noteVersionsResult.data,
     tags
   })
 }
@@ -127,7 +151,7 @@ export async function PATCH(
   const supabase = getSupabaseAdmin()
   const existing = await supabase
     .from("records")
-    .select("id, state")
+    .select("id, state, source_id, url, source_title")
     .eq("id", parsedParams.data.id)
     .eq("user_id", userId)
     .single()
@@ -163,6 +187,8 @@ export async function PATCH(
 
   const shouldUpdateUrl = Object.prototype.hasOwnProperty.call(parsedBody.data, "url")
   const shouldUpdateSourceTitle = Object.prototype.hasOwnProperty.call(parsedBody.data, "source_title")
+  const nextUrl = shouldUpdateUrl ? parsedBody.data.url ?? null : existing.data.url ?? null
+  const nextSourceTitle = shouldUpdateSourceTitle ? parsedBody.data.source_title ?? null : existing.data.source_title ?? null
 
   const updated = await supabase
     .rpc("update_record_with_tags", {
@@ -171,9 +197,9 @@ export async function PATCH(
       p_update_state: Boolean(parsedBody.data.state),
       p_state: parsedBody.data.state ?? null,
       p_update_url: shouldUpdateUrl,
-      p_url: shouldUpdateUrl ? parsedBody.data.url ?? null : null,
+      p_url: shouldUpdateUrl ? nextUrl : null,
       p_update_source_title: shouldUpdateSourceTitle,
-      p_source_title: shouldUpdateSourceTitle ? parsedBody.data.source_title ?? null : null,
+      p_source_title: shouldUpdateSourceTitle ? nextSourceTitle : null,
       p_update_tags: shouldUpdateTags,
       p_tag_ids: nextTagIds
     })
@@ -185,6 +211,48 @@ export async function PATCH(
     }
 
     return internalError("record.patch", updated.error)
+  }
+
+  if (existing.data.source_id && (shouldUpdateUrl || shouldUpdateSourceTitle)) {
+    const updatedSource = await supabase
+      .from("sources")
+      .update({
+        url: nextUrl,
+        title: nextSourceTitle
+      })
+      .eq("id", existing.data.source_id)
+      .eq("user_id", userId)
+
+    if (updatedSource.error) {
+      return internalError("record.patch", updatedSource.error)
+    }
+
+    const propagated = await supabase
+      .from("records")
+      .update({
+        url: nextUrl,
+        source_title: nextSourceTitle,
+        favicon_url: resolveFaviconUrl(nextUrl)
+      })
+      .eq("user_id", userId)
+      .eq("source_id", existing.data.source_id)
+
+    if (propagated.error) {
+      return internalError("record.patch", propagated.error)
+    }
+
+    const refreshed = await supabase
+      .from("records")
+      .select("*")
+      .eq("id", parsedParams.data.id)
+      .eq("user_id", userId)
+      .single()
+
+    if (refreshed.error) {
+      return internalError("record.patch", refreshed.error)
+    }
+
+    return ok({ record: refreshed.data as RecordRow })
   }
 
   return ok({ record: updated.data as RecordRow })

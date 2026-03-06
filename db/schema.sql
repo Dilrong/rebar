@@ -1,11 +1,31 @@
+CREATE TABLE sources (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users ON DELETE CASCADE,
+  source_type TEXT NOT NULL CHECK (source_type IN ('book', 'article', 'service', 'manual', 'ai', 'unknown')),
+  identity_key TEXT NOT NULL,
+  title TEXT,
+  author TEXT,
+  url TEXT,
+  service TEXT,
+  external_source_id TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (user_id, source_type, identity_key)
+);
+
 CREATE TABLE records (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users ON DELETE CASCADE,
+  source_id UUID REFERENCES sources ON DELETE CASCADE,
   kind TEXT NOT NULL CHECK (kind IN ('quote', 'note', 'link', 'ai')),
   content TEXT NOT NULL,
   content_hash TEXT NOT NULL,
   url TEXT,
   source_title TEXT,
+  favicon_url TEXT,
+  current_note TEXT,
+  note_updated_at TIMESTAMPTZ,
+  adopted_from_ai BOOLEAN NOT NULL DEFAULT FALSE,
   state TEXT NOT NULL DEFAULT 'INBOX' CHECK (state IN ('INBOX', 'ACTIVE', 'PINNED', 'ARCHIVED', 'TRASHED')),
   interval_days INTEGER NOT NULL DEFAULT 1 CHECK (interval_days > 0),
   due_at TIMESTAMPTZ,
@@ -15,14 +35,16 @@ CREATE TABLE records (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE UNIQUE INDEX records_user_content_hash ON records (user_id, content_hash);
+CREATE UNIQUE INDEX records_user_source_content_hash ON records (user_id, source_id, content_hash);
 CREATE INDEX records_user_state ON records (user_id, state);
 CREATE INDEX records_due ON records (user_id, due_at) WHERE state IN ('ACTIVE', 'PINNED');
 CREATE INDEX records_user_created_at ON records (user_id, created_at DESC);
+CREATE INDEX records_user_source ON records (user_id, source_id);
 ALTER TABLE records ADD COLUMN fts tsvector
   GENERATED ALWAYS AS (
     setweight(to_tsvector('simple', coalesce(source_title, '')), 'A') ||
-    setweight(to_tsvector('simple', content), 'B')
+    setweight(to_tsvector('simple', content), 'B') ||
+    setweight(to_tsvector('simple', coalesce(current_note, '')), 'C')
   ) STORED;
 CREATE INDEX records_fts_idx ON records USING GIN (fts);
 
@@ -32,8 +54,36 @@ CREATE TABLE annotations (
   user_id UUID NOT NULL REFERENCES auth.users ON DELETE CASCADE,
   kind TEXT NOT NULL CHECK (kind IN ('highlight', 'comment', 'correction')),
   body TEXT NOT NULL,
+  anchor TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+CREATE TABLE record_note_versions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  record_id UUID NOT NULL REFERENCES records ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users ON DELETE CASCADE,
+  body TEXT NOT NULL,
+  import_channel TEXT CHECK (import_channel IN ('manual', 'csv', 'json', 'api', 'share', 'extension', 'url', 'ocr')),
+  replaced_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX record_note_versions_record_replaced_at ON record_note_versions (record_id, replaced_at DESC);
+
+CREATE TABLE record_ingest_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  record_id UUID NOT NULL REFERENCES records ON DELETE CASCADE,
+  source_id UUID NOT NULL REFERENCES sources ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users ON DELETE CASCADE,
+  import_channel TEXT NOT NULL CHECK (import_channel IN ('manual', 'csv', 'json', 'api', 'share', 'extension', 'url', 'ocr')),
+  source_snapshot JSONB NOT NULL,
+  note_snapshot TEXT,
+  external_item_id TEXT,
+  external_anchor TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX record_ingest_events_record_created_at ON record_ingest_events (record_id, created_at DESC);
+CREATE INDEX record_ingest_events_user_channel_created_at ON record_ingest_events (user_id, import_channel, created_at DESC);
 
 CREATE TABLE review_log (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -87,20 +137,27 @@ CREATE INDEX ingest_jobs_user_status_created ON ingest_jobs (user_id, status, cr
 CREATE TABLE user_preferences (
   user_id UUID PRIMARY KEY REFERENCES auth.users ON DELETE CASCADE,
   start_page TEXT NOT NULL DEFAULT '/library' CHECK (start_page IN ('/review', '/capture', '/library', '/search')),
+  font_family TEXT NOT NULL DEFAULT 'sans' CHECK (font_family IN ('sans', 'mono')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+ALTER TABLE sources ENABLE ROW LEVEL SECURITY;
 ALTER TABLE records ENABLE ROW LEVEL SECURITY;
 ALTER TABLE annotations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE record_note_versions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE record_ingest_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE review_log ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tags ENABLE ROW LEVEL SECURITY;
 ALTER TABLE record_tags ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ingest_jobs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_preferences ENABLE ROW LEVEL SECURITY;
 
+CREATE POLICY sources_owner_policy ON sources USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
 CREATE POLICY records_owner_policy ON records USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
 CREATE POLICY annotations_owner_policy ON annotations USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
+CREATE POLICY record_note_versions_owner_policy ON record_note_versions USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
+CREATE POLICY record_ingest_events_owner_policy ON record_ingest_events USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
 CREATE POLICY review_log_owner_policy ON review_log USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
 CREATE POLICY tags_owner_policy ON tags USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
 CREATE POLICY ingest_jobs_owner_policy ON ingest_jobs USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
@@ -133,6 +190,11 @@ $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER records_set_updated_at
 BEFORE UPDATE ON records
+FOR EACH ROW
+EXECUTE FUNCTION set_updated_at();
+
+CREATE TRIGGER sources_set_updated_at
+BEFORE UPDATE ON sources
 FOR EACH ROW
 EXECUTE FUNCTION set_updated_at();
 
