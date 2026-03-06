@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useSearchParams } from "next/navigation"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Search } from "lucide-react"
@@ -33,6 +33,8 @@ type TagsResponse = {
 
 export default function SearchPage() {
   const { t } = useI18n()
+  const router = useRouter()
+  const pathname = usePathname()
   const searchParams = useSearchParams()
   const [q, setQ] = useState("")
   const debouncedQ = useDebouncedValue(q, 220)
@@ -41,34 +43,56 @@ export default function SearchPage() {
   const [fromDate, setFromDate] = useState("")
   const [toDate, setToDate] = useState("")
   const [semantic, setSemantic] = useState(false)
+  const [didInitFromUrl, setDidInitFromUrl] = useState(false)
 
   useEffect(() => {
-    const queryQ = searchParams.get("q")
-    const queryState = searchParams.get("state")
-    const queryTag = searchParams.get("tag_id")
-    const queryFrom = searchParams.get("from")
-    const queryTo = searchParams.get("to")
+    const queryQ = searchParams.get("q") ?? ""
+    const queryState = searchParams.get("state") ?? ""
+    const queryTag = searchParams.get("tag_id") ?? ""
+    const queryFrom = searchParams.get("from") ?? ""
+    const queryTo = searchParams.get("to") ?? ""
     const querySemantic = searchParams.get("semantic")
 
-    if (queryQ) {
-      setQ(queryQ)
-    }
-    if (queryState) {
-      setState(queryState)
-    }
-    if (queryTag) {
-      setTagId(queryTag)
-    }
-    if (queryFrom) {
-      setFromDate(queryFrom)
-    }
-    if (queryTo) {
-      setToDate(queryTo)
-    }
-    if (querySemantic === "1" || querySemantic?.toLowerCase() === "true") {
-      setSemantic(true)
-    }
+    setQ(queryQ)
+    setState(queryState)
+    setTagId(queryTag)
+    setFromDate(queryFrom)
+    setToDate(queryTo)
+    setSemantic(querySemantic === "1" || querySemantic?.toLowerCase() === "true")
+    setDidInitFromUrl(true)
   }, [searchParams])
+
+  const hasBaseFilters = Boolean(debouncedQ.trim() || state || tagId || fromDate || toDate)
+
+  useEffect(() => {
+    if (!hasBaseFilters && semantic) {
+      setSemantic(false)
+    }
+  }, [hasBaseFilters, semantic])
+
+  const currentParams = searchParams.toString()
+
+  useEffect(() => {
+    if (!didInitFromUrl) {
+      return
+    }
+
+    const params = new URLSearchParams()
+    if (debouncedQ.trim()) params.set("q", debouncedQ.trim())
+    if (state) params.set("state", state)
+    if (tagId) params.set("tag_id", tagId)
+    if (fromDate) params.set("from", fromDate)
+    if (toDate) params.set("to", toDate)
+    if (semantic && hasBaseFilters) params.set("semantic", "1")
+
+    const nextParams = params.toString()
+    if (nextParams === currentParams) {
+      return
+    }
+
+    const nextHref = nextParams ? `${pathname}?${nextParams}` : pathname
+    router.replace(nextHref, { scroll: false })
+  }, [currentParams, debouncedQ, didInitFromUrl, fromDate, hasBaseFilters, pathname, router, semantic, state, tagId, toDate])
 
   const tags = useQuery({
     queryKey: ["tags"],
@@ -83,9 +107,9 @@ export default function SearchPage() {
     if (tagId) params.set("tag_id", tagId)
     if (fromDate) params.set("from", fromDate)
     if (toDate) params.set("to", toDate)
-    if (semantic) params.set("semantic", "1")
+    if (semantic && hasBaseFilters) params.set("semantic", "1")
     return params.toString()
-  }, [debouncedQ, state, tagId, fromDate, toDate, semantic])
+  }, [debouncedQ, fromDate, hasBaseFilters, semantic, state, tagId, toDate])
 
   const result = useQuery({
     queryKey: ["search", queryString],
@@ -193,7 +217,14 @@ export default function SearchPage() {
             <div className="mt-3 flex flex-wrap items-center gap-2 border-t-2 border-foreground pt-3">
               <button
                 type="button"
-                onClick={() => setSemantic((prev) => !prev)}
+                onClick={() => {
+                  if (!hasBaseFilters && !semantic) {
+                    return
+                  }
+
+                  setSemantic((prev) => !prev)
+                }}
+                disabled={!hasBaseFilters && !semantic}
                 className={`min-h-[44px] border-4 px-3 py-2 font-mono text-xs font-bold uppercase transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm ${semantic
                   ? "border-foreground bg-foreground text-background"
                   : "border-foreground bg-background text-foreground hover:bg-foreground hover:text-background"
@@ -205,9 +236,20 @@ export default function SearchPage() {
                 <p className="font-mono text-[10px] font-bold uppercase text-muted-foreground">
                   {t("search.semanticHint", "의미 기반 유사도 우선으로 결과를 정렬합니다")}
                 </p>
+              ) : !hasBaseFilters ? (
+                <p className="font-mono text-[10px] font-bold uppercase text-muted-foreground">
+                  {t("search.semanticNeedsFilter", "검색어 또는 필터를 먼저 지정하세요")}
+                </p>
               ) : null}
             </div>
           </section>
+
+          {queryString.length === 0 ? (
+            <EmptyState
+              title={t("search.setFilterPrompt", "SET A QUERY OR FILTER")}
+              description={t("search.setFilterPromptDesc", "검색어, 상태, 태그, 날짜 중 하나를 선택하면 결과를 표시합니다")}
+            />
+          ) : null}
 
           {result.isFetching && queryString.length > 0 ? (
             <p className="mb-4 font-mono text-[10px] font-bold uppercase text-muted-foreground">

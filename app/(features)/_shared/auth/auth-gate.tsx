@@ -57,7 +57,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
   }, [pathname, router, searchParams])
 
   if (!ready) {
-    return <PageLoading />
+    return <PageLoading messageKey="loading.auth" fallback="Verifying authentication..." />
   }
 
   return <>{children}</>

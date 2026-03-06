@@ -8,7 +8,7 @@ import AppNav from "@shared/layout/app-nav"
 import { apiFetch } from "@/lib/client-http"
 import { CreateRecordSchema, type CreateRecordInput } from "@/lib/schemas"
 import type { RecordRow, TagRow } from "@/lib/types"
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import type { ChangeEvent } from "react"
 import { useForm } from "react-hook-form"
 import { useI18n } from "@app-shared/i18n/i18n-provider"
@@ -66,6 +66,9 @@ type CsvPreview = {
 }
 
 type ImportMode = "manual" | "url" | "batch" | "csv" | "ocr"
+type CaptureToastKind = "saved" | "ingested" | "ocrFilled" | "retryDone"
+
+const TOAST_DURATION_MS = 5000
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null
@@ -356,11 +359,38 @@ export default function CapturePage() {
   const [ocrFile, setOcrFile] = useState<File | null>(null)
   const [ocrFileName, setOcrFileName] = useState<string | null>(null)
   const [showSavedToast, setShowSavedToast] = useState(false)
+  const [toastKind, setToastKind] = useState<CaptureToastKind>("saved")
   const [latestSavedRecordId, setLatestSavedRecordId] = useState<string | null>(null)
+  const [pendingIngestCount, setPendingIngestCount] = useState<number | null>(null)
+  const [ocrProgress, setOcrProgress] = useState<number | null>(null)
   const [ingestResult, setIngestResult] = useState<IngestResponse | null>(null)
   const [ingestError, setIngestError] = useState<string | null>(null)
   const [importMode, setImportMode] = useState<ImportMode>("manual")
   const [duplicateRecordId, setDuplicateRecordId] = useState<string | null>(null)
+  const toastTimerRef = useRef<number | null>(null)
+
+  const openToast = (kind: CaptureToastKind, recordId: string | null = null) => {
+    if (toastTimerRef.current) {
+      window.clearTimeout(toastTimerRef.current)
+    }
+
+    setToastKind(kind)
+    setLatestSavedRecordId(recordId)
+    setShowSavedToast(true)
+    toastTimerRef.current = window.setTimeout(() => {
+      setShowSavedToast(false)
+      setLatestSavedRecordId(null)
+      toastTimerRef.current = null
+    }, TOAST_DURATION_MS)
+  }
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) {
+        window.clearTimeout(toastTimerRef.current)
+      }
+    }
+  }, [])
 
   const mutation = useMutation({
     mutationFn: async (payload: CreateRecordInput) =>
@@ -376,10 +406,8 @@ export default function CapturePage() {
       }),
     onSuccess: (createdRecord) => {
       setDuplicateRecordId(null)
-      setLatestSavedRecordId(createdRecord.id)
       form.reset({ kind: "note", content: "", url: "", source_title: "", tag_ids: [] })
-      setShowSavedToast(true)
-      window.setTimeout(() => setShowSavedToast(false), 2500)
+      openToast("saved", createdRecord.id)
     },
     onError: (error: Error & { status?: number; payload?: unknown }) => {
       if (error.status === 409 && error.payload && typeof error.payload === "object") {
@@ -415,13 +443,15 @@ export default function CapturePage() {
     onSuccess: (data) => {
       setIngestError(null)
       setIngestResult(data)
-      setLatestSavedRecordId(data.ids[0] ?? null)
+      setPendingIngestCount(null)
       setExternalJson("")
       setCsvText("")
       setCsvFileName(null)
       setCsvPreview({ totalRows: 0, importableRows: 0, readwiseDetected: false })
-      setShowSavedToast(true)
-      window.setTimeout(() => setShowSavedToast(false), 2500)
+      openToast("ingested", data.ids[0] ?? null)
+    },
+    onError: () => {
+      setPendingIngestCount(null)
     }
   })
 
@@ -467,16 +497,22 @@ export default function CapturePage() {
       )
 
       if (data.done > 0) {
-        setShowSavedToast(true)
-        window.setTimeout(() => setShowSavedToast(false), 2500)
+        openToast("retryDone")
       }
     }
   })
 
   const ocrMutation = useMutation({
     mutationFn: async (file: File) => {
+      setOcrProgress(0)
       const { recognize } = await import("tesseract.js")
-      const result = await recognize(file, "kor+eng")
+      const result = await recognize(file, "kor+eng", {
+        logger: (message) => {
+          if (message.status === "recognizing text" && typeof message.progress === "number") {
+            setOcrProgress(Math.round(message.progress * 100))
+          }
+        }
+      })
       return result.data.text.trim()
     },
     onSuccess: (text) => {
@@ -488,12 +524,23 @@ export default function CapturePage() {
       form.setValue("kind", "note")
       form.setValue("content", text)
       setImportMode("manual")
-      setShowSavedToast(true)
-      window.setTimeout(() => setShowSavedToast(false), 2500)
+      openToast("ocrFilled")
+    },
+    onSettled: () => {
+      setOcrProgress(null)
     }
   })
 
-  const onSubmit = form.handleSubmit((values) => mutation.mutate(values))
+  const onSubmit = form.handleSubmit(
+    (values) => mutation.mutate(values),
+    (errors) => {
+      const fieldOrder: Array<keyof CreateRecordInput> = ["content", "kind", "url", "source_title"]
+      const firstInvalidField = fieldOrder.find((field) => errors[field])
+      if (firstInvalidField) {
+        form.setFocus(firstInvalidField)
+      }
+    }
+  )
 
   const handleMergeDuplicate = () => {
     const values = form.getValues()
@@ -511,6 +558,8 @@ export default function CapturePage() {
         throw new Error(t("capture.ingestEmpty", "No importable items found."))
       }
 
+      setPendingIngestCount(items.length)
+
       ingestMutation.mutate(
         { items },
         {
@@ -524,6 +573,7 @@ export default function CapturePage() {
     } catch (error) {
       const message = error instanceof Error ? error.message : t("capture.ingestParseError", "Invalid JSON")
       setIngestError(message)
+      setPendingIngestCount(null)
     }
   }
 
@@ -538,6 +588,8 @@ export default function CapturePage() {
         throw new Error(t("capture.csvEmpty", "No importable rows found."))
       }
 
+      setPendingIngestCount(items.length)
+
       ingestMutation.mutate(
         { items },
         {
@@ -551,6 +603,7 @@ export default function CapturePage() {
     } catch (error) {
       const message = error instanceof Error ? error.message : t("capture.csvParseError", "Invalid CSV")
       setIngestError(message)
+      setPendingIngestCount(null)
     }
   }
 
@@ -625,6 +678,7 @@ export default function CapturePage() {
                 onExternalJsonChange={setExternalJson}
                 onRunBatchImport={handleIngestSubmit}
                 ingestPending={ingestMutation.isPending}
+                ingestPendingCount={pendingIngestCount}
                 ingestError={ingestError}
                 ingestMutationError={ingestMutation.error?.message ?? null}
                 ingestResultCreated={ingestResult?.created ?? null}
@@ -642,6 +696,7 @@ export default function CapturePage() {
                 csvFileName={csvFileName}
                 csvPreview={csvPreview}
                 ingestPending={ingestMutation.isPending}
+                ingestPendingCount={pendingIngestCount}
                 ingestError={ingestError}
                 ingestMutationError={ingestMutation.error?.message ?? null}
                 ingestResultCreated={ingestResult?.created ?? null}
@@ -657,6 +712,7 @@ export default function CapturePage() {
                 ocrFileName={ocrFileName}
                 hasOcrFile={Boolean(ocrFile)}
                 ocrPending={ocrMutation.isPending}
+                ocrProgress={ocrProgress}
                 ocrError={ocrMutation.error?.message ?? null}
                 ingestError={ingestError}
                 onOcrFileChange={handleOcrFileChange}
@@ -684,7 +740,15 @@ export default function CapturePage() {
       </AuthGate>
       {showSavedToast ? (
         <Toast
-          message={t("toast.saved", "Saved")}
+          message={
+            toastKind === "ocrFilled"
+              ? t("capture.ocrFilledForm", "텍스트를 수동 입력 폼에 채웠습니다")
+              : toastKind === "ingested"
+                ? t("capture.ingestToastDone", "일괄 가져오기가 완료되었습니다")
+                : toastKind === "retryDone"
+                  ? t("capture.retryDone", "대기 중이던 인입이 모두 처리되었습니다.")
+                  : t("toast.saved", "Saved")
+          }
           actionLabel={latestSavedRecordId ? t("toast.openRecord", "Open") : undefined}
           onAction={
             latestSavedRecordId
@@ -693,6 +757,10 @@ export default function CapturePage() {
           }
           tone="success"
           onClose={() => {
+            if (toastTimerRef.current) {
+              window.clearTimeout(toastTimerRef.current)
+              toastTimerRef.current = null
+            }
             setShowSavedToast(false)
             setLatestSavedRecordId(null)
           }}

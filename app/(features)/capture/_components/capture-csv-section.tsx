@@ -11,6 +11,7 @@ type CaptureCsvSectionProps = {
   csvFileName: string | null
   csvPreview: CsvPreview
   ingestPending: boolean
+  ingestPendingCount: number | null
   ingestError: string | null
   ingestMutationError: string | null
   ingestResultCreated: number | null
@@ -24,6 +25,7 @@ export function CaptureCsvSection({
   csvFileName,
   csvPreview,
   ingestPending,
+  ingestPendingCount,
   ingestError,
   ingestMutationError,
   ingestResultCreated,
@@ -85,6 +87,11 @@ export function CaptureCsvSection({
           {ingestPending ? t("capture.csvImporting", "IMPORTING...") : t("capture.csvRun", "IMPORT CSV")}
         </button>
       </div>
+      {ingestPending && ingestPendingCount !== null ? (
+        <p className="mt-2 font-mono text-[10px] font-bold uppercase text-muted-foreground">
+          {t("capture.ingestProgress", "PROCESSING ITEMS")}: {ingestPendingCount}
+        </p>
+      ) : null}
       {ingestError ? <p className="mt-2 font-mono text-xs text-destructive">{ingestError}</p> : null}
       {ingestMutationError ? <p className="mt-2 font-mono text-xs text-destructive">{ingestMutationError}</p> : null}
       {ingestResultCreated !== null ? (

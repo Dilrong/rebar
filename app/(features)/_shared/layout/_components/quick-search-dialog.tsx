@@ -43,6 +43,8 @@ export function QuickSearchDialog({
     return null
   }
 
+  const fullSearchHref = query.trim() ? `/search?q=${encodeURIComponent(query.trim())}` : "/search"
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 backdrop-blur-sm p-4 transition-all"
@@ -69,6 +71,15 @@ export function QuickSearchDialog({
         <p id="quick-search-description" className="mb-2 font-mono text-[10px] font-bold uppercase text-muted-foreground">
           키보드: ↑↓ 이동, Enter 열기, Esc 닫기
         </p>
+        <div className="mb-3 flex items-center justify-end">
+          <Link
+            href={fullSearchHref}
+            onClick={onClose}
+            className="min-h-[40px] flex items-center justify-center border-2 border-foreground px-3 py-2 font-mono text-[10px] font-bold uppercase hover:bg-foreground hover:text-background active:translate-y-1 active:translate-x-1 shadow-brutal-sm hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all duration-200"
+          >
+            FULL SEARCH
+          </Link>
+        </div>
         <label htmlFor="quick-search-input" className="sr-only">
           Quick search
         </label>

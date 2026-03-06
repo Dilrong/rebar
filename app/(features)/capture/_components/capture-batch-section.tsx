@@ -6,6 +6,7 @@ type CaptureBatchSectionProps = {
   onExternalJsonChange: (value: string) => void
   onRunBatchImport: () => void
   ingestPending: boolean
+  ingestPendingCount: number | null
   ingestError: string | null
   ingestMutationError: string | null
   ingestResultCreated: number | null
@@ -22,6 +23,7 @@ export function CaptureBatchSection({
   onExternalJsonChange,
   onRunBatchImport,
   ingestPending,
+  ingestPendingCount,
   ingestError,
   ingestMutationError,
   ingestResultCreated,
@@ -79,6 +81,11 @@ export function CaptureBatchSection({
           {ingestPending ? t("capture.ingesting", "IMPORTING...") : t("capture.ingestRun", "BATCH IMPORT")}
         </button>
       </div>
+      {ingestPending && ingestPendingCount !== null ? (
+        <p className="mt-2 font-mono text-[10px] font-bold uppercase text-muted-foreground">
+          {t("capture.ingestProgress", "PROCESSING ITEMS")}: {ingestPendingCount}
+        </p>
+      ) : null}
       <details className="mt-3 border-2 border-foreground bg-background p-3">
         <summary className="min-h-[44px] flex items-center cursor-pointer font-mono text-[10px] font-bold uppercase">ADVANCED IMPORT TOOLS</summary>
         <div className="mt-3 border-2 border-foreground bg-background p-3">

@@ -36,6 +36,15 @@ export function NavMobileTop({
         REBAR_
       </Link>
       <div className="flex items-center gap-2">
+        <span
+          className={cn(
+            "max-w-[110px] truncate border-2 px-2 py-1 font-mono text-[9px] font-bold uppercase",
+            syncError ? "border-destructive text-destructive" : "border-foreground text-muted-foreground"
+          )}
+          aria-live="polite"
+        >
+          {syncStatusLabel}
+        </span>
         <button
           type="button"
           onClick={onSync}

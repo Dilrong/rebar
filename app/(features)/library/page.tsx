@@ -1,6 +1,6 @@
 "use client"
 
-import { useSearchParams } from "next/navigation"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react"
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import AuthGate from "@shared/auth/auth-gate"
@@ -42,6 +42,8 @@ type StateFilter = "ALL" | (typeof STATE_TABS)[number]
 
 export default function LibraryPage() {
   const { t } = useI18n()
+  const router = useRouter()
+  const pathname = usePathname()
   const searchParams = useSearchParams()
   const queryClient = useQueryClient()
   const [state, setState] = useState<StateFilter>("ALL")
@@ -65,6 +67,7 @@ export default function LibraryPage() {
   const [allRecords, setAllRecords] = useState<RecordRow[]>([])
   const [editingTagId, setEditingTagId] = useState<string | null>(null)
   const [editingTagName, setEditingTagName] = useState("")
+  const [didInitFromUrl, setDidInitFromUrl] = useState(false)
 
   useEffect(() => {
     const queryState = searchParams.get("state")
@@ -74,30 +77,51 @@ export default function LibraryPage() {
     const querySort = searchParams.get("sort")
     const queryOrder = searchParams.get("order")
 
-    if (queryState === "ALL" || queryState === "INBOX" || queryState === "ACTIVE" || queryState === "PINNED" || queryState === "ARCHIVED") {
-      setState(queryState)
-    }
+    setState(
+      queryState === "ALL" || queryState === "INBOX" || queryState === "ACTIVE" || queryState === "PINNED" || queryState === "ARCHIVED"
+        ? queryState
+        : "ALL"
+    )
 
-    if (queryKind === "quote" || queryKind === "note" || queryKind === "link" || queryKind === "ai") {
-      setKind(queryKind)
-    }
-
-    if (queryText) {
-      setQ(queryText)
-    }
-
-    if (queryTag) {
-      setTagId(queryTag)
-    }
-
-    if (querySort === "created_at" || querySort === "review_count" || querySort === "due_at") {
-      setSort(querySort)
-    }
-
-    if (queryOrder === "asc" || queryOrder === "desc") {
-      setOrder(queryOrder)
-    }
+    setKind(queryKind === "quote" || queryKind === "note" || queryKind === "link" || queryKind === "ai" ? queryKind : "")
+    setQ(queryText ?? "")
+    setTagId(queryTag ?? "")
+    setSort(querySort === "created_at" || querySort === "review_count" || querySort === "due_at" ? querySort : "created_at")
+    setOrder(queryOrder === "asc" || queryOrder === "desc" ? queryOrder : "desc")
+    setDidInitFromUrl(true)
   }, [searchParams])
+
+  const currentParams = searchParams.toString()
+
+  useEffect(() => {
+    if (!didInitFromUrl) {
+      return
+    }
+
+    const params = new URLSearchParams()
+    if (state !== "ALL") {
+      params.set("state", state)
+    }
+    if (kind) {
+      params.set("kind", kind)
+    }
+    if (debouncedQ) {
+      params.set("q", debouncedQ)
+    }
+    if (tagId) {
+      params.set("tag_id", tagId)
+    }
+    params.set("sort", sort)
+    params.set("order", order)
+
+    const nextParams = params.toString()
+    if (nextParams === currentParams) {
+      return
+    }
+
+    const nextHref = nextParams ? `${pathname}?${nextParams}` : pathname
+    router.replace(nextHref, { scroll: false })
+  }, [currentParams, debouncedQ, didInitFromUrl, kind, order, pathname, router, sort, state, tagId])
 
   const queryString = useMemo(() => {
     const params = new URLSearchParams()

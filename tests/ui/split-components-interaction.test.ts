@@ -78,20 +78,15 @@ describe("split components interaction (jsdom)", () => {
     expect((loadingButton as HTMLButtonElement).disabled).toBe(true)
   })
 
-  it("triggers mobile quick search action", () => {
-    const onOpenQuickSearch = vi.fn()
-
+  it("renders mobile search navigation link", () => {
     render(
       createElement(NavMobileBottom, {
-        pathname: "/capture",
-        onOpenQuickSearch
+        pathname: "/capture"
       })
     )
 
-    const searchButton = screen.getByRole("button", { name: "SEARCH" })
-    fireEvent.click(searchButton)
-
-    expect(onOpenQuickSearch).toHaveBeenCalledTimes(1)
+    const searchLink = screen.getByRole("link", { name: "SEARCH" })
+    expect(searchLink.getAttribute("href")).toBe("/search")
     expect(screen.getByLabelText("Capture")).toBeTruthy()
   })
 

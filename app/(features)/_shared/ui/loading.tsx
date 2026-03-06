@@ -17,14 +17,22 @@ export function LoadingDots() {
   )
 }
 
-export function PageLoading() {
+type PageLoadingProps = {
+  messageKey?: string
+  fallback?: string
+}
+
+export function PageLoading({
+  messageKey = "loading.system",
+  fallback = "System.Loading..."
+}: PageLoadingProps = {}) {
   const { t } = useI18n()
 
   return (
     <div className="flex min-h-[50vh] flex-col items-center justify-center space-y-4">
       <LoadingSpinner className="h-10 w-10 text-accent" />
       <p className="animate-pulse font-mono text-xs font-bold uppercase tracking-widest text-muted-foreground">
-        {t("loading.system", "System.Loading...")}
+        {t(messageKey, fallback)}
       </p>
     </div>
   )

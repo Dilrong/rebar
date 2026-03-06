@@ -7,7 +7,7 @@ import { useI18n } from "@app-shared/i18n/i18n-provider"
 import { getSupabaseBrowser } from "@/lib/supabase-browser"
 import {
   getStartPagePreference,
-  getStartPagePreferenceServer,
+  getPreferencesServer,
   setStartPagePreference
 } from "@feature-lib/settings/preferences"
 import { useQuery } from "@tanstack/react-query"
@@ -84,11 +84,11 @@ export default function AppNav() {
     setMounted(true)
     try {
       const supabase = getSupabaseBrowser()
-      supabase.auth.getUser().then(({ data }) => {
+      supabase.auth.getUser().then(({ data }: { data: any }) => {
         setAuthEmail(data.user?.email ?? null)
       })
 
-      const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      const { data } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
         setAuthEmail(session?.user?.email ?? null)
       })
 
@@ -180,14 +180,14 @@ export default function AppNav() {
         container.querySelectorAll<HTMLElement>(
           'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
         )
-      ).filter((node) => !node.hasAttribute("disabled"))
+      ).filter((node: any) => !node.hasAttribute("disabled"))
 
       if (focusable.length === 0) {
         return
       }
 
-      const first = focusable[0]
-      const last = focusable[focusable.length - 1]
+      const first = focusable[0] as HTMLElement
+      const last = focusable[focusable.length - 1] as HTMLElement
       const active = document.activeElement as HTMLElement | null
 
       if (event.shiftKey && active === first) {
@@ -207,13 +207,13 @@ export default function AppNav() {
     const localStartPage = getStartPagePreference()
     setHomeHref(localStartPage)
 
-    void getStartPagePreferenceServer().then((serverStartPage) => {
-      if (!serverStartPage) {
+    void getPreferencesServer().then((serverPrefs) => {
+      if (!serverPrefs.startPage) {
         return
       }
 
-      setStartPagePreference(serverStartPage)
-      setHomeHref(serverStartPage)
+      setStartPagePreference(serverPrefs.startPage)
+      setHomeHref(serverPrefs.startPage)
     })
   }, [])
 
@@ -225,13 +225,13 @@ export default function AppNav() {
 
     if (event.key === "ArrowDown") {
       event.preventDefault()
-      setQuickActiveIndex((idx) => (idx + 1) % quickResults.length)
+      setQuickActiveIndex((idx: number) => (idx + 1) % quickResults.length)
       return
     }
 
     if (event.key === "ArrowUp") {
       event.preventDefault()
-      setQuickActiveIndex((idx) => (idx <= 0 ? quickResults.length - 1 : idx - 1))
+      setQuickActiveIndex((idx: number) => (idx <= 0 ? quickResults.length - 1 : idx - 1))
       return
     }
 
@@ -278,7 +278,7 @@ export default function AppNav() {
         onToggleTheme={() => setTheme(theme === "dark" ? "light" : "dark")}
       />
 
-      <NavMobileBottom pathname={pathname} onOpenQuickSearch={() => setQuickOpen(true)} />
+      <NavMobileBottom pathname={pathname} />
 
       {authError ? <p className="font-mono text-xs text-destructive mt-[-1rem] mb-4">{authError}</p> : null}
 

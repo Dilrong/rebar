@@ -42,7 +42,7 @@ export function LibraryRecordGrid({
       {isLoading ? (
         <>
           {[1, 2, 3, 4, 5, 6].map((i) => (
-            <Skeleton key={i} className="h-48 md:h-72 w-full" />
+            <Skeleton key={i} className="min-h-[14rem] md:min-h-[18rem] w-full" />
           ))}
         </>
       ) : null}

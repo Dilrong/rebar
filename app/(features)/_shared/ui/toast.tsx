@@ -18,7 +18,7 @@ export function Toast({ message, actionLabel, onAction, onClose, tone = "default
     <div
       role="status"
       aria-live="polite"
-      className={`fixed bottom-4 right-4 z-[100] max-w-sm border-4 p-4 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.1)] animate-slide-in-right ${toneClass}`}
+      className={`fixed bottom-[calc(env(safe-area-inset-bottom)+5.75rem)] left-3 right-3 z-[100] border-4 p-4 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.1)] animate-slide-in-right md:bottom-4 md:left-auto md:right-4 md:max-w-sm ${toneClass}`}
     >
       <div className="flex items-center gap-2 font-mono text-xs font-bold uppercase">
         <span className="flex-1">{message}</span>

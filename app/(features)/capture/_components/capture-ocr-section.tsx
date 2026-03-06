@@ -5,6 +5,7 @@ type CaptureOcrSectionProps = {
   ocrFileName: string | null
   hasOcrFile: boolean
   ocrPending: boolean
+  ocrProgress: number | null
   ocrError: string | null
   ingestError: string | null
   onOcrFileChange: (event: ChangeEvent<HTMLInputElement>) => void
@@ -16,6 +17,7 @@ export function CaptureOcrSection({
   ocrFileName,
   hasOcrFile,
   ocrPending,
+  ocrProgress,
   ocrError,
   ingestError,
   onOcrFileChange,
@@ -52,6 +54,16 @@ export function CaptureOcrSection({
           {ocrPending ? t("capture.ocrRunning", "READING...") : t("capture.ocrRun", "EXTRACT TEXT")}
         </button>
       </div>
+      {ocrPending && ocrProgress !== null ? (
+        <div className="mt-2">
+          <p className="font-mono text-[10px] font-bold uppercase text-muted-foreground">
+            {t("capture.ocrProgress", "OCR PROGRESS")}: {ocrProgress}%
+          </p>
+          <div className="mt-1 h-2 w-full border-2 border-foreground bg-background">
+            <div className="h-full bg-foreground transition-[width] duration-300" style={{ width: `${ocrProgress}%` }} />
+          </div>
+        </div>
+      ) : null}
       {ocrError ? <p className="mt-2 font-mono text-xs text-destructive">{ocrError}</p> : null}
       {ingestError ? <p className="mt-2 font-mono text-xs text-destructive">{ingestError}</p> : null}
     </section>

@@ -58,6 +58,14 @@
     --ring: 21 100% 50%;
     --shadow-color: rgba(255, 255, 255, 0.1);
   }
+
+  :root {
+    --app-font: var(--font-sans);
+  }
+
+  :root[data-font="mono"] {
+    --app-font: var(--font-mono);
+  }
 }
 
 @layer base {
@@ -67,6 +75,7 @@
 
   body {
     @apply bg-background text-foreground antialiased selection:bg-accent/30 selection:text-foreground font-sans;
+    font-family: var(--app-font) !important;
     /* Extra padding on mobile to account for fixed bottom nav + safe area */
     padding-bottom: calc(5rem + env(safe-area-inset-bottom));
   }
@@ -83,6 +92,43 @@
   select {
     font-size: 16px !important;
   }
+
+  :where(a, button, input, select, textarea, [role="button"], [role="option"], [tabindex]:not([tabindex="-1"])):focus-visible {
+    outline: 3px solid hsl(var(--accent)) !important;
+    outline-offset: 2px;
+  }
+
+  /* Brutalist Typography Hierarchy & Pattern */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-bold uppercase tracking-tight text-foreground mb-6;
+    line-height: 1.1;
+  }
+
+  h1 {
+    @apply text-4xl md:text-6xl;
+  }
+
+  h2 {
+    @apply text-3xl md:text-4xl;
+  }
+
+  h3 {
+    @apply text-2xl md:text-3xl;
+  }
+
+  /* Vertical Rhythm and Line Width Limits */
+  p,
+  ul,
+  ol,
+  dl {
+    @apply mb-6 leading-relaxed;
+    max-width: 65ch;
+  }
 }
 
 @layer utilities {
@@ -92,7 +138,7 @@
   }
 
   .focus-ring {
-    @apply focus:outline-none focus:ring-0 focus:shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:focus:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] focus:translate-x-[2px] focus:translate-y-[2px] transition-all duration-200;
+    @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 focus-visible:shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:focus-visible:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] focus-visible:translate-x-[2px] focus-visible:translate-y-[2px] transition-all duration-200;
   }
 
   /* Hide scrollbar but keep functionality */
@@ -114,5 +160,45 @@
 
   .text-glitch:hover {
     animation: glitch 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) both infinite;
+  }
+
+  /* Call To Action Emphasis Button */
+  .btn-cta {
+    @apply inline-flex items-center justify-center px-6 py-3 font-bold uppercase tracking-wider text-accent-foreground bg-accent border-4 border-foreground shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] transition-all duration-200;
+  }
+
+  .dark .btn-cta {
+    @apply shadow-[8px_8px_0px_0px_rgba(255,255,255,0.1)];
+  }
+
+  .btn-cta:hover {
+    @apply translate-x-[2px] translate-y-[2px] shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] bg-foreground text-background border-accent;
+  }
+
+  .dark .btn-cta:hover {
+    @apply shadow-[6px_6px_0px_0px_rgba(255,255,255,0.1)];
+  }
+
+  .btn-cta:active {
+    @apply translate-x-[8px] translate-y-[8px] shadow-[0px_0px_0px_0px_rgba(0,0,0,1)];
+  }
+
+  .dark .btn-cta:active {
+    @apply shadow-[0px_0px_0px_0px_rgba(255,255,255,0)];
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .text-glitch:hover {
+    animation: none !important;
   }
 }

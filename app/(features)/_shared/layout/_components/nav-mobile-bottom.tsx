@@ -4,10 +4,9 @@ import { cn } from "@/lib/utils"
 
 type NavMobileBottomProps = {
   pathname: string
-  onOpenQuickSearch: () => void
 }
 
-export function NavMobileBottom({ pathname, onOpenQuickSearch }: NavMobileBottomProps) {
+export function NavMobileBottom({ pathname }: NavMobileBottomProps) {
   return (
     <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 border-t-[3px] border-foreground bg-background bg-noise shadow-[0_-8px_0_0_rgba(0,0,0,1)] dark:shadow-[0_-8px_0_0_rgba(255,255,255,0.05)] pb-[env(safe-area-inset-bottom)]">
       <div className="flex flex-row items-center justify-around px-1 py-1 relative">
@@ -47,14 +46,16 @@ export function NavMobileBottom({ pathname, onOpenQuickSearch }: NavMobileBottom
           <span className="sr-only">Capture</span>
         </Link>
 
-        <button
-          type="button"
-          onClick={onOpenQuickSearch}
-          className="flex flex-col items-center justify-center p-3 min-w-[64px] text-muted-foreground hover:text-foreground transition-all duration-200 active:translate-y-1"
+        <Link
+          href="/search"
+          className={cn(
+            "flex flex-col items-center justify-center p-3 min-w-[64px] transition-all duration-200 active:translate-y-1",
+            pathname.includes("/search") ? "text-accent text-glitch" : "text-muted-foreground hover:text-foreground"
+          )}
         >
           <Search className="h-6 w-6 stroke-[2.5]" />
-          <span className="font-mono text-[9px] font-bold uppercase mt-1.5">SEARCH</span>
-        </button>
+          <span className="font-mono text-[10px] font-bold uppercase mt-1.5">SEARCH</span>
+        </Link>
       </div>
     </div>
   )

@@ -51,7 +51,7 @@ export default function SharePage() {
     onSuccess: (data) => {
       setLastSharedRecordId(data.ids[0] ?? null)
       setShowSavedToast(true)
-      window.setTimeout(() => setShowSavedToast(false), 2500)
+      window.setTimeout(() => setShowSavedToast(false), 5000)
 
       setContent("")
       setTitle("")

@@ -301,7 +301,7 @@ export default function RecordDetailPage() {
       queryClient.invalidateQueries({ queryKey: ["records"] })
       queryClient.invalidateQueries({ queryKey: ["review-today"] })
       setShowUpdateToast(true)
-      window.setTimeout(() => setShowUpdateToast(false), 2500)
+      window.setTimeout(() => setShowUpdateToast(false), 5000)
     }
   })
 

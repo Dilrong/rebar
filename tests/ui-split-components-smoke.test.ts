@@ -59,10 +59,7 @@ describe("split component smoke coverage", () => {
   it("renders mobile bottom nav with capture accessible label", () => {
     const html = renderToStaticMarkup(
       createElement(NavMobileBottom, {
-        pathname: "/capture",
-        onOpenQuickSearch: () => {
-          return undefined
-        }
+        pathname: "/capture"
       })
     )
 

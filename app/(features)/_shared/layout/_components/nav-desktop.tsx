@@ -2,7 +2,7 @@ import Link from "next/link"
 import { BookOpen, CheckSquare, Moon, Plus, RefreshCw, Search, Sun, User } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-const NAV_LINKS = ["capture", "review", "library"] as const
+const NAV_LINKS = ["capture", "review", "library", "search"] as const
 
 type NavDesktopProps = {
   t: (key: string, fallback?: string) => string
@@ -54,14 +54,16 @@ export function NavDesktop({
                 key={segment}
                 href={`/${segment}`}
                 title={t(`nav.${segment}`)}
+                aria-label={t(`nav.${segment}`)}
                 className={cn(
                   "border-2 p-2 min-h-[40px] min-w-[40px] flex items-center justify-center transition-all duration-200",
-                  pathname === `/${segment}`
+                  pathname.startsWith(`/${segment}`)
                     ? "border-foreground bg-foreground text-background translate-x-1 translate-y-1 shadow-none"
                     : "border-transparent text-muted-foreground hover:border-foreground hover:text-foreground hover:shadow-brutal-sm hover:-translate-x-1 hover:-translate-y-1 active:translate-x-1 active:translate-y-1 active:shadow-none"
                 )}
               >
                 <Icon className="h-5 w-5" strokeWidth={2.5} />
+                <span className="sr-only">{t(`nav.${segment}`)}</span>
               </Link>
             )
           })}
@@ -84,6 +86,15 @@ export function NavDesktop({
         >
           <RefreshCw className={cn("h-5 w-5", syncFetching && "animate-spin")} strokeWidth={2.5} />
         </button>
+        <span
+          className={cn(
+            "hidden xl:inline-block border-2 px-2 py-1 font-mono text-[10px] font-bold uppercase",
+            syncError ? "border-destructive text-destructive" : "border-foreground text-muted-foreground"
+          )}
+          aria-live="polite"
+        >
+          {syncStatusLabel}
+        </span>
 
         {authEmail ? (
           <Link

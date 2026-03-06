@@ -20,6 +20,10 @@ type CaptureManualFormProps = {
   onMergeDuplicate: () => void
 }
 
+function getErrorMessage(message: unknown): string | null {
+  return typeof message === "string" ? message : null
+}
+
 export function CaptureManualForm({
   t,
   form,
@@ -33,6 +37,13 @@ export function CaptureManualForm({
   duplicateRecordId,
   onMergeDuplicate
 }: CaptureManualFormProps) {
+  const { errors } = form.formState
+  const kindError = getErrorMessage(errors.kind?.message)
+  const contentError = getErrorMessage(errors.content?.message)
+  const urlError = getErrorMessage(errors.url?.message)
+  const sourceTitleError = getErrorMessage(errors.source_title?.message)
+  const tagIdsError = getErrorMessage(errors.tag_ids?.message)
+
   return (
     <form className="space-y-8" onSubmit={onSubmit}>
       <div className="space-y-2">
@@ -41,6 +52,8 @@ export function CaptureManualForm({
           <select
             id="capture-kind"
             {...form.register("kind")}
+            aria-invalid={Boolean(kindError)}
+            aria-describedby={kindError ? "capture-kind-error" : undefined}
             className="min-h-[44px] w-full bg-background border-4 border-foreground text-foreground p-4 focus:outline-none focus:ring-0 shadow-brutal-sm focus:shadow-none focus:translate-x-1 focus:translate-y-1 transition-all duration-200 appearance-none cursor-pointer font-bold uppercase rounded-none"
           >
             <option value="quote">{t("capture.kind.quote", "Quote / Highlight")}</option>
@@ -52,6 +65,11 @@ export function CaptureManualForm({
             ▼
           </div>
         </div>
+        {kindError ? (
+          <p id="capture-kind-error" role="alert" className="font-mono text-[10px] font-bold uppercase text-destructive">
+            ERR: {kindError}
+          </p>
+        ) : null}
       </div>
 
       <div className="space-y-2">
@@ -60,10 +78,17 @@ export function CaptureManualForm({
           id="capture-content"
           rows={6}
           placeholder={t("capture.contentPlaceholder", "Paste your content")}
+          aria-invalid={Boolean(contentError)}
+          aria-describedby={contentError ? "capture-content-error" : undefined}
           className="w-full bg-background border-4 border-foreground text-foreground text-lg md:text-xl p-4 focus:outline-none focus:ring-0 shadow-brutal-sm focus:shadow-none focus:translate-x-1 focus:translate-y-1 transition-all duration-200 resize-y placeholder:text-muted-foreground/50 rounded-none"
           {...form.register("content")}
           autoFocus
         />
+        {contentError ? (
+          <p id="capture-content-error" role="alert" className="font-mono text-[10px] font-bold uppercase text-destructive">
+            ERR: {contentError}
+          </p>
+        ) : null}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 border-t-4 border-dashed border-border pt-8">
@@ -72,9 +97,16 @@ export function CaptureManualForm({
           <input
             id="capture-meta-url"
             placeholder="https://..."
+            aria-invalid={Boolean(urlError)}
+            aria-describedby={urlError ? "capture-meta-url-error" : undefined}
             className="min-h-[44px] w-full bg-background border-4 border-foreground text-foreground p-3 focus:outline-none focus:ring-0 shadow-brutal-sm focus:shadow-none focus:translate-x-1 focus:translate-y-1 transition-all duration-200 placeholder:text-muted-foreground/40 font-mono text-sm rounded-none"
             {...form.register("url")}
           />
+          {urlError ? (
+            <p id="capture-meta-url-error" role="alert" className="font-mono text-[10px] font-bold uppercase text-destructive">
+              ERR: {urlError}
+            </p>
+          ) : null}
         </div>
 
         <div className="space-y-2">
@@ -82,14 +114,25 @@ export function CaptureManualForm({
           <input
             id="capture-meta-ref"
             placeholder="SOURCE IDENTIFIER"
+            aria-invalid={Boolean(sourceTitleError)}
+            aria-describedby={sourceTitleError ? "capture-meta-ref-error" : undefined}
             className="min-h-[44px] w-full bg-background border-4 border-foreground text-foreground p-3 focus:outline-none focus:ring-0 shadow-brutal-sm focus:shadow-none focus:translate-x-1 focus:translate-y-1 transition-all duration-200 placeholder:text-muted-foreground/40 font-mono text-sm uppercase rounded-none"
             {...form.register("source_title")}
           />
+          {sourceTitleError ? (
+            <p id="capture-meta-ref-error" role="alert" className="font-mono text-[10px] font-bold uppercase text-destructive">
+              ERR: {sourceTitleError}
+            </p>
+          ) : null}
         </div>
       </div>
 
-      <div className="space-y-3 border-t-2 border-border pt-6">
-        <p className="font-mono text-sm font-bold uppercase text-foreground">{`>> ${t("capture.tags", "TAGS")}`}</p>
+      <fieldset
+        className="space-y-3 border-t-2 border-border pt-6"
+        aria-invalid={Boolean(tagIdsError)}
+        aria-describedby={tagIdsError ? "capture-tags-error" : undefined}
+      >
+        <legend className="font-mono text-sm font-bold uppercase text-foreground">{`>> ${t("capture.tags", "TAGS")}`}</legend>
         <div className="flex flex-wrap gap-2">
           {tags.map((tag) => {
             const checked = selectedTagIds.includes(tag.id)
@@ -100,7 +143,7 @@ export function CaptureManualForm({
                 <input
                   id={inputId}
                   type="checkbox"
-                  className="sr-only"
+                  className="peer sr-only"
                   checked={checked}
                   onChange={() => {
                     const current = form.getValues("tag_ids") ?? []
@@ -112,7 +155,7 @@ export function CaptureManualForm({
                 />
                 <label
                   htmlFor={inputId}
-                  className={`min-h-[44px] px-4 py-2 border-4 font-mono text-xs font-bold uppercase flex items-center justify-center transition-all duration-200 active:translate-y-1 active:translate-x-1 hover:bg-foreground hover:text-background shadow-brutal-sm hover:shadow-none hover:translate-x-1 hover:translate-y-1 cursor-pointer ${checked
+                  className={`min-h-[44px] px-4 py-2 border-4 font-mono text-xs font-bold uppercase flex items-center justify-center transition-all duration-200 active:translate-y-1 active:translate-x-1 hover:bg-foreground hover:text-background shadow-brutal-sm hover:shadow-none hover:translate-x-1 hover:translate-y-1 cursor-pointer peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-accent peer-focus-visible:outline-offset-2 ${checked
                     ? "border-foreground bg-foreground text-background"
                     : "border-foreground bg-background text-foreground"
                     }`}
@@ -123,16 +166,14 @@ export function CaptureManualForm({
             )
           })}
         </div>
-      </div>
+        {tagIdsError ? (
+          <p id="capture-tags-error" role="alert" className="font-mono text-[10px] font-bold uppercase text-destructive">
+            ERR: {tagIdsError}
+          </p>
+        ) : null}
+      </fieldset>
 
       <div className="pt-6 border-t-4 border-foreground flex flex-col items-start gap-4">
-        {Object.values(form.formState.errors).map((error, index) => (
-          <div key={`${error.message ?? "form-error"}-${index}`} className="flex items-center text-destructive-foreground bg-destructive font-mono text-xs font-bold px-3 py-2 uppercase">
-            <AlertTriangle className="w-4 h-4 mr-2" strokeWidth={3} />
-            ERR: {error.message}
-          </div>
-        ))}
-
         {mutationErrorMessage ? (
           <div className="flex items-center text-destructive-foreground bg-destructive font-mono text-xs font-bold px-3 py-2 uppercase">
             <AlertTriangle className="w-4 h-4 mr-2" strokeWidth={3} />

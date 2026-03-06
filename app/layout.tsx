@@ -11,8 +11,6 @@ export const viewport: Viewport = {
   themeColor: "#000000",
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
 }
 
 export const metadata: Metadata = {
@@ -38,8 +36,25 @@ export const metadata: Metadata = {
 }
 
 export default function RootLayout({ children }: { children: ReactNode }) {
+  // Inline script to prevent FOUC when applying font setting.
+  const themeScript = `
+    (function() {
+      try {
+        var font = window.localStorage.getItem('rebar.fontFamily');
+        if (font) {
+          document.documentElement.setAttribute('data-font', font);
+        } else {
+          document.documentElement.setAttribute('data-font', 'sans');
+        }
+      } catch (e) {}
+    })();
+  `
+
   return (
     <html lang="ko" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body className={`${inter.variable} ${mono.variable}`}>
         <div className="bg-noise pointer-events-none fixed inset-0 z-[9999] opacity-[0.04] mix-blend-multiply dark:opacity-[0.06] dark:mix-blend-screen" aria-hidden="true" />
         <Providers>{children}</Providers>
