@@ -70,6 +70,19 @@ describe("resolveClientKey", () => {
     expect(resolveClientKey(headers)).toBe("1.1.1.1")
   })
 
+  it("falls back to x-real-ip when forwarded header is malformed", () => {
+    const headers = new Headers({
+      "x-forwarded-for": "not-an-ip",
+      "x-real-ip": "3.3.3.3"
+    })
+    expect(resolveClientKey(headers)).toBe("3.3.3.3")
+  })
+
+  it("supports bracketed ipv6 candidates", () => {
+    const headers = new Headers({ "x-forwarded-for": "[2001:db8::1]:443" })
+    expect(resolveClientKey(headers)).toBe("2001:db8::1")
+  })
+
   it("falls back to x-real-ip", () => {
     const headers = new Headers({ "x-real-ip": "3.3.3.3" })
     expect(resolveClientKey(headers)).toBe("3.3.3.3")

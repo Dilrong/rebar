@@ -84,6 +84,38 @@ type RequestResult = {
   body: string
 }
 
+const MAX_HTML_RESPONSE_BYTES = 1_000_000
+
+function readHeaderValue(value: string | string[] | undefined): string | null {
+  if (Array.isArray(value)) {
+    return value[0] ?? null
+  }
+
+  return value ?? null
+}
+
+function isHtmlLikeResponse(headers: IncomingHttpHeaders, statusCode: number): boolean {
+  if (statusCode >= 300 && statusCode < 400) {
+    return true
+  }
+
+  const contentType = readHeaderValue(headers["content-type"])?.toLowerCase() ?? ""
+  if (!contentType) {
+    return true
+  }
+
+  return contentType.startsWith("text/html") || contentType.startsWith("application/xhtml+xml")
+}
+
+function exceedsHtmlSizeLimit(headers: IncomingHttpHeaders): boolean {
+  const contentLength = Number(readHeaderValue(headers["content-length"]) ?? NaN)
+  if (Number.isNaN(contentLength)) {
+    return false
+  }
+
+  return contentLength > MAX_HTML_RESPONSE_BYTES
+}
+
 function requestHtmlWithPinnedLookup(targetUrl: URL): Promise<RequestResult | null> {
   return new Promise((resolve) => {
     const client = targetUrl.protocol === "https:" ? httpsRequest : httpRequest
@@ -92,6 +124,9 @@ function requestHtmlWithPinnedLookup(targetUrl: URL): Promise<RequestResult | nu
       {
         method: "GET",
         timeout: 10_000,
+        headers: {
+          Accept: "text/html,application/xhtml+xml;q=0.9"
+        },
         lookup(hostname, _options, callback) {
           dnsLookup(hostname, { family: 0, all: false, verbatim: true }, (error, address, family) => {
             if (error) {
@@ -109,15 +144,53 @@ function requestHtmlWithPinnedLookup(targetUrl: URL): Promise<RequestResult | nu
         }
       },
       (response) => {
+        const statusCode = response.statusCode ?? 0
+        const headers = response.headers
+        const isRedirect = statusCode >= 300 && statusCode < 400
+
+        if (!isHtmlLikeResponse(headers, statusCode) || (!isRedirect && exceedsHtmlSizeLimit(headers))) {
+          request.destroy()
+          resolve(null)
+          return
+        }
+
+        if (isRedirect) {
+          resolve({
+            statusCode,
+            headers,
+            body: ""
+          })
+          return
+        }
+
         const chunks: string[] = []
+        let resolved = false
+        let bodyBytes = 0
         response.setEncoding("utf8")
         response.on("data", (chunk: string) => {
+          if (resolved) {
+            return
+          }
+
+          bodyBytes += Buffer.byteLength(chunk, "utf8")
+          if (bodyBytes > MAX_HTML_RESPONSE_BYTES) {
+            resolved = true
+            request.destroy()
+            resolve(null)
+            return
+          }
+
           chunks.push(chunk)
         })
         response.on("end", () => {
+          if (resolved) {
+            return
+          }
+
+          resolved = true
           resolve({
-            statusCode: response.statusCode ?? 0,
-            headers: response.headers,
+            statusCode,
+            headers,
             body: chunks.join("")
           })
         })

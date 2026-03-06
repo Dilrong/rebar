@@ -3,6 +3,7 @@ import { z } from "zod"
 import { getUserId } from "@/lib/auth"
 import { fail, internalError, ok, rateLimited } from "@/lib/http"
 import { checkRateLimitDistributed, resolveClientKey } from "@/lib/rate-limit"
+import { buildRecordTagLinks, getInvalidOwnedTagIds } from "@/lib/record-tags"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
 
 const BodySchema = z.object({
@@ -45,14 +46,12 @@ export async function POST(request: NextRequest) {
   const targetIds = ids.filter((id) => existingIds.has(id))
 
   if (tagIds.length > 0) {
-    const ownedTags = await supabase.from("tags").select("id").eq("user_id", userId).in("id", tagIds)
-    if (ownedTags.error) {
-      return internalError("records.bulk.tags", ownedTags.error)
+    const validation = await getInvalidOwnedTagIds(supabase, userId, tagIds)
+    if (validation.error) {
+      return internalError("records.bulk.tags", validation.error)
     }
 
-    const ownedTagIds = new Set(ownedTags.data.map((row) => row.id))
-    const invalidTagIds = tagIds.filter((tagId) => !ownedTagIds.has(tagId))
-    if (invalidTagIds.length > 0) {
+    if (validation.invalidTagIds.length > 0) {
       return fail("Invalid tag_ids", 400)
     }
   }
@@ -68,14 +67,9 @@ export async function POST(request: NextRequest) {
         return internalError("records.bulk.tags", deletedAll.error)
       }
     } else {
-      const links: Array<{ record_id: string; tag_id: string }> = []
-      for (const recordId of targetIds) {
-        for (const tagId of tagIds) {
-          links.push({ record_id: recordId, tag_id: tagId })
-        }
-      }
-
-      const upserted = await supabase.from("record_tags").upsert(links, { onConflict: "record_id,tag_id" })
+      const upserted = await supabase.from("record_tags").upsert(buildRecordTagLinks(targetIds, tagIds), {
+        onConflict: "record_id,tag_id"
+      })
       if (upserted.error) {
         return internalError("records.bulk.tags", upserted.error)
       }
@@ -95,14 +89,9 @@ export async function POST(request: NextRequest) {
       }
     }
   } else if (tagIds.length > 0) {
-    const links: Array<{ record_id: string; tag_id: string }> = []
-    for (const recordId of targetIds) {
-      for (const tagId of tagIds) {
-        links.push({ record_id: recordId, tag_id: tagId })
-      }
-    }
-
-    const upserted = await supabase.from("record_tags").upsert(links, { onConflict: "record_id,tag_id" })
+    const upserted = await supabase.from("record_tags").upsert(buildRecordTagLinks(targetIds, tagIds), {
+      onConflict: "record_id,tag_id"
+    })
     if (upserted.error) {
       return internalError("records.bulk.tags", upserted.error)
     }

@@ -256,6 +256,80 @@ describe("POST /api/capture/extract fetch guards", () => {
     await expect(response.json()).resolves.toEqual({ error: "Failed to fetch URL" })
   })
 
+  it("fails on non-html content types", async () => {
+    queuedResponses.push({
+      statusCode: 200,
+      headers: { "content-type": "application/pdf" },
+      body: "%PDF-1.7"
+    })
+
+    const response = await POST(
+      new NextRequest("http://localhost/api/capture/extract", {
+        method: "POST",
+        body: JSON.stringify({ url: "http://example.com/file" })
+      })
+    )
+
+    expect(httpRequestMock).toHaveBeenCalledTimes(1)
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toEqual({ error: "Failed to fetch URL" })
+  })
+
+  it("fails when html response body exceeds the size limit", async () => {
+    queuedResponses.push({
+      statusCode: 200,
+      headers: { "content-type": "text/html; charset=utf-8" },
+      body: `<html><body>${"x".repeat(1_100_000)}</body></html>`
+    })
+
+    const response = await POST(
+      new NextRequest("http://localhost/api/capture/extract", {
+        method: "POST",
+        body: JSON.stringify({ url: "http://example.com/large" })
+      })
+    )
+
+    expect(httpRequestMock).toHaveBeenCalledTimes(1)
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toEqual({ error: "Failed to fetch URL" })
+  })
+
+  it("fails on unsupported response content type", async () => {
+    queuedResponses.push({
+      statusCode: 200,
+      headers: { "content-type": "image/png" },
+      body: "binary"
+    })
+
+    const response = await POST(
+      new NextRequest("http://localhost/api/capture/extract", {
+        method: "POST",
+        body: JSON.stringify({ url: "http://example.com/image" })
+      })
+    )
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toEqual({ error: "Failed to fetch URL" })
+  })
+
+  it("fails when content length exceeds the response size limit", async () => {
+    queuedResponses.push({
+      statusCode: 200,
+      headers: { "content-length": "1000001", "content-type": "text/html; charset=utf-8" },
+      body: "<html><body>too large</body></html>"
+    })
+
+    const response = await POST(
+      new NextRequest("http://localhost/api/capture/extract", {
+        method: "POST",
+        body: JSON.stringify({ url: "http://example.com/too-large" })
+      })
+    )
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toEqual({ error: "Failed to fetch URL" })
+  })
+
   it("prefers long meta description over extracted body text", async () => {
     const longDescription = "D".repeat(120)
     queuedResponses.push({

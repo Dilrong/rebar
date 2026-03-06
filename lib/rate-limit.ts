@@ -1,3 +1,5 @@
+import { isIP } from "node:net"
+
 type RateLimitInput = {
   key: string
   limit: number
@@ -47,16 +49,37 @@ async function upstashCommand(command: Array<string | number>) {
 
 let lastCleanup = 0
 const CLEANUP_INTERVAL_MS = 60_000
+const MAX_IN_MEMORY_KEYS = 5_000
+
+function cleanupExpiredEntries(now: number) {
+  for (const [key, entry] of store) {
+    if (entry.resetAt <= now) {
+      store.delete(key)
+    }
+  }
+}
+
+function trimStoreIfNeeded() {
+  if (store.size <= MAX_IN_MEMORY_KEYS) {
+    return
+  }
+
+  const overflow = store.size - MAX_IN_MEMORY_KEYS
+  const oldestEntries = [...store.entries()]
+    .sort((left, right) => left[1].resetAt - right[1].resetAt)
+    .slice(0, overflow)
+
+  for (const [key] of oldestEntries) {
+    store.delete(key)
+  }
+}
 
 export function checkRateLimit(input: RateLimitInput): RateLimitResult {
   const now = Date.now()
 
   if (store.size > 500 || (store.size > 0 && now - lastCleanup > CLEANUP_INTERVAL_MS)) {
-    for (const [key, entry] of store) {
-      if (entry.resetAt <= now) {
-        store.delete(key)
-      }
-    }
+    cleanupExpiredEntries(now)
+    trimStoreIfNeeded()
     lastCleanup = now
   }
 
@@ -126,19 +149,36 @@ export async function checkRateLimitDistributed(input: RateLimitInput): Promise<
   }
 }
 
-export function resolveClientKey(headers: Headers): string {
-  const forwarded = headers.get("x-forwarded-for")
-  if (forwarded) {
-    const first = forwarded.split(",")[0]?.trim()
-    if (first) {
-      return first
+function normalizeClientIpCandidate(value: string | null): string | null {
+  if (!value) {
+    return null
+  }
+
+  const candidate = value.split(",")[0]?.trim()
+  if (!candidate) {
+    return null
+  }
+
+  let normalized = candidate
+
+  if (normalized.startsWith("[")) {
+    const closingIndex = normalized.indexOf("]")
+    if (closingIndex <= 1) {
+      return null
     }
+
+    normalized = normalized.slice(1, closingIndex)
+  } else if (normalized.includes(".") && normalized.includes(":")) {
+    normalized = normalized.split(":")[0] ?? normalized
   }
 
-  const realIp = headers.get("x-real-ip")
-  if (realIp) {
-    return realIp
-  }
+  return isIP(normalized) ? normalized : null
+}
 
-  return "unknown"
+export function resolveClientKey(headers: Headers): string {
+  return (
+    normalizeClientIpCandidate(headers.get("x-forwarded-for")) ??
+    normalizeClientIpCandidate(headers.get("x-real-ip")) ??
+    "unknown"
+  )
 }

@@ -4,10 +4,11 @@ import { getUserId } from "@/lib/auth"
 import { PG_UNIQUE_VIOLATION } from "@/lib/constants"
 import { fail, internalError, ok, rateLimited } from "@/lib/http"
 import { checkRateLimitDistributed, resolveClientKey } from "@/lib/rate-limit"
+import { TagNameSchema } from "@/lib/schemas"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
 
 const CreateTagSchema = z.object({
-  name: z.string().min(1).max(50)
+  name: TagNameSchema
 })
 
 export async function GET(request: NextRequest) {

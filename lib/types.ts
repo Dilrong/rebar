@@ -54,3 +54,22 @@ export type ReviewLogRow = {
   action_type: "EXPERIMENT" | "SHARE" | "TODO" | null
   defer_reason: "NEED_INFO" | "LOW_CONFIDENCE" | "NO_TIME" | null
 }
+
+export type IngestJobRow = {
+  id: string
+  user_id: string
+  status: "PENDING" | "DONE" | "FAILED"
+  payload: unknown
+  attempts: number
+  last_error: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type UserPreferencesRow = {
+  user_id: string
+  start_page: "/review" | "/capture" | "/library" | "/search"
+  font_family: "sans" | "mono"
+  created_at: string
+  updated_at: string
+}

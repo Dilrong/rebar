@@ -1,10 +1,10 @@
 import { NextRequest } from "next/server"
 import { z } from "zod"
-import { POST as ingestPost } from "@/app/api/(capture)/capture/ingest/route"
-import { isValidOrigin } from "@/lib/auth"
-import { fail, rateLimited } from "@/lib/http"
+import { getUserId, isValidOrigin } from "@/lib/auth"
+import { fail, ok, rateLimited } from "@/lib/http"
+import { processIngest } from "@feature-lib/capture/ingest"
 import { checkRateLimitDistributed, resolveClientKey } from "@/lib/rate-limit"
-import { RecordKindSchema } from "@/lib/schemas"
+import { RecordKindSchema, TagNameSchema } from "@/lib/schemas"
 
 const ShareBodySchema = z
   .object({
@@ -13,10 +13,10 @@ const ShareBodySchema = z
     title: z.string().optional(),
     source_title: z.string().optional(),
     url: z.string().url().optional(),
-    tags: z.array(z.string().min(1)).optional(),
+    tags: z.array(TagNameSchema).optional(),
     kind: RecordKindSchema.optional(),
     default_kind: RecordKindSchema.optional(),
-    default_tags: z.array(z.string().min(1)).optional()
+    default_tags: z.array(TagNameSchema).optional()
   })
   .passthrough()
 
@@ -61,11 +61,15 @@ export async function POST(request: NextRequest) {
     default_tags: parsed.data.default_tags
   }
 
-  const ingestRequest = new NextRequest(new URL("/api/capture/ingest", request.url), {
-    method: "POST",
-    headers: request.headers,
-    body: JSON.stringify(ingestBody)
-  })
+  const userId = await getUserId(request.headers, { allowIngestKey: true })
+  if (!userId) {
+    return fail("Unauthorized", 401)
+  }
 
-  return ingestPost(ingestRequest)
+  try {
+    const result = await processIngest(userId, ingestBody)
+    return ok(result)
+  } catch (error) {
+    return fail(error instanceof Error ? error.message : "Ingest failed", 500)
+  }
 }

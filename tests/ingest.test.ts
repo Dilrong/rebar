@@ -29,6 +29,7 @@ const mockState: {
     review_count: number
   }>
   tagSelectCalls: number
+  upsertSelectReturnsRows: boolean
   fail: FailureState
 } = {
   tags: [],
@@ -36,6 +37,7 @@ const mockState: {
   insertedRecordTags: [],
   recordRows: [],
   tagSelectCalls: 0,
+  upsertSelectReturnsRows: true,
   fail: {
     tagsSelect: null,
     tagsRefresh: null,
@@ -61,18 +63,27 @@ function createSupabaseMock() {
               return { data: mockState.tags, error: null }
             }
           }),
-          upsert: async (rows: Array<{ user_id: string; name: string }>) => {
-            if (mockState.fail.tagsUpsert) {
-              return { error: { message: mockState.fail.tagsUpsert } }
-            }
+          upsert: (rows: Array<{ user_id: string; name: string }>) => ({
+            select: async () => {
+              if (mockState.fail.tagsUpsert) {
+                return { data: null, error: { message: mockState.fail.tagsUpsert } }
+              }
 
-            for (const row of rows) {
-              if (!mockState.tags.find((tag) => tag.name === row.name)) {
-                mockState.tags.push({ id: `tag-${mockState.tags.length + 1}`, name: row.name })
+              const insertedTags: TagRow[] = []
+              for (const row of rows) {
+                if (!mockState.tags.find((tag) => tag.name === row.name)) {
+                  const insertedTag = { id: `tag-${mockState.tags.length + 1}`, name: row.name }
+                  mockState.tags.push(insertedTag)
+                  insertedTags.push(insertedTag)
+                }
+              }
+
+              return {
+                data: mockState.upsertSelectReturnsRows ? insertedTags : [],
+                error: null
               }
             }
-            return { error: null }
-          }
+          })
         }
       }
 
@@ -114,7 +125,7 @@ vi.mock("@/lib/supabase-admin", () => ({
   getSupabaseAdmin: () => createSupabaseMock()
 }))
 
-import { processIngest, resolveContent, resolveKind } from "@feature-lib/capture/ingest"
+import { IngestPayloadSchema, processIngest, resolveContent, resolveKind } from "@feature-lib/capture/ingest"
 import { sha256 } from "@/lib/hash"
 
 describe("resolveContent", () => {
@@ -150,6 +161,7 @@ describe("processIngest", () => {
     mockState.insertedRecordTags = []
     mockState.recordRows = []
     mockState.tagSelectCalls = 0
+    mockState.upsertSelectReturnsRows = true
     mockState.fail = {
       tagsSelect: null,
       tagsRefresh: null,
@@ -178,6 +190,7 @@ describe("processIngest", () => {
     expect(result.total).toBe(3)
     expect(mockState.tags.find((tag) => tag.name === "x")).toBeTruthy()
     expect(mockState.tags.find((tag) => tag.name === "y")).toBeTruthy()
+    expect(mockState.tagSelectCalls).toBe(1)
     expect(mockState.insertedRecordTags.length).toBeGreaterThan(0)
   })
 
@@ -219,6 +232,7 @@ describe("processIngest", () => {
   })
 
   it("throws when refreshed tag lookup fails after upsert", async () => {
+    mockState.upsertSelectReturnsRows = false
     mockState.fail.tagsRefresh = "tags refresh failed"
 
     await expect(
@@ -252,5 +266,15 @@ describe("processIngest", () => {
         items: [{ content: "a" }]
       })
     ).rejects.toThrow("record_tags upsert failed")
+  })
+})
+
+describe("IngestPayloadSchema", () => {
+  it("rejects tag names longer than 50 characters", () => {
+    const parsed = IngestPayloadSchema.safeParse({
+      items: [{ content: "a", tags: ["x".repeat(51)] }]
+    })
+
+    expect(parsed.success).toBe(false)
   })
 })

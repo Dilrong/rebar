@@ -1,11 +1,7 @@
 import type { Metadata, Viewport } from "next"
-import { Inter, Roboto_Mono } from "next/font/google"
 import type { ReactNode } from "react"
 import "./globals.css"
 import Providers from "@/app/providers"
-
-const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
-const mono = Roboto_Mono({ subsets: ["latin"], variable: "--font-mono" })
 
 export const viewport: Viewport = {
   themeColor: "#000000",
@@ -55,7 +51,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body className={`${inter.variable} ${mono.variable}`}>
+      <body>
         <div className="bg-noise pointer-events-none fixed inset-0 z-[9999] opacity-[0.04] mix-blend-multiply dark:opacity-[0.06] dark:mix-blend-screen" aria-hidden="true" />
         <Providers>{children}</Providers>
       </body>

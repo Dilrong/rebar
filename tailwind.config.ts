@@ -17,7 +17,7 @@ const config = {
         extend: {
             fontFamily: {
                 sans: ["var(--app-font)", "system-ui", "sans-serif"],
-                mono: ["var(--app-font)", "ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "monospace"],
+                mono: ["var(--font-mono)", "ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "monospace"],
             },
             colors: {
                 border: "hsl(var(--border))",

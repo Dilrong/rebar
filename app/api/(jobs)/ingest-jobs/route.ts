@@ -1,11 +1,13 @@
 import { NextRequest } from "next/server"
 import { z } from "zod"
+import type { Json } from "@/lib/database.types"
 import { getUserId } from "@/lib/auth"
 import { fail, internalError, ok, rateLimited } from "@/lib/http"
 import { IngestPayloadSchema } from "@feature-lib/capture/ingest"
 import { checkRateLimitDistributed, resolveClientKey } from "@/lib/rate-limit"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
 
+const StatusSchema = z.enum(["PENDING", "DONE", "FAILED"])
 const BodySchema = z.object({
   payload: IngestPayloadSchema,
   error: z.string().optional()
@@ -26,7 +28,12 @@ export async function GET(request: NextRequest) {
     return fail("Unauthorized", 401)
   }
 
-  const status = request.nextUrl.searchParams.get("status") ?? "PENDING"
+  const parsedStatus = StatusSchema.safeParse(request.nextUrl.searchParams.get("status") ?? "PENDING")
+  if (!parsedStatus.success) {
+    return fail("Invalid status", 400)
+  }
+
+  const status = parsedStatus.data
   const supabase = getSupabaseAdmin()
 
   const query = await supabase
@@ -71,7 +78,7 @@ export async function POST(request: NextRequest) {
     .insert({
       user_id: userId,
       status: "PENDING",
-      payload: parsed.data.payload,
+      payload: parsed.data.payload as Json,
       last_error: parsed.data.error ?? null,
       attempts: 0
     })
@@ -100,7 +107,12 @@ export async function DELETE(request: NextRequest) {
     return fail("Unauthorized", 401)
   }
 
-  const status = request.nextUrl.searchParams.get("status") ?? "PENDING"
+  const parsedStatus = StatusSchema.safeParse(request.nextUrl.searchParams.get("status") ?? "PENDING")
+  if (!parsedStatus.success) {
+    return fail("Invalid status", 400)
+  }
+
+  const status = parsedStatus.data
   const supabase = getSupabaseAdmin()
 
   const deleted = await supabase.from("ingest_jobs").delete().eq("user_id", userId).eq("status", status)

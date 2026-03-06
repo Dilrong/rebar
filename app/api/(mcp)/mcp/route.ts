@@ -2,6 +2,7 @@ import { z } from "zod"
 import { getUserId } from "@/lib/auth"
 import { fail, internalError, ok, rateLimited } from "@/lib/http"
 import { checkRateLimitDistributed, resolveClientKey } from "@/lib/rate-limit"
+import { applyRecordSearchFilter, isTextSearchUnavailable, MAX_RECORD_SEARCH_QUERY_LENGTH } from "@/lib/record-search"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
 
 const ToolCallSchema = z.object({
@@ -11,7 +12,10 @@ const ToolCallSchema = z.object({
 
 const GetRecordInput = z.object({ id: z.string().uuid() })
 const ListRecordsInput = z.object({ limit: z.number().int().min(1).max(100).optional() })
-const SearchInput = z.object({ q: z.string().min(1), limit: z.number().int().min(1).max(100).optional() })
+const SearchInput = z.object({
+  q: z.string().trim().min(1).max(MAX_RECORD_SEARCH_QUERY_LENGTH),
+  limit: z.number().int().min(1).max(100).optional()
+})
 
 function toolList() {
   return [
@@ -138,18 +142,19 @@ export async function POST(request: Request) {
       .order("created_at", { ascending: false })
       .limit(p.data.limit ?? 20)
 
-    query = query.textSearch("fts", p.data.q, { type: "plain", config: "simple" })
+    query = applyRecordSearchFilter(query, p.data.q, true)
     let result = await query
-    if (result.error && /fts|textSearch|column/i.test(result.error.message)) {
-      const escaped = p.data.q.replace(/[\\%_]/g, "\\$&").replace(/[,]/g, "")
-      result = await supabase
+    if (isTextSearchUnavailable(result.error)) {
+      let fallbackQuery = supabase
         .from("records")
         .select("id,kind,state,source_title,content,created_at")
         .eq("user_id", userId)
         .neq("state", "TRASHED")
-        .or(`content.ilike.%${escaped}%,source_title.ilike.%${escaped}%`)
         .order("created_at", { ascending: false })
         .limit(p.data.limit ?? 20)
+
+      fallbackQuery = applyRecordSearchFilter(fallbackQuery, p.data.q, false)
+      result = await fallbackQuery
     }
 
     if (result.error) {

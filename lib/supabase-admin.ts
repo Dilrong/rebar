@@ -1,6 +1,10 @@
-import { createClient } from "@supabase/supabase-js"
+import { createClient, type SupabaseClient } from "@supabase/supabase-js"
+import type { Database } from "@/lib/database.types"
 
-export function getSupabaseAdmin() {
+let cachedAdminClient: SupabaseClient<Database> | null = null
+let cachedAdminSignature: string | null = null
+
+export function getSupabaseAdmin(): SupabaseClient<Database> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY
 
@@ -16,7 +20,15 @@ export function getSupabaseAdmin() {
     throw new Error("Supabase key is a placeholder value")
   }
 
-  return createClient(url, key, {
+  const signature = `${url}::${key}`
+  if (cachedAdminClient && cachedAdminSignature === signature) {
+    return cachedAdminClient
+  }
+
+  cachedAdminClient = createClient<Database>(url, key, {
     auth: { persistSession: false, autoRefreshToken: false }
   })
+  cachedAdminSignature = signature
+
+  return cachedAdminClient
 }

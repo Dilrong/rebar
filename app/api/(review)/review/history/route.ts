@@ -7,6 +7,7 @@ import { toPositiveInt } from "@/lib/query"
 import { checkRateLimitDistributed, resolveClientKey } from "@/lib/rate-limit"
 import { TriageActionTypeSchema, TriageDecisionTypeSchema, TriageDeferReasonSchema } from "@/lib/schemas"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
+import type { RecordRow, ReviewLogRow } from "@/lib/types"
 
 const ActionSchema = z.enum(["reviewed", "resurface", "undo"])
 
@@ -38,6 +39,10 @@ export async function GET(request: NextRequest) {
   const from = (page - 1) * limit
   const to = from + limit - 1
   const cursorTs = cursorParam ? decodeTimestampCursor(cursorParam) : null
+  let actionFilter: z.infer<typeof ActionSchema> | undefined
+  let decisionTypeFilter: z.infer<typeof TriageDecisionTypeSchema> | undefined
+  let actionTypeFilter: z.infer<typeof TriageActionTypeSchema> | undefined
+  let deferReasonFilter: z.infer<typeof TriageDeferReasonSchema> | undefined
 
   if (cursorParam && !cursorTs) {
     return fail("Invalid cursor", 400)
@@ -48,6 +53,8 @@ export async function GET(request: NextRequest) {
     if (!parsedAction.success) {
       return fail("Invalid action", 400)
     }
+
+    actionFilter = parsedAction.data
   }
 
   if (decisionTypeParam) {
@@ -55,6 +62,8 @@ export async function GET(request: NextRequest) {
     if (!parsedDecisionType.success) {
       return fail("Invalid decision_type", 400)
     }
+
+    decisionTypeFilter = parsedDecisionType.data
   }
 
   if (actionTypeParam) {
@@ -62,6 +71,8 @@ export async function GET(request: NextRequest) {
     if (!parsedActionType.success) {
       return fail("Invalid action_type", 400)
     }
+
+    actionTypeFilter = parsedActionType.data
   }
 
   if (deferReasonParam) {
@@ -69,6 +80,8 @@ export async function GET(request: NextRequest) {
     if (!parsedDeferReason.success) {
       return fail("Invalid defer_reason", 400)
     }
+
+    deferReasonFilter = parsedDeferReason.data
   }
 
   const fromDate = fromParam ? new Date(fromParam) : null
@@ -84,20 +97,20 @@ export async function GET(request: NextRequest) {
     .eq("user_id", userId)
     .order("reviewed_at", { ascending: false })
 
-  if (actionParam) {
-    query = query.eq("action", actionParam)
+  if (actionFilter) {
+    query = query.eq("action", actionFilter)
   }
 
-  if (decisionTypeParam) {
-    query = query.eq("decision_type", decisionTypeParam)
+  if (decisionTypeFilter) {
+    query = query.eq("decision_type", decisionTypeFilter)
   }
 
-  if (actionTypeParam) {
-    query = query.eq("action_type", actionTypeParam)
+  if (actionTypeFilter) {
+    query = query.eq("action_type", actionTypeFilter)
   }
 
-  if (deferReasonParam) {
-    query = query.eq("defer_reason", deferReasonParam)
+  if (deferReasonFilter) {
+    query = query.eq("defer_reason", deferReasonFilter)
   }
 
   if (fromDate) {
@@ -120,7 +133,7 @@ export async function GET(request: NextRequest) {
     return internalError("review.history", logsResult.error)
   }
 
-  const logs = logsResult.data
+  const logs = (logsResult.data ?? []) as ReviewLogRow[]
   if (logs.length === 0) {
     return ok({ data: [], total: logsResult.count ?? 0, next_cursor: null })
   }
@@ -136,7 +149,12 @@ export async function GET(request: NextRequest) {
     return internalError("review.history", recordsResult.error)
   }
 
-  const recordsById = new Map(recordsResult.data.map((record) => [record.id, record]))
+  const recordsById = new Map(
+    ((recordsResult.data ?? []) as Array<Pick<RecordRow, "id" | "kind" | "source_title" | "content">>).map((record) => [
+      record.id,
+      record
+    ])
+  )
   const merged = logs.map((log) => {
     const record = recordsById.get(log.record_id)
     return {

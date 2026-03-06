@@ -5,6 +5,7 @@ import { fail, internalError, rateLimited } from "@/lib/http"
 import { checkRateLimitDistributed, resolveClientKey } from "@/lib/rate-limit"
 import { RecordStateSchema } from "@/lib/schemas"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
+import type { RecordRow, RecordTagRow, TagRow } from "@/lib/types"
 
 const UuidSchema = z.string().uuid()
 
@@ -85,7 +86,7 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = getSupabaseAdmin()
-  let recordIdsByTag: string[] | null = null
+  let recordIdsByTag: string[] | undefined
   if (tagIdParam) {
     const ownedTag = await supabase
       .from("tags")
@@ -118,8 +119,8 @@ export async function GET(request: NextRequest) {
       return internalError("export", links.error)
     }
 
-    recordIdsByTag = links.data.map((item) => item.record_id)
-    if (recordIdsByTag.length === 0) {
+    const matchedRecordIds = (links.data ?? []).map((item) => item.record_id)
+    if (matchedRecordIds.length === 0) {
       const emptyContent = `# Rebar Export — ${new Date().toISOString().slice(0, 10)}\n`
       return new Response(emptyContent, {
         status: 200,
@@ -129,6 +130,8 @@ export async function GET(request: NextRequest) {
         }
       })
     }
+
+    recordIdsByTag = matchedRecordIds
   }
 
   let query = supabase
@@ -150,7 +153,7 @@ export async function GET(request: NextRequest) {
     return internalError("export", result.error)
   }
 
-  const records = result.data
+  const records = (result.data ?? []) as RecordRow[]
   const recordIds = records.map((record) => record.id)
   const tagMap = new Map<string, string[]>()
 
@@ -164,7 +167,8 @@ export async function GET(request: NextRequest) {
       return internalError("export", linkResult.error)
     }
 
-    const tagIds = Array.from(new Set(linkResult.data.map((item) => item.tag_id)))
+    const recordTagRows = (linkResult.data ?? []) as RecordTagRow[]
+    const tagIds = Array.from(new Set(recordTagRows.map((item) => item.tag_id)))
     let tagsById = new Map<string, string>()
 
     if (tagIds.length > 0) {
@@ -178,10 +182,11 @@ export async function GET(request: NextRequest) {
         return internalError("export", tagsResult.error)
       }
 
-      tagsById = new Map(tagsResult.data.map((tag) => [tag.id, tag.name]))
+      const tags = (tagsResult.data ?? []) as Pick<TagRow, "id" | "name">[]
+      tagsById = new Map(tags.map((tag) => [tag.id, tag.name]))
     }
 
-    for (const link of linkResult.data) {
+    for (const link of recordTagRows) {
       const current = tagMap.get(link.record_id) ?? []
       const tagName = tagsById.get(link.tag_id)
       if (tagName) {

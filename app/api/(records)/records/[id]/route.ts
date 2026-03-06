@@ -4,8 +4,10 @@ import { getUserId } from "@/lib/auth"
 import { PGRST_NOT_FOUND } from "@/lib/constants"
 import { fail, internalError, ok, rateLimited } from "@/lib/http"
 import { checkRateLimitDistributed, resolveClientKey } from "@/lib/rate-limit"
+import { getInvalidOwnedTagIds } from "@/lib/record-tags"
 import { isValidStateTransition, UpdateRecordSchema } from "@/lib/schemas"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
+import type { RecordRow } from "@/lib/types"
 
 const ParamsSchema = z.object({ id: z.string().uuid() })
 
@@ -145,80 +147,47 @@ export async function PATCH(
     return fail("Invalid state transition", 400)
   }
 
-  const patch: {
-    state?: string
-    url?: string | null
-    source_title?: string | null
-    updated_at: string
-  } = {
-    updated_at: new Date().toISOString()
-  }
+  const shouldUpdateTags = Object.prototype.hasOwnProperty.call(parsedBody.data, "tag_ids")
+  const nextTagIds = shouldUpdateTags ? Array.from(new Set(parsedBody.data.tag_ids ?? [])) : []
 
-  if (parsedBody.data.state) {
-    patch.state = parsedBody.data.state
-  }
+  if (shouldUpdateTags && nextTagIds.length > 0) {
+    const validation = await getInvalidOwnedTagIds(supabase, userId, nextTagIds)
+    if (validation.error) {
+      return internalError("record.patch", validation.error)
+    }
 
-  if (Object.prototype.hasOwnProperty.call(parsedBody.data, "url")) {
-    patch.url = parsedBody.data.url ?? null
-  }
-
-  if (Object.prototype.hasOwnProperty.call(parsedBody.data, "source_title")) {
-    patch.source_title = parsedBody.data.source_title ?? null
-  }
-
-  const updated = await supabase
-    .from("records")
-    .update(patch)
-    .eq("id", parsedParams.data.id)
-    .eq("user_id", userId)
-    .select("*")
-    .single()
-
-  if (updated.error) {
-    return internalError("record.patch", updated.error)
-  }
-
-  if (Object.prototype.hasOwnProperty.call(parsedBody.data, "tag_ids")) {
-    const nextTagIds = parsedBody.data.tag_ids ?? []
-
-    if (nextTagIds.length > 0) {
-      const upserted = await supabase.from("record_tags").upsert(
-        nextTagIds.map((tagId) => ({
-          record_id: parsedParams.data.id,
-          tag_id: tagId
-        })),
-        { onConflict: "record_id,tag_id" }
-      )
-
-      if (upserted.error) {
-        return internalError("record.patch", upserted.error)
-      }
-
-      const existingLinks = await supabase.from("record_tags").select("tag_id").eq("record_id", parsedParams.data.id)
-      if (existingLinks.error) {
-        return internalError("record.patch", existingLinks.error)
-      }
-      const tagIdSet = new Set(nextTagIds)
-      const staleTagIds = existingLinks.data.map((r) => r.tag_id).filter((id) => !tagIdSet.has(id))
-      if (staleTagIds.length > 0) {
-        const removeStale = await supabase.from("record_tags").delete().eq("record_id", parsedParams.data.id).in("tag_id", staleTagIds)
-        if (removeStale.error) {
-          return internalError("record.patch", removeStale.error)
-        }
-      }
-    } else {
-      const removedAll = await supabase
-        .from("record_tags")
-        .delete()
-        .eq("record_id", parsedParams.data.id)
-
-      if (removedAll.error) {
-        return internalError("record.patch", removedAll.error)
-      }
+    if (validation.invalidTagIds.length > 0) {
+      return fail("Invalid tag_ids", 400)
     }
   }
 
-  return ok({ record: updated.data })
+  const shouldUpdateUrl = Object.prototype.hasOwnProperty.call(parsedBody.data, "url")
+  const shouldUpdateSourceTitle = Object.prototype.hasOwnProperty.call(parsedBody.data, "source_title")
+
+  const updated = await supabase
+    .rpc("update_record_with_tags", {
+      p_user_id: userId,
+      p_record_id: parsedParams.data.id,
+      p_update_state: Boolean(parsedBody.data.state),
+      p_state: parsedBody.data.state ?? null,
+      p_update_url: shouldUpdateUrl,
+      p_url: shouldUpdateUrl ? parsedBody.data.url ?? null : null,
+      p_update_source_title: shouldUpdateSourceTitle,
+      p_source_title: shouldUpdateSourceTitle ? parsedBody.data.source_title ?? null : null,
+      p_update_tags: shouldUpdateTags,
+      p_tag_ids: nextTagIds
+    })
+    .single()
+
+  if (updated.error) {
+    if (updated.error.code === "P0002") {
+      return fail("Record not found", 404)
+    }
+
+    return internalError("record.patch", updated.error)
+  }
+
+  return ok({ record: updated.data as RecordRow })
 }
 
 export async function DELETE(

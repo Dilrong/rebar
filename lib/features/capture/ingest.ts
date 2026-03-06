@@ -1,6 +1,6 @@
 import { z } from "zod"
 import { sha256 } from "@/lib/hash"
-import { RecordKindSchema } from "@/lib/schemas"
+import { RecordKindSchema, TagNameSchema } from "@/lib/schemas"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
 
 /** Resolve a favicon URL from a page URL using Google's favicon service. */
@@ -14,7 +14,7 @@ function resolveFaviconUrl(url: string | null): string | null {
   }
 }
 
-export const ExternalTagSchema = z.union([z.string().min(1), z.object({ name: z.string().min(1) })])
+export const ExternalTagSchema = z.union([TagNameSchema, z.object({ name: TagNameSchema })])
 
 export const ExternalItemSchema = z
   .object({
@@ -34,10 +34,15 @@ export const ExternalItemSchema = z
 export const IngestPayloadSchema = z.object({
   items: z.array(ExternalItemSchema).min(1).max(300),
   default_kind: RecordKindSchema.optional(),
-  default_tags: z.array(z.string().min(1)).optional()
+  default_tags: z.array(TagNameSchema).optional()
 })
 
 export type IngestPayload = z.infer<typeof IngestPayloadSchema>
+
+type TagRow = {
+  id: string
+  name: string
+}
 
 function resolveTagName(tag: z.infer<typeof ExternalTagSchema>): string {
   if (typeof tag === "string") {
@@ -66,6 +71,12 @@ export function resolveKind(item: z.infer<typeof ExternalItemSchema>, fallback: 
   }
 
   return resolveUrl(item) ? "link" : fallback
+}
+
+function addTagsToMap(tagMap: Map<string, string>, tags: TagRow[]) {
+  for (const tag of tags) {
+    tagMap.set(tag.name.toLowerCase(), tag.id)
+  }
 }
 
 export async function processIngest(userId: string, payload: IngestPayload) {
@@ -150,9 +161,7 @@ export async function processIngest(userId: string, payload: IngestPayload) {
   }
 
   const tagMap = new Map<string, string>()
-  for (const tag of existingTags.data) {
-    tagMap.set(tag.name.toLowerCase(), tag.id)
-  }
+  addTagsToMap(tagMap, existingTags.data)
 
   const missingTags: string[] = []
   for (const tagName of allTagNames) {
@@ -162,21 +171,28 @@ export async function processIngest(userId: string, payload: IngestPayload) {
   }
 
   if (missingTags.length > 0) {
-    const upsertedTags = await supabase.from("tags").upsert(
-      missingTags.map((name) => ({ user_id: userId, name })),
-      { onConflict: "user_id,name", ignoreDuplicates: true }
-    )
+    const upsertedTags = await supabase
+      .from("tags")
+      .upsert(
+        missingTags.map((name) => ({ user_id: userId, name })),
+        { onConflict: "user_id,name", ignoreDuplicates: true }
+      )
+      .select("id, name")
+
     if (upsertedTags.error) {
       throw new Error(upsertedTags.error.message)
     }
 
-    const refreshedTags = await supabase.from("tags").select("id, name").eq("user_id", userId)
-    if (refreshedTags.error) {
-      throw new Error(refreshedTags.error.message)
-    }
+    addTagsToMap(tagMap, upsertedTags.data ?? [])
 
-    for (const tag of refreshedTags.data) {
-      tagMap.set(tag.name.toLowerCase(), tag.id)
+    const unresolvedTagNames = missingTags.filter((name) => !tagMap.has(name.toLowerCase()))
+    if (unresolvedTagNames.length > 0) {
+      const refreshedTags = await supabase.from("tags").select("id, name").eq("user_id", userId)
+      if (refreshedTags.error) {
+        throw new Error(refreshedTags.error.message)
+      }
+
+      addTagsToMap(tagMap, refreshedTags.data)
     }
   }
 

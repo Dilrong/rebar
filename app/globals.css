@@ -4,6 +4,8 @@
 
 @layer base {
   :root {
+    --font-sans: "Helvetica Neue", "Arial Nova", "Segoe UI", sans-serif;
+    --font-mono: "SFMono-Regular", "Cascadia Mono", "IBM Plex Mono", "Consolas", monospace;
     --background: 0 0% 95%;
     /* Light concrete */
     --foreground: 0 0% 5%;
@@ -75,7 +77,6 @@
 
   body {
     @apply bg-background text-foreground antialiased selection:bg-accent/30 selection:text-foreground font-sans;
-    font-family: var(--app-font) !important;
     /* Extra padding on mobile to account for fixed bottom nav + safe area */
     padding-bottom: calc(5rem + env(safe-area-inset-bottom));
   }

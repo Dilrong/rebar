@@ -55,4 +55,13 @@ describe("GET /api/search", () => {
     expect(response.status).toBe(400)
     await expect(response.json()).resolves.toEqual({ error: "Invalid cursor" })
   })
+
+  it("returns 400 for overly long search query", async () => {
+    const response = await GET(
+      new NextRequest(`http://localhost/api/search?q=${"a".repeat(201)}`, { method: "GET" })
+    )
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toEqual({ error: "Search query must be 200 characters or fewer" })
+  })
 })

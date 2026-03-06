@@ -1,6 +1,7 @@
 import { z } from "zod"
 
 export const RecordKindSchema = z.enum(["quote", "note", "link", "ai"])
+export const TagNameSchema = z.string().min(1).max(50)
 
 export const RecordStateSchema = z.enum([
   "INBOX",

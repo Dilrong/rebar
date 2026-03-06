@@ -5,6 +5,7 @@ import { PGRST_NOT_FOUND } from "@/lib/constants"
 import { fail, internalError, ok, rateLimited } from "@/lib/http"
 import { checkRateLimitDistributed, resolveClientKey } from "@/lib/rate-limit"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
+import type { RecordRow, ReviewLogRow } from "@/lib/types"
 
 const ParamsSchema = z.object({ id: z.string().uuid() })
 const UNDO_WINDOW_MS = 4000
@@ -50,19 +51,30 @@ export async function POST(
     return internalError("review.undo", lastLog.error)
   }
 
-  if (lastLog.data.action === "undo") {
+  const lastLogRow = lastLog.data as Pick<
+    ReviewLogRow,
+    | "action"
+    | "reviewed_at"
+    | "prev_state"
+    | "prev_interval_days"
+    | "prev_due_at"
+    | "prev_review_count"
+    | "prev_last_reviewed_at"
+  >
+
+  if (lastLogRow.action === "undo") {
     return fail("Last review action is already undo", 400)
   }
 
-  const diffMs = Date.now() - new Date(lastLog.data.reviewed_at).getTime()
+  const diffMs = Date.now() - new Date(lastLogRow.reviewed_at).getTime()
   if (diffMs > UNDO_WINDOW_MS) {
     return fail("Undo window expired", 400)
   }
 
   if (
-    !lastLog.data.prev_state ||
-    lastLog.data.prev_interval_days === null ||
-    lastLog.data.prev_review_count === null
+    !lastLogRow.prev_state ||
+    lastLogRow.prev_interval_days === null ||
+    lastLogRow.prev_review_count === null
   ) {
     return fail("Undo metadata missing", 400)
   }
@@ -82,23 +94,25 @@ export async function POST(
     return internalError("review.undo", currentRecord.error)
   }
 
-  if (currentRecord.data.review_count !== lastLog.data.prev_review_count + 1) {
+  const currentRecordRow = currentRecord.data as Pick<RecordRow, "updated_at" | "review_count">
+
+  if (currentRecordRow.review_count !== lastLogRow.prev_review_count + 1) {
     return fail("Undo target is stale", 409)
   }
 
   const restored = await supabase
     .from("records")
     .update({
-      state: lastLog.data.prev_state,
-      interval_days: lastLog.data.prev_interval_days,
-      due_at: lastLog.data.prev_due_at,
-      last_reviewed_at: lastLog.data.prev_last_reviewed_at,
-      review_count: lastLog.data.prev_review_count,
+      state: lastLogRow.prev_state,
+      interval_days: lastLogRow.prev_interval_days,
+      due_at: lastLogRow.prev_due_at,
+      last_reviewed_at: lastLogRow.prev_last_reviewed_at,
+      review_count: lastLogRow.prev_review_count,
       updated_at: new Date().toISOString()
     })
     .eq("id", parsed.data.id)
     .eq("user_id", userId)
-    .eq("updated_at", currentRecord.data.updated_at)
+    .eq("updated_at", currentRecordRow.updated_at)
     .select("*")
     .single()
 
@@ -110,20 +124,29 @@ export async function POST(
     return internalError("review.undo", restored.error)
   }
 
+  const restoredRecord = restored.data as Pick<
+    RecordRow,
+    | "state"
+    | "interval_days"
+    | "due_at"
+    | "review_count"
+    | "last_reviewed_at"
+  >
+
   const inserted = await supabase.from("review_log").insert({
     user_id: userId,
     record_id: parsed.data.id,
     action: "undo",
-    prev_state: restored.data.state,
-    prev_interval_days: restored.data.interval_days,
-    prev_due_at: restored.data.due_at,
-    prev_review_count: restored.data.review_count,
-    prev_last_reviewed_at: restored.data.last_reviewed_at
+    prev_state: restoredRecord.state,
+    prev_interval_days: restoredRecord.interval_days,
+    prev_due_at: restoredRecord.due_at,
+    prev_review_count: restoredRecord.review_count,
+    prev_last_reviewed_at: restoredRecord.last_reviewed_at
   })
 
   if (inserted.error) {
     return internalError("review.undo", inserted.error)
   }
 
-  return ok({ record: restored.data })
+  return ok({ record: restored.data as RecordRow })
 }

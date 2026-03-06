@@ -4,6 +4,7 @@ import { getUserId } from "@/lib/auth"
 import { fail, internalError, ok, rateLimited } from "@/lib/http"
 import { decodeTimestampCursor, encodeTimestampCursor } from "@/lib/pagination"
 import { checkRateLimitDistributed, resolveClientKey } from "@/lib/rate-limit"
+import { applyRecordSearchFilter, isTextSearchUnavailable, parseSearchQuery } from "@/lib/record-search"
 import { RecordStateSchema } from "@/lib/schemas"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
 
@@ -137,7 +138,7 @@ export async function GET(request: NextRequest) {
   }
 
   const params = request.nextUrl.searchParams
-  const q = params.get("q")?.trim() ?? ""
+  const parsedSearch = parseSearchQuery(params.get("q"))
   const state = params.get("state")?.trim() ?? ""
   const tagId = params.get("tag_id")?.trim() ?? ""
   const fromDate = params.get("from")?.trim() ?? ""
@@ -148,6 +149,12 @@ export async function GET(request: NextRequest) {
   const cursorParam = params.get("cursor")
   const cursorTs = cursorParam ? decodeTimestampCursor(cursorParam) : null
   let validState: z.infer<typeof RecordStateSchema> | undefined
+
+  if (parsedSearch.error) {
+    return fail(parsedSearch.error, 400)
+  }
+
+  const q = parsedSearch.value ?? ""
 
   if (!q && !state && !tagId && !fromDate && !toDate) {
     return fail("At least one filter is required", 400)
@@ -239,12 +246,7 @@ export async function GET(request: NextRequest) {
     let runnable = query
 
     if (q) {
-      if (useTextSearch) {
-        runnable = runnable.textSearch("fts", q, { type: "plain", config: "simple" })
-      } else {
-        const escaped = q.replace(/[\\%_]/g, "\\$&").replace(/[,]/g, "")
-        runnable = runnable.or(`content.ilike.%${escaped}%,source_title.ilike.%${escaped}%`)
-      }
+      runnable = applyRecordSearchFilter(runnable, q, useTextSearch)
     }
 
     return runnable
@@ -256,19 +258,14 @@ export async function GET(request: NextRequest) {
       let runnable = query.limit(candidateLimit)
 
       if (q) {
-        if (useTextSearch) {
-          runnable = runnable.textSearch("fts", q, { type: "plain", config: "simple" })
-        } else {
-          const escaped = q.replace(/[\\%_]/g, "\\$&").replace(/[,]/g, "")
-          runnable = runnable.or(`content.ilike.%${escaped}%,source_title.ilike.%${escaped}%`)
-        }
+        runnable = applyRecordSearchFilter(runnable, q, useTextSearch)
       }
 
       return runnable
     }
 
     let candidateResult = await runSemanticCandidates(true)
-    if (q && candidateResult.error && /fts|textSearch|column/i.test(candidateResult.error.message)) {
+    if (q && isTextSearchUnavailable(candidateResult.error)) {
       candidateResult = await runSemanticCandidates(false)
     }
 
@@ -299,7 +296,7 @@ export async function GET(request: NextRequest) {
   }
 
   let result = await runQuery(true)
-  if (q && result.error && /fts|textSearch|column/i.test(result.error.message)) {
+  if (q && isTextSearchUnavailable(result.error)) {
     result = await runQuery(false)
   }
 
