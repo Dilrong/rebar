@@ -1,15 +1,5 @@
-import { timingSafeEqual } from "node:crypto"
+import { safeEqual } from "@/lib/crypto"
 import { fail } from "@/lib/http"
-
-function safeEqual(a: string, b: string): boolean {
-  const aBuf = Buffer.from(a)
-  const bBuf = Buffer.from(b)
-  if (aBuf.length !== bBuf.length) {
-    return false
-  }
-
-  return timingSafeEqual(aBuf, bBuf)
-}
 
 export function verifyCronRequest(headers: Headers): { ok: true } | { ok: false; response: Response } {
   const expected = process.env.REBAR_CRON_SECRET ?? process.env.CRON_SECRET

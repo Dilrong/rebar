@@ -1,5 +1,5 @@
 import { verifyCronRequest } from "@/lib/cron"
-import { ok } from "@/lib/http"
+import { internalError, ok } from "@/lib/http"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
 
 export async function POST(request: Request) {
@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     .select("id")
 
   if (deleted.error) {
-    return ok({ error: deleted.error.message, deleted: 0 }, { status: 500 })
+    return internalError("cron.cleanup", deleted.error)
   }
 
   return ok({ deleted: deleted.data.length, cutoff })

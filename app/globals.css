@@ -18,10 +18,10 @@
     --secondary-foreground: 0 0% 5%;
     --muted: 0 0% 88%;
     --muted-foreground: 0 0% 40%;
-    --accent: 21 100% 38%;
+    --accent: 21 100% 50%;
     /* Construction Orange #FF5A00 */
     --accent-foreground: 0 0% 100%;
-    --destructive: 0 72% 45%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
     --border: 0 0% 5%;
     /* Pure black borders */
@@ -48,9 +48,9 @@
     --secondary-foreground: 0 0% 95%;
     --muted: 0 0% 15%;
     --muted-foreground: 0 0% 60%;
-    --accent: 21 100% 38%;
+    --accent: 21 100% 50%;
     --accent-foreground: 0 0% 100%;
-    --destructive: 0 72% 55%;
+    --destructive: 0 62% 30%;
     --destructive-foreground: 0 0% 5%;
     --border: 0 0% 25%;
     /* Darker gray borders in dark mode to not be blinding */

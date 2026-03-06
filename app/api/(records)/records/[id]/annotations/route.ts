@@ -2,7 +2,7 @@ import { NextRequest } from "next/server"
 import { z } from "zod"
 import { getUserId } from "@/lib/auth"
 import { PGRST_NOT_FOUND } from "@/lib/constants"
-import { fail, ok, rateLimited } from "@/lib/http"
+import { fail, internalError, ok, rateLimited } from "@/lib/http"
 import { checkRateLimitDistributed, resolveClientKey } from "@/lib/rate-limit"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
 
@@ -46,7 +46,7 @@ export async function GET(
     .order("created_at", { ascending: true })
 
   if (result.error) {
-    return fail(result.error.message, 500)
+    return internalError("annotations.get", result.error)
   }
 
   return ok({ data: result.data })
@@ -95,7 +95,7 @@ export async function POST(
       return fail("Record not found", 404)
     }
 
-    return fail(record.error.message, 500)
+    return internalError("annotations.post", record.error)
   }
 
   const result = await supabase
@@ -111,7 +111,7 @@ export async function POST(
     .single()
 
   if (result.error) {
-    return fail(result.error.message, 500)
+    return internalError("annotations.post", result.error)
   }
 
   return ok(result.data, { status: 201 })

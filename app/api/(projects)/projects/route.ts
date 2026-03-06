@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server"
 import { z } from "zod"
 import { getUserId } from "@/lib/auth"
-import { fail, ok, rateLimited } from "@/lib/http"
+import { fail, internalError, ok, rateLimited } from "@/lib/http"
 import { checkRateLimitDistributed, resolveClientKey } from "@/lib/rate-limit"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
 
@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
   }
 
   if (!PROJECT_MODE_ENABLED) {
-    return fail("Project mode is temporarily disabled", 503)
+    return fail("Project mode is not available", 404)
   }
 
   const selectedTagId = request.nextUrl.searchParams.get("tag_id")?.trim() ?? ""
@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
     .order("name", { ascending: true })
 
   if (tagsResult.error) {
-    return fail(tagsResult.error.message, 500)
+    return internalError("projects", tagsResult.error)
   }
 
   const tags = tagsResult.data
@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
     .in("tag_id", allTagIds)
 
   if (linksResult.error) {
-    return fail(linksResult.error.message, 500)
+    return internalError("projects", linksResult.error)
   }
 
   const links = linksResult.data
@@ -124,7 +124,7 @@ export async function GET(request: NextRequest) {
     .neq("state", "TRASHED")
 
   if (recordsResult.error) {
-    return fail(recordsResult.error.message, 500)
+    return internalError("projects", recordsResult.error)
   }
 
   const records = recordsResult.data
@@ -202,7 +202,7 @@ export async function GET(request: NextRequest) {
       : { data: [], error: null }
 
   if (reviewLogsResult.error) {
-    return fail(reviewLogsResult.error.message, 500)
+    return internalError("projects", reviewLogsResult.error)
   }
 
   const now = Date.now()

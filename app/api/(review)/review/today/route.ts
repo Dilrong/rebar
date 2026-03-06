@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server"
 import { getUserId } from "@/lib/auth"
-import { fail, ok, rateLimited } from "@/lib/http"
+import { fail, internalError, ok, rateLimited } from "@/lib/http"
 import { toPositiveInt } from "@/lib/query"
 import { checkRateLimitDistributed, resolveClientKey } from "@/lib/rate-limit"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
@@ -50,9 +50,9 @@ export async function GET(request: NextRequest) {
       .range(0, n - 1)
   ])
 
-  if (inbox.error) return fail(inbox.error.message, 500)
-  if (pinned.error) return fail(pinned.error.message, 500)
-  if (active.error) return fail(active.error.message, 500)
+  if (inbox.error) return internalError("review.today", inbox.error)
+  if (pinned.error) return internalError("review.today", pinned.error)
+  if (active.error) return internalError("review.today", active.error)
 
   const inboxData = inbox.data
   const pinnedData = pinned.data

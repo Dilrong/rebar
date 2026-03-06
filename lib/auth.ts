@@ -1,5 +1,5 @@
-import { timingSafeEqual } from "node:crypto"
 import { z } from "zod"
+import { safeEqual } from "@/lib/crypto"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
 import { isLocalRequestHost } from "@/lib/security/localhost"
 import { isAllowedOrigin } from "@/lib/security/origin"
@@ -50,9 +50,7 @@ export async function getUserId(headers: Headers, options: GetUserIdOptions = {}
       return null
     }
 
-    const keyA = Buffer.from(ingestKey)
-    const keyB = Buffer.from(expectedKey)
-    if (keyA.length === keyB.length && timingSafeEqual(keyA, keyB)) {
+    if (safeEqual(ingestKey, expectedKey)) {
       return parsedHeaderUserId.data
     }
 

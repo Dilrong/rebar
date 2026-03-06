@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server"
 import { z } from "zod"
 import { getUserId } from "@/lib/auth"
-import { fail, ok, rateLimited } from "@/lib/http"
+import { fail, internalError, ok, rateLimited } from "@/lib/http"
 import { checkRateLimitDistributed, resolveClientKey } from "@/lib/rate-limit"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
 
@@ -43,7 +43,7 @@ export async function DELETE(
         .eq("user_id", userId)
 
     if (result.error) {
-        return fail(result.error.message, 500)
+        return internalError("annotation.delete", result.error)
     }
 
     return ok({ deleted: true })

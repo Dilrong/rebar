@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server"
 import { z } from "zod"
 import { getUserId } from "@/lib/auth"
-import { fail, ok, rateLimited } from "@/lib/http"
+import { fail, internalError, ok, rateLimited } from "@/lib/http"
 import { decodeTimestampCursor, encodeTimestampCursor } from "@/lib/pagination"
 import { checkRateLimitDistributed, resolveClientKey } from "@/lib/rate-limit"
 import { RecordStateSchema } from "@/lib/schemas"
@@ -185,7 +185,7 @@ export async function GET(request: NextRequest) {
       .maybeSingle()
 
     if (ownedTag.error) {
-      return fail(ownedTag.error.message, 500)
+      return internalError("search", ownedTag.error)
     }
 
     if (!ownedTag.data) {
@@ -198,7 +198,7 @@ export async function GET(request: NextRequest) {
       .eq("tag_id", tagId)
 
     if (tagged.error) {
-      return fail(tagged.error.message, 500)
+      return internalError("search", tagged.error)
     }
 
     filteredRecordIds = tagged.data.map((row) => row.record_id)
@@ -273,7 +273,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (candidateResult.error) {
-      return fail(candidateResult.error.message, 500)
+      return internalError("search", candidateResult.error)
     }
 
     const candidates = (candidateResult.data ?? []) as SemanticRow[]
@@ -304,7 +304,7 @@ export async function GET(request: NextRequest) {
   }
 
   if (result.error) {
-    return fail(result.error.message, 500)
+    return internalError("search", result.error)
   }
 
   const rows = result.data ?? []

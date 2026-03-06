@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server"
 import { z } from "zod"
 import { getUserId } from "@/lib/auth"
-import { fail, ok, rateLimited } from "@/lib/http"
+import { fail, internalError, ok, rateLimited } from "@/lib/http"
 import { checkRateLimitDistributed, resolveClientKey } from "@/lib/rate-limit"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
 import { parseStartPage, type StartPage } from "@feature-lib/settings/preferences"
@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
     .maybeSingle()
 
   if (result.error) {
-    return fail(result.error.message, 500)
+    return internalError("settings", result.error)
   }
 
   const startPage = parseStartPage(result.data?.start_page) ?? DEFAULT_START_PAGE
@@ -77,7 +77,7 @@ export async function PATCH(request: NextRequest) {
     .single()
 
   if (result.error) {
-    return fail(result.error.message, 500)
+    return internalError("settings", result.error)
   }
 
   return ok({ startPage: result.data.start_page })

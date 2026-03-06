@@ -8,6 +8,11 @@ export function fail(message: string, status: number): NextResponse {
   return NextResponse.json({ error: message }, { status })
 }
 
+export function internalError(context: string, error: unknown): NextResponse {
+  console.error(`[${context}]`, error instanceof Error ? error.message : error)
+  return NextResponse.json({ error: "Internal error" }, { status: 500 })
+}
+
 export function rateLimited(retryAfterSec: number): NextResponse {
   return NextResponse.json(
     { error: "Too Many Requests" },

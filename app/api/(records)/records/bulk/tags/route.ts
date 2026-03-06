@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server"
 import { z } from "zod"
 import { getUserId } from "@/lib/auth"
-import { fail, ok, rateLimited } from "@/lib/http"
+import { fail, internalError, ok, rateLimited } from "@/lib/http"
 import { checkRateLimitDistributed, resolveClientKey } from "@/lib/rate-limit"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
 
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
 
   const records = await supabase.from("records").select("id").eq("user_id", userId).in("id", ids)
   if (records.error) {
-    return fail(records.error.message, 500)
+    return internalError("records.bulk.tags", records.error)
   }
 
   const existingIds = new Set(records.data.map((row) => row.id))
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
   if (tagIds.length > 0) {
     const ownedTags = await supabase.from("tags").select("id").eq("user_id", userId).in("id", tagIds)
     if (ownedTags.error) {
-      return fail(ownedTags.error.message, 500)
+      return internalError("records.bulk.tags", ownedTags.error)
     }
 
     const ownedTagIds = new Set(ownedTags.data.map((row) => row.id))
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
     if (tagIds.length === 0) {
       const deletedAll = await supabase.from("record_tags").delete().in("record_id", targetIds)
       if (deletedAll.error) {
-        return fail(deletedAll.error.message, 500)
+        return internalError("records.bulk.tags", deletedAll.error)
       }
     } else {
       const links: Array<{ record_id: string; tag_id: string }> = []
@@ -77,20 +77,20 @@ export async function POST(request: NextRequest) {
 
       const upserted = await supabase.from("record_tags").upsert(links, { onConflict: "record_id,tag_id" })
       if (upserted.error) {
-        return fail(upserted.error.message, 500)
+        return internalError("records.bulk.tags", upserted.error)
       }
 
       const tagIdSet = new Set(tagIds)
       const existingLinks = await supabase.from("record_tags").select("record_id, tag_id").in("record_id", targetIds)
       if (existingLinks.error) {
-        return fail(existingLinks.error.message, 500)
+        return internalError("records.bulk.tags", existingLinks.error)
       }
       const staleLinks = existingLinks.data.filter((r) => !tagIdSet.has(r.tag_id))
       if (staleLinks.length > 0) {
         const staleTagIds = [...new Set(staleLinks.map((r) => r.tag_id))]
         const removed = await supabase.from("record_tags").delete().in("record_id", targetIds).in("tag_id", staleTagIds)
         if (removed.error) {
-          return fail(removed.error.message, 500)
+          return internalError("records.bulk.tags", removed.error)
         }
       }
     }
@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
 
     const upserted = await supabase.from("record_tags").upsert(links, { onConflict: "record_id,tag_id" })
     if (upserted.error) {
-      return fail(upserted.error.message, 500)
+      return internalError("records.bulk.tags", upserted.error)
     }
   }
 

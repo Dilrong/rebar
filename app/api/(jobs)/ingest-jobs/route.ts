@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server"
 import { z } from "zod"
 import { getUserId } from "@/lib/auth"
-import { fail, ok, rateLimited } from "@/lib/http"
+import { fail, internalError, ok, rateLimited } from "@/lib/http"
 import { IngestPayloadSchema } from "@feature-lib/capture/ingest"
 import { checkRateLimitDistributed, resolveClientKey } from "@/lib/rate-limit"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
     .limit(20)
 
   if (query.error) {
-    return fail(query.error.message, 500)
+    return internalError("ingest-jobs", query.error)
   }
 
   return ok({ data: query.data, total: query.count ?? 0 })
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
     .single()
 
   if (inserted.error) {
-    return fail(inserted.error.message, 500)
+    return internalError("ingest-jobs", inserted.error)
   }
 
   return ok({ id: inserted.data.id }, { status: 201 })
@@ -105,7 +105,7 @@ export async function DELETE(request: NextRequest) {
 
   const deleted = await supabase.from("ingest_jobs").delete().eq("user_id", userId).eq("status", status)
   if (deleted.error) {
-    return fail(deleted.error.message, 500)
+    return internalError("ingest-jobs", deleted.error)
   }
 
   return ok({ cleared: true })

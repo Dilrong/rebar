@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server"
 import { z } from "zod"
 import { getUserId } from "@/lib/auth"
-import { fail, ok, rateLimited } from "@/lib/http"
+import { fail, internalError, ok, rateLimited } from "@/lib/http"
 import { checkRateLimitDistributed, resolveClientKey } from "@/lib/rate-limit"
 import { isValidStateTransition, RecordStateSchema } from "@/lib/schemas"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
@@ -41,7 +41,7 @@ export async function PATCH(request: NextRequest) {
     .in("id", ids)
 
   if (rows.error) {
-    return fail(rows.error.message, 500)
+    return internalError("records.bulk", rows.error)
   }
 
   const byId = new Map(rows.data.map((row) => [row.id, row.state]))
@@ -71,7 +71,7 @@ export async function PATCH(request: NextRequest) {
       .in("id", updatableIds)
 
     if (updated.error) {
-      return fail(updated.error.message, 500)
+      return internalError("records.bulk", updated.error)
     }
   }
 

@@ -2,7 +2,7 @@ import { NextRequest } from "next/server"
 import { z } from "zod"
 import { getUserId } from "@/lib/auth"
 import { PGRST_NOT_FOUND, PG_UNIQUE_VIOLATION } from "@/lib/constants"
-import { fail, ok, rateLimited } from "@/lib/http"
+import { fail, internalError, ok, rateLimited } from "@/lib/http"
 import { checkRateLimitDistributed, resolveClientKey } from "@/lib/rate-limit"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
 
@@ -64,7 +64,7 @@ export async function PATCH(
       return fail("Tag already exists", 409)
     }
 
-    return fail(updated.error.message, 500)
+    return internalError("tag", updated.error)
   }
 
   return ok({ tag: updated.data })
@@ -108,7 +108,7 @@ export async function DELETE(
       return fail("Tag not found", 404)
     }
 
-    return fail(deleted.error.message, 500)
+    return internalError("tag", deleted.error)
   }
 
   return ok({ deleted: true })

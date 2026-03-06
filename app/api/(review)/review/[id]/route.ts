@@ -2,7 +2,7 @@ import { NextRequest } from "next/server"
 import { z } from "zod"
 import { getUserId } from "@/lib/auth"
 import { PGRST_NOT_FOUND } from "@/lib/constants"
-import { fail, ok, rateLimited } from "@/lib/http"
+import { fail, internalError, ok, rateLimited } from "@/lib/http"
 import { checkRateLimitDistributed, resolveClientKey } from "@/lib/rate-limit"
 import { calcNextInterval } from "@feature-lib/review/review"
 import { ReviewRecordSchema, TriageDecisionSchema, type ReviewAction, type TriageActionType, type TriageDecisionType, type TriageDeferReason } from "@/lib/schemas"
@@ -106,7 +106,7 @@ export async function POST(
       return fail("Record not found", 404)
     }
 
-    return fail(current.error.message, 500)
+    return internalError("review", current.error)
   }
 
   if (!["INBOX", "ACTIVE", "PINNED"].includes(current.data.state)) {
@@ -147,7 +147,7 @@ export async function POST(
     .single()
 
   if (updated.error) {
-    return fail(updated.error.message, 500)
+    return internalError("review", updated.error)
   }
 
   const logInserted = await supabase.from("review_log").insert({
@@ -165,7 +165,7 @@ export async function POST(
   })
 
   if (logInserted.error) {
-    return fail(logInserted.error.message, 500)
+    return internalError("review", logInserted.error)
   }
 
   return ok({ record: updated.data })

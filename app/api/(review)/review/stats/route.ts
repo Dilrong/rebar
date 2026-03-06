@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server"
 import { getUserId } from "@/lib/auth"
-import { fail, ok, rateLimited } from "@/lib/http"
+import { fail, internalError, ok, rateLimited } from "@/lib/http"
 import { checkRateLimitDistributed, resolveClientKey } from "@/lib/rate-limit"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
 
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
     .gte("reviewed_at", todayStart.toISOString())
 
   if (todayReviewed.error) {
-    return fail(todayReviewed.error.message, 500)
+    return internalError("review.stats", todayReviewed.error)
   }
 
   const dueCounts = await Promise.all([
@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
 
   for (const result of dueCounts) {
     if (result.error) {
-      return fail(result.error.message, 500)
+      return internalError("review.stats", result.error)
     }
   }
 
@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
     .limit(400)
 
   if (streakLogs.error) {
-    return fail(streakLogs.error.message, 500)
+    return internalError("review.stats", streakLogs.error)
   }
 
   const days = Array.from(new Set(streakLogs.data.map((row) => ymd(new Date(row.reviewed_at))))).sort((a, b) => (a > b ? -1 : 1))

@@ -2,7 +2,7 @@ import { NextRequest } from "next/server"
 import { z } from "zod"
 import { getUserId } from "@/lib/auth"
 import { PG_UNIQUE_VIOLATION } from "@/lib/constants"
-import { fail, ok, rateLimited } from "@/lib/http"
+import { fail, internalError, ok, rateLimited } from "@/lib/http"
 import { checkRateLimitDistributed, resolveClientKey } from "@/lib/rate-limit"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
 
@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
     .order("name", { ascending: true })
 
   if (result.error) {
-    return fail(result.error.message, 500)
+    return internalError("tags", result.error)
   }
 
   return ok({ data: result.data })
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
       return fail("Tag already exists", 409)
     }
 
-    return fail(created.error.message, 500)
+    return internalError("tags", created.error)
   }
 
   return ok({ tag: created.data }, { status: 201 })

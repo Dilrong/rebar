@@ -2,11 +2,12 @@ import { NextRequest } from "next/server"
 import { z } from "zod"
 import { getUserId } from "@/lib/auth"
 import { PGRST_NOT_FOUND } from "@/lib/constants"
-import { fail, ok, rateLimited } from "@/lib/http"
+import { fail, internalError, ok, rateLimited } from "@/lib/http"
 import { checkRateLimitDistributed, resolveClientKey } from "@/lib/rate-limit"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
 
 const ParamsSchema = z.object({ id: z.string().uuid() })
+const UNDO_WINDOW_MS = 4000
 
 export async function POST(
   request: NextRequest,
@@ -46,7 +47,7 @@ export async function POST(
     if (lastLog.error.code === PGRST_NOT_FOUND) {
       return fail("No review log found", 404)
     }
-    return fail(lastLog.error.message, 500)
+    return internalError("review.undo", lastLog.error)
   }
 
   if (lastLog.data.action === "undo") {
@@ -54,7 +55,7 @@ export async function POST(
   }
 
   const diffMs = Date.now() - new Date(lastLog.data.reviewed_at).getTime()
-  if (diffMs > 4000) {
+  if (diffMs > UNDO_WINDOW_MS) {
     return fail("Undo window expired", 400)
   }
 
@@ -78,7 +79,7 @@ export async function POST(
       return fail("Record not found", 404)
     }
 
-    return fail(currentRecord.error.message, 500)
+    return internalError("review.undo", currentRecord.error)
   }
 
   if (currentRecord.data.review_count !== lastLog.data.prev_review_count + 1) {
@@ -106,7 +107,7 @@ export async function POST(
       return fail("Undo already applied or record changed", 409)
     }
 
-    return fail(restored.error.message, 500)
+    return internalError("review.undo", restored.error)
   }
 
   const inserted = await supabase.from("review_log").insert({
@@ -121,7 +122,7 @@ export async function POST(
   })
 
   if (inserted.error) {
-    return fail(inserted.error.message, 500)
+    return internalError("review.undo", inserted.error)
   }
 
   return ok({ record: restored.data })

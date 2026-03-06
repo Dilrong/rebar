@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server"
 import { z } from "zod"
 import { getUserId } from "@/lib/auth"
-import { fail, rateLimited } from "@/lib/http"
+import { fail, internalError, rateLimited } from "@/lib/http"
 import { checkRateLimitDistributed, resolveClientKey } from "@/lib/rate-limit"
 import { RecordStateSchema } from "@/lib/schemas"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
@@ -95,7 +95,7 @@ export async function GET(request: NextRequest) {
       .maybeSingle()
 
     if (ownedTag.error) {
-      return fail(ownedTag.error.message, 500)
+      return internalError("export", ownedTag.error)
     }
 
     if (!ownedTag.data) {
@@ -115,7 +115,7 @@ export async function GET(request: NextRequest) {
       .eq("tag_id", tagIdParam)
 
     if (links.error) {
-      return fail(links.error.message, 500)
+      return internalError("export", links.error)
     }
 
     recordIdsByTag = links.data.map((item) => item.record_id)
@@ -147,7 +147,7 @@ export async function GET(request: NextRequest) {
 
   const result = await query
   if (result.error) {
-    return fail(result.error.message, 500)
+    return internalError("export", result.error)
   }
 
   const records = result.data
@@ -161,7 +161,7 @@ export async function GET(request: NextRequest) {
       .in("record_id", recordIds)
 
     if (linkResult.error) {
-      return fail(linkResult.error.message, 500)
+      return internalError("export", linkResult.error)
     }
 
     const tagIds = Array.from(new Set(linkResult.data.map((item) => item.tag_id)))
@@ -175,7 +175,7 @@ export async function GET(request: NextRequest) {
         .in("id", tagIds)
 
       if (tagsResult.error) {
-        return fail(tagsResult.error.message, 500)
+        return internalError("export", tagsResult.error)
       }
 
       tagsById = new Map(tagsResult.data.map((tag) => [tag.id, tag.name]))

@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server"
 import { z } from "zod"
 import { getUserId } from "@/lib/auth"
-import { fail, ok, rateLimited } from "@/lib/http"
+import { fail, internalError, ok, rateLimited } from "@/lib/http"
 import { decodeTimestampCursor, encodeTimestampCursor } from "@/lib/pagination"
 import { toPositiveInt } from "@/lib/query"
 import { checkRateLimitDistributed, resolveClientKey } from "@/lib/rate-limit"
@@ -117,7 +117,7 @@ export async function GET(request: NextRequest) {
   const logsResult = cursorTs ? await query.limit(limit) : await query.range(from, to)
 
   if (logsResult.error) {
-    return fail(logsResult.error.message, 500)
+    return internalError("review.history", logsResult.error)
   }
 
   const logs = logsResult.data
@@ -133,7 +133,7 @@ export async function GET(request: NextRequest) {
     .in("id", recordIds)
 
   if (recordsResult.error) {
-    return fail(recordsResult.error.message, 500)
+    return internalError("review.history", recordsResult.error)
   }
 
   const recordsById = new Map(recordsResult.data.map((record) => [record.id, record]))

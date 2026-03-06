@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server"
 import { getUserId } from "@/lib/auth"
-import { fail, ok, rateLimited } from "@/lib/http"
+import { fail, internalError, ok, rateLimited } from "@/lib/http"
 import { IngestPayloadSchema, processIngest } from "@feature-lib/capture/ingest"
 import { checkRateLimitDistributed, resolveClientKey } from "@/lib/rate-limit"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     .limit(20)
 
   if (jobs.error) {
-    return fail(jobs.error.message, 500)
+    return internalError("ingest-jobs.retry", jobs.error)
   }
 
   let done = 0
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
 
   const pendingCount = await supabase.from("ingest_jobs").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("status", "PENDING")
   if (pendingCount.error) {
-    return fail(pendingCount.error.message, 500)
+    return internalError("ingest-jobs.retry", pendingCount.error)
   }
 
   return ok({ done, failed, pending: pendingCount.count ?? 0 })

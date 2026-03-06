@@ -2,7 +2,7 @@ import { NextRequest } from "next/server"
 import { z } from "zod"
 import { getUserId } from "@/lib/auth"
 import { PGRST_NOT_FOUND } from "@/lib/constants"
-import { fail, ok, rateLimited } from "@/lib/http"
+import { fail, internalError, ok, rateLimited } from "@/lib/http"
 import { checkRateLimitDistributed, resolveClientKey } from "@/lib/rate-limit"
 import { isValidStateTransition, UpdateRecordSchema } from "@/lib/schemas"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
@@ -46,7 +46,7 @@ export async function GET(
       return fail("Record not found", 404)
     }
 
-    return fail(recordResult.error.message, 500)
+    return internalError("record.get", recordResult.error)
   }
 
   const [annotationsResult, linksResult] = await Promise.all([
@@ -60,11 +60,11 @@ export async function GET(
   ])
 
   if (annotationsResult.error) {
-    return fail(annotationsResult.error.message, 500)
+    return internalError("record.get", annotationsResult.error)
   }
 
   if (linksResult.error) {
-    return fail(linksResult.error.message, 500)
+    return internalError("record.get", linksResult.error)
   }
 
   const tagIds = linksResult.data.map((item) => item.tag_id)
@@ -79,7 +79,7 @@ export async function GET(
       .order("name", { ascending: true })
 
     if (tagsResult.error) {
-      return fail(tagsResult.error.message, 500)
+      return internalError("record.get", tagsResult.error)
     }
 
     tags = tagsResult.data
@@ -135,7 +135,7 @@ export async function PATCH(
       return fail("Record not found", 404)
     }
 
-    return fail(existing.error.message, 500)
+    return internalError("record.patch", existing.error)
   }
 
   if (
@@ -175,7 +175,7 @@ export async function PATCH(
     .single()
 
   if (updated.error) {
-    return fail(updated.error.message, 500)
+    return internalError("record.patch", updated.error)
   }
 
   if (Object.prototype.hasOwnProperty.call(parsedBody.data, "tag_ids")) {
@@ -191,19 +191,19 @@ export async function PATCH(
       )
 
       if (upserted.error) {
-        return fail(upserted.error.message, 500)
+        return internalError("record.patch", upserted.error)
       }
 
       const existingLinks = await supabase.from("record_tags").select("tag_id").eq("record_id", parsedParams.data.id)
       if (existingLinks.error) {
-        return fail(existingLinks.error.message, 500)
+        return internalError("record.patch", existingLinks.error)
       }
       const tagIdSet = new Set(nextTagIds)
       const staleTagIds = existingLinks.data.map((r) => r.tag_id).filter((id) => !tagIdSet.has(id))
       if (staleTagIds.length > 0) {
         const removeStale = await supabase.from("record_tags").delete().eq("record_id", parsedParams.data.id).in("tag_id", staleTagIds)
         if (removeStale.error) {
-          return fail(removeStale.error.message, 500)
+          return internalError("record.patch", removeStale.error)
         }
       }
     } else {
@@ -213,7 +213,7 @@ export async function PATCH(
         .eq("record_id", parsedParams.data.id)
 
       if (removedAll.error) {
-        return fail(removedAll.error.message, 500)
+        return internalError("record.patch", removedAll.error)
       }
     }
   }
@@ -259,7 +259,7 @@ export async function DELETE(
       return fail("Record not found", 404)
     }
 
-    return fail(deleted.error.message, 500)
+    return internalError("record.delete", deleted.error)
   }
 
   return ok({ record: deleted.data })

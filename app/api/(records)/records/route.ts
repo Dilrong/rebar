@@ -4,7 +4,7 @@ import { z } from "zod"
 import { getUserId } from "@/lib/auth"
 import { PG_UNIQUE_VIOLATION } from "@/lib/constants"
 import { sha256 } from "@/lib/hash"
-import { fail, ok, rateLimited } from "@/lib/http"
+import { fail, internalError, ok, rateLimited } from "@/lib/http"
 import { decodeTimestampCursor, encodeTimestampCursor } from "@/lib/pagination"
 import { toPositiveInt } from "@/lib/query"
 import { checkRateLimitDistributed, resolveClientKey } from "@/lib/rate-limit"
@@ -108,7 +108,7 @@ export async function GET(request: NextRequest) {
       .maybeSingle()
 
     if (ownedTag.error) {
-      return fail(ownedTag.error.message, 500)
+      return internalError("records.get", ownedTag.error)
     }
 
     if (!ownedTag.data) {
@@ -116,7 +116,7 @@ export async function GET(request: NextRequest) {
     }
 
     const tagged = await supabase.from("record_tags").select("record_id").eq("tag_id", tagIdParam)
-    if (tagged.error) return fail(tagged.error.message, 500)
+    if (tagged.error) return internalError("records.get", tagged.error)
     filteredRecordIds = tagged.data.map((r) => r.record_id)
     if (filteredRecordIds.length === 0) return ok({ data: [], total: 0 })
   }
@@ -172,7 +172,7 @@ export async function GET(request: NextRequest) {
   }
 
   if (result.error) {
-    return fail(result.error.message, 500)
+    return internalError("records.get", result.error)
   }
 
   const rows = result.data ?? []
@@ -233,7 +233,7 @@ export async function POST(request: NextRequest) {
           .single()
 
         if (existing.error) {
-          return fail(existing.error.message, 500)
+          return internalError("records.post", existing.error)
         }
 
         const mergedUrl = parsed.data.url ?? existing.data.url
@@ -252,7 +252,7 @@ export async function POST(request: NextRequest) {
           .single()
 
         if (updated.error) {
-          return fail(updated.error.message, 500)
+          return internalError("records.post", updated.error)
         }
 
         if (parsed.data.tag_ids && parsed.data.tag_ids.length > 0) {
@@ -263,7 +263,7 @@ export async function POST(request: NextRequest) {
 
           const tagged = await supabase.from("record_tags").upsert(links, { onConflict: "record_id,tag_id" })
           if (tagged.error) {
-            return fail(tagged.error.message, 500)
+            return internalError("records.post", tagged.error)
           }
         }
 
@@ -283,7 +283,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    return fail(created.error.message, 500)
+    return internalError("records.post", created.error)
   }
 
   if (parsed.data.tag_ids && parsed.data.tag_ids.length > 0) {
@@ -294,7 +294,7 @@ export async function POST(request: NextRequest) {
 
     const tagged = await supabase.from("record_tags").insert(links)
     if (tagged.error) {
-      return fail(tagged.error.message, 500)
+      return internalError("records.post", tagged.error)
     }
   }
 

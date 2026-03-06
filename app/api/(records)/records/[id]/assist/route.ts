@@ -2,7 +2,7 @@ import { NextRequest } from "next/server"
 import { z } from "zod"
 import { getUserId } from "@/lib/auth"
 import { PGRST_NOT_FOUND } from "@/lib/constants"
-import { fail, ok, rateLimited } from "@/lib/http"
+import { fail, internalError, ok, rateLimited } from "@/lib/http"
 import { checkRateLimitDistributed, resolveClientKey } from "@/lib/rate-limit"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
 import { generateRecordAssist } from "@feature-lib/content/assist"
@@ -45,7 +45,7 @@ export async function POST(
     if (recordResult.error.code === PGRST_NOT_FOUND) {
       return fail("Record not found", 404)
     }
-    return fail(recordResult.error.message, 500)
+    return internalError("assist.get", recordResult.error)
   }
 
   const [annotationsResult, tagLinksResult] = await Promise.all([
@@ -63,11 +63,11 @@ export async function POST(
   ])
 
   if (annotationsResult.error) {
-    return fail(annotationsResult.error.message, 500)
+    return internalError("assist.get", annotationsResult.error)
   }
 
   if (tagLinksResult.error) {
-    return fail(tagLinksResult.error.message, 500)
+    return internalError("assist.get", tagLinksResult.error)
   }
 
   const tagIds = tagLinksResult.data.map((row) => row.tag_id)
@@ -81,7 +81,7 @@ export async function POST(
       .in("id", tagIds)
 
     if (tagsResult.error) {
-      return fail(tagsResult.error.message, 500)
+      return internalError("assist.get", tagsResult.error)
     }
 
     tags = tagsResult.data.map((tag) => tag.name)

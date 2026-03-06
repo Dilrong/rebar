@@ -2,7 +2,7 @@ import { getUserId } from "@/lib/auth"
 import { fail, ok } from "@/lib/http"
 
 export async function GET(request: Request) {
-  const userId = await getUserId(new Headers(request.headers))
+  const userId = await getUserId(request.headers)
   if (!userId) {
     return fail("Unauthorized", 401)
   }

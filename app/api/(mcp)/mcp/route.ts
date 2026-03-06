@@ -1,6 +1,6 @@
 import { z } from "zod"
 import { getUserId } from "@/lib/auth"
-import { fail, ok, rateLimited } from "@/lib/http"
+import { fail, internalError, ok, rateLimited } from "@/lib/http"
 import { checkRateLimitDistributed, resolveClientKey } from "@/lib/rate-limit"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
 
@@ -47,7 +47,7 @@ export async function GET(request: Request) {
     return rateLimited(limitResult.retryAfterSec)
   }
 
-  const userId = await getUserId(new Headers(request.headers))
+  const userId = await getUserId(request.headers)
   if (!userId) {
     return fail("Unauthorized", 401)
   }
@@ -65,7 +65,7 @@ export async function POST(request: Request) {
     return rateLimited(limitResult.retryAfterSec)
   }
 
-  const userId = await getUserId(new Headers(request.headers))
+  const userId = await getUserId(request.headers)
   if (!userId) {
     return fail("Unauthorized", 401)
   }
@@ -99,7 +99,7 @@ export async function POST(request: Request) {
       .limit(p.data.limit ?? 20)
 
     if (result.error) {
-      return fail(result.error.message, 500)
+      return internalError("mcp", result.error)
     }
 
     return ok({ content: result.data })
@@ -118,7 +118,7 @@ export async function POST(request: Request) {
       .eq("id", p.data.id)
       .single()
     if (result.error) {
-      return fail(result.error.message, 500)
+      return internalError("mcp", result.error)
     }
 
     return ok({ content: result.data })
@@ -153,7 +153,7 @@ export async function POST(request: Request) {
     }
 
     if (result.error) {
-      return fail(result.error.message, 500)
+      return internalError("mcp", result.error)
     }
 
     return ok({ content: result.data })
