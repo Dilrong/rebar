@@ -1,10 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 import {
   START_PAGE_KEY,
+  FONT_FAMILY_KEY,
   getStartPagePreference,
+  getFontFamilyPreference,
   getPreferencesServer,
   parseStartPage,
+  parseFontFamily,
   setStartPagePreference,
+  setFontFamilyPreference,
   setPreferencesServer
 } from "@feature-lib/settings/preferences"
 
@@ -50,6 +54,20 @@ describe("parseStartPage", () => {
   })
 })
 
+describe("parseFontFamily", () => {
+  it("accepts only supported values", () => {
+    expect(parseFontFamily("sans")).toBe("sans")
+    expect(parseFontFamily("mono")).toBe("mono")
+  })
+
+  it("returns null for invalid values", () => {
+    expect(parseFontFamily("serif")).toBeNull()
+    expect(parseFontFamily("")).toBeNull()
+    expect(parseFontFamily(null)).toBeNull()
+    expect(parseFontFamily(undefined)).toBeNull()
+  })
+})
+
 describe("client preference helpers", () => {
   it("falls back to /library when window is not available", () => {
     expect(getStartPagePreference()).toBe("/library")
@@ -83,16 +101,46 @@ describe("client preference helpers", () => {
   it("does not throw when writing without window", () => {
     expect(() => setStartPagePreference("/capture")).not.toThrow()
   })
+
+  it("falls back to sans when window is not available for font family", () => {
+    expect(getFontFamilyPreference()).toBe("sans")
+  })
+
+  it("returns stored font family from localStorage", () => {
+    vi.stubGlobal("window", {
+      localStorage: makeLocalStorage({ [FONT_FAMILY_KEY]: "mono" })
+    })
+
+    expect(getFontFamilyPreference()).toBe("mono")
+  })
+
+  it("ignores invalid font family values", () => {
+    vi.stubGlobal("window", {
+      localStorage: makeLocalStorage({ [FONT_FAMILY_KEY]: "comic-sans" })
+    })
+
+    expect(getFontFamilyPreference()).toBe("sans")
+  })
+
+  it("writes font family to localStorage without DOM side effects", () => {
+    const localStorage = makeLocalStorage()
+    vi.stubGlobal("window", { localStorage })
+
+    setFontFamilyPreference("mono")
+
+    expect(localStorage.getItem(FONT_FAMILY_KEY)).toBe("mono")
+  })
 })
 
 describe("server preference helpers", () => {
-  it("returns parsed start page when API succeeds", async () => {
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ startPage: "/capture" }), { status: 200 }))
+  it("returns parsed preferences when API succeeds", async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ startPage: "/capture", fontFamily: "mono" }), { status: 200 }))
     vi.stubGlobal("fetch", fetchMock)
 
     const value = await getPreferencesServer()
 
     expect(value.startPage).toBe("/capture")
+    expect(value.fontFamily).toBe("mono")
     expect(fetchMock).toHaveBeenCalledWith("/api/settings/preferences", {
       method: "GET",
       cache: "no-store"
@@ -104,11 +152,13 @@ describe("server preference helpers", () => {
     vi.stubGlobal("fetch", notOkFetch)
     let prefs = await getPreferencesServer()
     expect(prefs.startPage).toBeNull()
+    expect(prefs.fontFamily).toBeNull()
 
-    const malformedFetch = vi.fn(async () => new Response(JSON.stringify({ startPage: "/invalid" }), { status: 200 }))
+    const malformedFetch = vi.fn(async () => new Response(JSON.stringify({ startPage: "/invalid", fontFamily: "comic" }), { status: 200 }))
     vi.stubGlobal("fetch", malformedFetch)
     prefs = await getPreferencesServer()
     expect(prefs.startPage).toBeNull()
+    expect(prefs.fontFamily).toBeNull()
   })
 
   it("returns false when PATCH fails and true when it succeeds", async () => {

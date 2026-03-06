@@ -70,6 +70,7 @@ export default function SettingsPage() {
       if (serverPrefs.fontFamily) {
         setFontFamily(serverPrefs.fontFamily)
         setFontFamilyPreference(serverPrefs.fontFamily)
+        document.documentElement.setAttribute("data-font", serverPrefs.fontFamily)
       }
     })
     setOrigin(window.location.origin)
@@ -121,13 +122,14 @@ export default function SettingsPage() {
         </section>
 
         <section className="mb-6 border-4 border-foreground bg-card p-5">
-          <h2 className="mb-4 border-b-2 border-foreground pb-2 font-black text-2xl uppercase">{t("settings.typography", "typography")}</h2>
+          <h2 className="mb-4 border-b-2 border-foreground pb-2 font-black text-2xl uppercase">{t("settings.typography", "TYPOGRAPHY")}</h2>
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => {
                 setFontFamily("sans")
                 setFontFamilyPreference("sans")
+                document.documentElement.setAttribute("data-font", "sans")
                 void setPreferencesServer({ fontFamily: "sans" })
               }}
               className={
@@ -143,6 +145,7 @@ export default function SettingsPage() {
               onClick={() => {
                 setFontFamily("mono")
                 setFontFamilyPreference("mono")
+                document.documentElement.setAttribute("data-font", "mono")
                 void setPreferencesServer({ fontFamily: "mono" })
               }}
               className={

@@ -71,7 +71,6 @@ export function setFontFamilyPreference(value: FontFamily) {
   }
 
   window.localStorage.setItem(FONT_FAMILY_KEY, value)
-  document.documentElement.setAttribute('data-font', value)
 }
 
 export async function getPreferencesServer(): Promise<{ startPage: StartPage | null, fontFamily: FontFamily | null }> {

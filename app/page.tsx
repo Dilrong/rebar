@@ -101,9 +101,9 @@ export default function HomePage() {
           <div className="absolute top-0 right-0 w-64 h-64 bg-accent/5 rounded-full blur-3xl pointer-events-none group-hover/hero:bg-accent/10 transition-colors duration-500" aria-hidden="true" />
 
           <div className="flex flex-wrap gap-2 relative z-10">
-            <span className="bg-foreground text-background px-3 py-1 font-mono text-xs font-bold uppercase shadow-[2px_2px_0_0_rgba(255,255,255,0.2)] dark:shadow-[2px_2px_0_0_rgba(0,0,0,0.8)] border border-transparent">For Developers</span>
-            <span className="bg-foreground text-background px-3 py-1 font-mono text-xs font-bold uppercase shadow-[2px_2px_0_0_rgba(255,255,255,0.2)] dark:shadow-[2px_2px_0_0_rgba(0,0,0,0.8)] border border-transparent">For Researchers</span>
-            <span className="bg-foreground text-background px-3 py-1 font-mono text-xs font-bold uppercase shadow-[2px_2px_0_0_rgba(255,255,255,0.2)] dark:shadow-[2px_2px_0_0_rgba(0,0,0,0.8)] border border-transparent">For Builders</span>
+            <span className="bg-foreground text-background px-3 py-1 font-mono text-xs font-bold uppercase shadow-[2px_2px_0_0_rgba(255,255,255,0.2)] dark:shadow-[2px_2px_0_0_rgba(0,0,0,0.8)] border border-transparent">{t("home.hero.tagDev", "For Developers")}</span>
+            <span className="bg-foreground text-background px-3 py-1 font-mono text-xs font-bold uppercase shadow-[2px_2px_0_0_rgba(255,255,255,0.2)] dark:shadow-[2px_2px_0_0_rgba(0,0,0,0.8)] border border-transparent">{t("home.hero.tagResearch", "For Researchers")}</span>
+            <span className="bg-foreground text-background px-3 py-1 font-mono text-xs font-bold uppercase shadow-[2px_2px_0_0_rgba(255,255,255,0.2)] dark:shadow-[2px_2px_0_0_rgba(0,0,0,0.8)] border border-transparent">{t("home.hero.tagBuild", "For Builders")}</span>
           </div>
 
           <h1 className="font-black text-5xl sm:text-6xl md:text-7xl tracking-tighter uppercase text-foreground leading-[0.9] break-words relative z-10">
@@ -112,31 +112,31 @@ export default function HomePage() {
           </h1>
 
           <p className="font-sans text-lg md:text-xl font-bold max-w-3xl opacity-90 leading-relaxed border-l-[6px] border-accent pl-4 relative z-10 break-keep">
-            {t("home.hero.desc", "Traditional note apps are warehouses where ideas go to die. REBAROPS는 정보를 저장하는 창고가 아니라 지식을 흐르게 하는 강력한 파이프라인(SSOT) 시스템입니다. 파편화된 스크랩을 멈추고 파이프라인을 구축하십시오.")}
+            {t("home.hero.desc", "Traditional note apps are warehouses where ideas go to die. REBAR is a powerful SSOT pipeline that keeps knowledge flowing, not collecting dust. Stop fragmented scraps — build a pipeline.")}
           </p>
 
           <div className="pt-2 relative z-10 flex flex-wrap gap-4">
             <Link href="/capture" className="bg-accent text-accent-foreground font-black text-lg md:text-xl uppercase px-8 py-4 border-4 border-foreground shadow-[4px_4px_0_0_rgba(0,0,0,1)] dark:shadow-[4px_4px_0_0_rgba(255,255,255,1)] hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all cursor-pointer">
-              Initialize Pipeline
+              {t("home.hero.cta", "Initialize Pipeline")}
             </Link>
             <Link href="/review" className="bg-background text-foreground font-black text-lg md:text-xl uppercase px-8 py-4 border-4 border-foreground shadow-[4px_4px_0_0_rgba(0,0,0,1)] dark:shadow-[4px_4px_0_0_rgba(255,255,255,1)] hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all flex items-center gap-2 cursor-pointer">
-              <Terminal className="w-5 h-5" /> View Workflow
+              <Terminal className="w-5 h-5" /> {t("home.hero.ctaSecondary", "View Workflow")}
             </Link>
           </div>
         </header>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-0 border-[3px] md:border-4 border-foreground bg-foreground text-background shadow-brutal-sm">
           <div className="p-3 md:p-4 text-center border-b-[3px] lg:border-b-0 border-r-[3px] border-background/30 font-mono text-[10px] sm:text-xs font-bold uppercase flex items-center justify-center gap-2 transition-colors hover:bg-background/10">
-            <CheckSquare className="w-4 h-4 text-accent" /> 100% OWNERSHIP
+            <CheckSquare className="w-4 h-4 text-accent" /> {t("home.hero.feat1", "100% OWNERSHIP")}
           </div>
           <div className="p-3 md:p-4 text-center border-b-[3px] lg:border-b-0 lg:border-r-[3px] border-background/30 font-mono text-[10px] sm:text-xs font-bold uppercase flex items-center justify-center gap-2 transition-colors hover:bg-background/10">
-            <Database className="w-4 h-4 text-accent" /> NO VENDOR LOCK-IN
+            <Database className="w-4 h-4 text-accent" /> {t("home.hero.feat2", "NO VENDOR LOCK-IN")}
           </div>
           <div className="p-3 md:p-4 text-center border-r-[3px] border-background/30 font-mono text-[10px] sm:text-xs font-bold uppercase flex items-center justify-center gap-2 transition-colors hover:bg-background/10">
-            <Terminal className="w-4 h-4 text-accent" /> AI-READY CONTEXT
+            <Terminal className="w-4 h-4 text-accent" /> {t("home.hero.feat3", "AI-READY CONTEXT")}
           </div>
           <div className="p-3 md:p-4 text-center font-mono text-[10px] sm:text-xs font-bold uppercase flex items-center justify-center gap-2 transition-colors hover:bg-background/10">
-            <CheckSquare className="w-4 h-4 text-accent" /> SSOT GUARANTEED
+            <CheckSquare className="w-4 h-4 text-accent" /> {t("home.hero.feat4", "SSOT GUARANTEED")}
           </div>
         </div>
 
@@ -145,11 +145,11 @@ export default function HomePage() {
             <div className="flex items-center gap-3 px-1 md:px-0">
               <span className="w-3 h-3 bg-accent animate-pulse-brutal" aria-hidden="true" />
               <h2 className="font-black text-3xl md:text-5xl tracking-tighter uppercase">
-                The Knowledge Pipeline
+                {t("home.hero.pipelineTitle", "The Knowledge Pipeline")}
               </h2>
             </div>
             <p className="font-mono text-xs md:text-sm font-bold bg-foreground text-background px-3 py-1 uppercase border-l-4 border-accent inline-block self-start sm:self-auto ml-1 sm:ml-0 shadow-brutal-sm whitespace-nowrap">
-              Flow: Capture → Review → SSOT
+              {t("home.hero.pipelineFlow", "Flow: Capture → Review → SSOT")}
             </p>
           </div>
 
@@ -158,22 +158,22 @@ export default function HomePage() {
             <div className="p-6 md:p-8 flex flex-col gap-5 border-b-[3px] lg:border-b-0 lg:border-r-[3px] border-foreground hover:bg-foreground hover:text-background transition-colors group cursor-default">
               <div className="flex justify-between items-start">
                 <span className="font-black text-6xl text-foreground/20 group-hover:text-background/20 transition-colors">01</span>
-                <span className="border-2 border-foreground group-hover:border-background group-hover:bg-background group-hover:text-foreground px-2 py-1 font-mono text-[10px] md:text-xs font-bold uppercase transition-colors">Extension</span>
+                <span className="border-2 border-foreground group-hover:border-background group-hover:bg-background group-hover:text-foreground px-2 py-1 font-mono text-[10px] md:text-xs font-bold uppercase transition-colors">{t("home.hero.step1Badge", "Extension")}</span>
               </div>
-              <h3 className="font-black text-3xl uppercase">Capture</h3>
+              <h3 className="font-black text-3xl uppercase">{t("home.hero.step1Title", "Capture")}</h3>
               <p className="font-sans text-[15px] md:text-base font-bold opacity-90 break-keep leading-relaxed border-t-2 border-foreground/20 group-hover:border-background/20 pt-4 mt-auto">
-                가장 무자비한 수집. 크롬 익스텐션을 통해 웹의 모든 텍스트, 아티클, 레퍼런스를 클릭 한 번으로 Inbox에 가둡니다.
+                {t("home.hero.step1Desc", "가장 무자비한 수집. 크롬 익스텐션을 통해 웹의 모든 텍스트, 아티클, 레퍼런스를 클릭 한 번으로 Inbox에 가둡니다.")}
               </p>
             </div>
 
             <div className="p-6 md:p-8 flex flex-col gap-5 border-b-[3px] lg:border-b-0 lg:border-r-[3px] border-foreground hover:bg-foreground hover:text-background transition-colors group cursor-default">
               <div className="flex justify-between items-start">
                 <span className="font-black text-6xl text-foreground/20 group-hover:text-background/20 transition-colors">02</span>
-                <span className="border-2 border-foreground group-hover:border-background group-hover:bg-background group-hover:text-foreground px-2 py-1 font-mono text-[10px] md:text-xs font-bold uppercase transition-colors">Routine</span>
+                <span className="border-2 border-foreground group-hover:border-background group-hover:bg-background group-hover:text-foreground px-2 py-1 font-mono text-[10px] md:text-xs font-bold uppercase transition-colors">{t("home.hero.step2Badge", "Routine")}</span>
               </div>
-              <h3 className="font-black text-3xl uppercase">Review</h3>
+              <h3 className="font-black text-3xl uppercase">{t("home.hero.step2Title", "Review")}</h3>
               <p className="font-sans text-[15px] md:text-base font-bold opacity-90 break-keep leading-relaxed border-t-2 border-foreground/20 group-hover:border-background/20 pt-4 mt-auto">
-                노이즈 제거. 매일 할당된 분량의 데이터를 강제 리뷰하여 무가치한 것을 버리고 데이터에 핵심적인 맥락을 부여합니다.
+                {t("home.hero.step2Desc", "노이즈 제거. 매일 할당된 분량의 데이터를 강제 리뷰하여 무가치한 것을 버리고 데이터에 핵심적인 맥락을 부여합니다.")}
               </p>
             </div>
 
@@ -182,9 +182,9 @@ export default function HomePage() {
                 <span className="font-black text-6xl text-background/30 group-hover:text-accent/30 transition-colors">03</span>
                 <span className="border-2 border-background group-hover:border-accent group-hover:bg-accent group-hover:text-accent-foreground px-2 py-1 font-mono text-[10px] md:text-xs font-bold uppercase transition-colors shadow-[2px_2px_0_0_rgba(0,0,0,0.5)] group-hover:shadow-none">SSOT</span>
               </div>
-              <h3 className="font-black text-3xl uppercase drop-shadow-[2px_2px_0_rgba(0,0,0,0.5)] group-hover:drop-shadow-none">Vault</h3>
+              <h3 className="font-black text-3xl uppercase drop-shadow-[2px_2px_0_rgba(0,0,0,0.5)] group-hover:drop-shadow-none">{t("home.hero.step3Title", "Vault")}</h3>
               <p className="font-sans text-[15px] md:text-base font-bold break-keep leading-relaxed border-t-2 border-background/30 group-hover:border-accent/30 pt-4 mt-auto drop-shadow-[1px_1px_0_rgba(0,0,0,0.2)] group-hover:drop-shadow-none">
-                파이프라인 완성. 철저히 정제된 정보를 영구적인 단일 데이터베이스에 보관합니다. AI가 즉각 활용할 수 있는 인프라가 됩니다.
+                {t("home.hero.step3Desc", "파이프라인 완성. 철저히 정제된 정보를 영구적인 단일 데이터베이스에 보관합니다. AI가 즉각 활용할 수 있는 인프라가 됩니다.")}
               </p>
             </div>
 
