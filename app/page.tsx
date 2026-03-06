@@ -177,13 +177,13 @@ export default function HomePage() {
               </p>
             </div>
 
-            <div className="p-6 md:p-8 flex flex-col gap-5 bg-accent text-accent-foreground hover:bg-foreground hover:text-background transition-colors group cursor-default">
+            <div className="p-6 md:p-8 flex flex-col gap-5 bg-accent text-foreground hover:bg-foreground hover:text-background transition-colors group cursor-default">
               <div className="flex justify-between items-start">
-                <span className="font-black text-6xl text-background/30 group-hover:text-accent/30 transition-colors">03</span>
-                <span className="border-2 border-background group-hover:border-accent group-hover:bg-accent group-hover:text-accent-foreground px-2 py-1 font-mono text-[10px] md:text-xs font-bold uppercase transition-colors shadow-[2px_2px_0_0_rgba(0,0,0,0.5)] group-hover:shadow-none">SSOT</span>
+                <span className="font-black text-6xl text-foreground/20 group-hover:text-accent/30 transition-colors">03</span>
+                <span className="border-2 border-foreground group-hover:border-accent group-hover:bg-accent group-hover:text-foreground px-2 py-1 font-mono text-[10px] md:text-xs font-bold uppercase transition-colors shadow-[2px_2px_0_0_rgba(0,0,0,0.5)] group-hover:shadow-none">SSOT</span>
               </div>
               <h3 className="font-black text-3xl uppercase drop-shadow-[2px_2px_0_rgba(0,0,0,0.5)] group-hover:drop-shadow-none">{t("home.hero.step3Title", "Vault")}</h3>
-              <p className="font-sans text-[15px] md:text-base font-bold break-keep leading-relaxed border-t-2 border-background/30 group-hover:border-accent/30 pt-4 mt-auto drop-shadow-[1px_1px_0_rgba(0,0,0,0.2)] group-hover:drop-shadow-none">
+              <p className="font-sans text-[15px] md:text-base font-bold break-keep leading-relaxed border-t-2 border-foreground/30 group-hover:border-accent/30 pt-4 mt-auto drop-shadow-[1px_1px_0_rgba(0,0,0,0.2)] group-hover:drop-shadow-none">
                 {t("home.hero.step3Desc", "파이프라인 완성. 철저히 정제된 정보를 영구적인 단일 데이터베이스에 보관합니다. AI가 즉각 활용할 수 있는 인프라가 됩니다.")}
               </p>
             </div>
@@ -196,7 +196,7 @@ export default function HomePage() {
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="font-black text-2xl uppercase flex items-center gap-2">
-                  <span className="bg-accent text-accent-foreground px-2 py-0.5 text-sm align-middle">NEW</span>
+                  <span className="bg-accent px-2 py-0.5 text-sm align-middle text-foreground">NEW</span>
                   {t("home.onboarding.title", "2-MIN ONBOARDING")}
                 </p>
                 <p className="font-mono text-[11px] font-bold uppercase text-muted-foreground mt-1">
@@ -240,7 +240,7 @@ export default function HomePage() {
                 </Link>
                 <Link
                   href="/review"
-                  className="min-h-[44px] border-2 border-foreground bg-accent px-4 py-2 font-mono text-xs font-bold uppercase text-white hover:bg-foreground transition-colors focus-ring inline-flex items-center justify-center shadow-brutal-sm active:translate-x-1 active:translate-y-1 active:shadow-none"
+                  className="min-h-[44px] border-2 border-foreground bg-accent px-4 py-2 font-mono text-xs font-bold uppercase text-foreground hover:bg-foreground hover:text-background transition-colors focus-ring inline-flex items-center justify-center shadow-brutal-sm active:translate-x-1 active:translate-y-1 active:shadow-none"
                 >
                   {t("home.onboarding.goReview", "리뷰 열기")}
                 </Link>

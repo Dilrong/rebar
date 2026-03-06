@@ -16,7 +16,7 @@ export function EmptyState({ title, description, actionLabel, actionHref }: Empt
         <div className="mt-4">
           <Link
             href={actionHref}
-            className="border-2 border-foreground bg-foreground px-3 py-2 font-mono text-xs font-bold uppercase text-background"
+            className="inline-flex min-h-[44px] items-center justify-center border-2 border-foreground bg-foreground px-3 py-2 font-mono text-xs font-bold uppercase text-background"
           >
             {actionLabel}
           </Link>

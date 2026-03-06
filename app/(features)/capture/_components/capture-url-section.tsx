@@ -37,7 +37,7 @@ export function CaptureUrlSection({
           type="button"
           onClick={onImport}
           disabled={!externalUrl || importPending}
-          className="min-h-[44px] px-4 py-3 border-4 border-foreground font-mono text-xs font-bold uppercase bg-background text-foreground min-w-[100px] flex items-center justify-center hover:bg-foreground hover:text-background transition-all duration-200 active:translate-y-1 active:translate-x-1 shadow-brutal-sm hover:translate-x-1 hover:translate-y-1 hover:shadow-none"
+          className="flex min-h-[44px] w-full items-center justify-center border-4 border-foreground bg-background px-4 py-3 font-mono text-xs font-bold uppercase text-foreground shadow-brutal-sm transition-all duration-200 active:translate-y-1 active:translate-x-1 hover:translate-x-1 hover:translate-y-1 hover:shadow-none hover:bg-foreground hover:text-background md:min-w-[100px] md:w-auto"
         >
           {importPending ? <LoadingDots /> : t("capture.import", "IMPORT")}
         </button>

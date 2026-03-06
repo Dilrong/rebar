@@ -308,9 +308,9 @@ export default function ReviewPage() {
   }, [first, mutation, undoMutation, undoTargetId])
 
   return (
-    <div className="min-h-screen p-6 bg-background flex flex-col font-sans">
+    <div className="min-h-screen bg-background p-4 font-sans md:p-6">
       <AuthGate>
-        <main className="max-w-5xl w-full mx-auto flex-1 flex flex-col animate-fade-in-up">
+        <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col animate-fade-in-up">
           <AppNav />
 
           <ReviewHeader t={t} remaining={today.data?.total || 0} />

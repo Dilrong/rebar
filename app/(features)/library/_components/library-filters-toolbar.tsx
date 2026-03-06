@@ -44,12 +44,12 @@ export function LibraryFiltersToolbar({
 }: LibraryFiltersToolbarProps) {
   return (
     <section className="mb-8 border-4 border-foreground bg-card p-4">
-      <div className="flex flex-wrap gap-2 mb-4">
+      <div className="mb-4 flex gap-2 overflow-x-auto pb-1 hide-scrollbar">
         <button
           key="ALL"
           type="button"
           onClick={() => onStateChange("ALL")}
-          className={`min-h-[44px] px-4 py-2 border-4 border-foreground font-mono text-xs font-bold uppercase flex items-center justify-center transition-transform active:translate-y-[2px] active:translate-x-[2px] ${state === "ALL" ? "bg-foreground text-background shadow-brutal" : "bg-background text-foreground hover:bg-foreground/10"}`}
+          className={`min-h-[44px] shrink-0 px-4 py-2 border-4 border-foreground font-mono text-xs font-bold uppercase flex items-center justify-center transition-transform active:translate-y-[2px] active:translate-x-[2px] ${state === "ALL" ? "bg-foreground text-background shadow-brutal" : "bg-background text-foreground hover:bg-foreground/10"}`}
         >
           {t("library.allView", "전체보기")}
         </button>
@@ -58,14 +58,14 @@ export function LibraryFiltersToolbar({
             key={tab}
             type="button"
             onClick={() => onStateChange(tab)}
-            className={`min-h-[44px] px-4 py-2 border-4 border-foreground font-mono text-xs font-bold uppercase flex items-center justify-center transition-transform active:translate-y-[2px] active:translate-x-[2px] ${state === tab ? "bg-foreground text-background shadow-brutal" : "bg-background text-foreground hover:bg-foreground/10"}`}
+            className={`min-h-[44px] shrink-0 px-4 py-2 border-4 border-foreground font-mono text-xs font-bold uppercase flex items-center justify-center transition-transform active:translate-y-[2px] active:translate-x-[2px] ${state === tab ? "bg-foreground text-background shadow-brutal" : "bg-background text-foreground hover:bg-foreground/10"}`}
           >
             {getStateLabel(tab, t)}
           </button>
         ))}
       </div>
 
-      <div className="flex flex-col md:flex-row gap-3">
+      <div className="flex flex-col gap-3 xl:flex-row">
         <label htmlFor="library-query" className="sr-only">
           {t("library.searchPlaceholder", "Search content/title")}
         </label>
@@ -77,7 +77,7 @@ export function LibraryFiltersToolbar({
           placeholder={t("library.searchPlaceholder", "Search content/title")}
           className="min-h-[44px] bg-background border-4 border-foreground text-foreground px-4 py-3 font-mono text-sm w-full md:w-auto focus:outline-none focus:ring-0 flex-1 rounded-none shadow-brutal-sm focus:shadow-none focus:translate-x-1 focus:translate-y-1 transition-all duration-200"
         />
-        <div className="grid grid-cols-2 lg:flex lg:flex-row gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:flex xl:flex-row">
           <label htmlFor="library-kind" className="sr-only">
             {t("library.allKinds", "All kinds")}
           </label>
@@ -119,7 +119,7 @@ export function LibraryFiltersToolbar({
               const [nextSort, nextOrder] = event.target.value.split(":") as [SortField, SortOrder]
               onSortOrderChange(nextSort, nextOrder)
             }}
-            className="min-h-[44px] bg-background border-4 border-foreground px-4 py-2 font-mono text-sm text-foreground w-full md:w-auto col-span-2 lg:col-span-1 shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] focus:outline-none focus:ring-0 rounded-none transition-none"
+            className="min-h-[44px] bg-background border-4 border-foreground px-4 py-2 font-mono text-sm text-foreground w-full md:w-auto shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] focus:outline-none focus:ring-0 rounded-none transition-none sm:col-span-2 xl:col-span-1"
           >
             <option value="created_at:desc">Newest first</option>
             <option value="created_at:asc">Oldest first</option>
@@ -133,7 +133,7 @@ export function LibraryFiltersToolbar({
         <button
           type="button"
           onClick={() => onStateChange("ALL")}
-          className="min-h-[44px] flex items-center justify-center border-2 border-foreground px-3 py-2 font-mono text-[10px] font-bold uppercase transition-transform hover:bg-foreground/10 active:translate-y-[2px] active:translate-x-[2px]"
+          className="min-h-[44px] max-w-full flex items-center justify-center border-2 border-foreground px-3 py-2 font-mono text-[10px] font-bold uppercase transition-transform hover:bg-foreground/10 active:translate-y-[2px] active:translate-x-[2px]"
         >
           {t("library.state", "State")}: {state === "ALL" ? t("library.allView", "전체보기") : getStateLabel(state, t)}
         </button>
@@ -141,7 +141,7 @@ export function LibraryFiltersToolbar({
           <button
             type="button"
             onClick={() => onQueryChange("")}
-            className="min-h-[44px] flex items-center justify-center border-2 border-foreground px-3 py-2 font-mono text-[10px] font-bold uppercase transition-transform hover:bg-foreground/10 active:translate-y-[2px] active:translate-x-[2px]"
+            className="min-h-[44px] max-w-full truncate border-2 border-foreground px-3 py-2 font-mono text-[10px] font-bold uppercase transition-transform hover:bg-foreground/10 active:translate-y-[2px] active:translate-x-[2px]"
           >
             {t("library.query", "Search")}: {q} x
           </button>
@@ -150,7 +150,7 @@ export function LibraryFiltersToolbar({
           <button
             type="button"
             onClick={() => onKindChange("")}
-            className="min-h-[44px] flex items-center justify-center border-2 border-foreground px-3 py-2 font-mono text-[10px] font-bold uppercase transition-transform hover:bg-foreground/10 active:translate-y-[2px] active:translate-x-[2px]"
+            className="min-h-[44px] max-w-full flex items-center justify-center border-2 border-foreground px-3 py-2 font-mono text-[10px] font-bold uppercase transition-transform hover:bg-foreground/10 active:translate-y-[2px] active:translate-x-[2px]"
           >
             {t("library.kind", "Kind")}: {kind} x
           </button>
@@ -159,7 +159,7 @@ export function LibraryFiltersToolbar({
           <button
             type="button"
             onClick={() => onTagChange("")}
-            className="min-h-[44px] flex items-center justify-center border-2 border-foreground px-3 py-2 font-mono text-[10px] font-bold uppercase transition-transform hover:bg-foreground/10 active:translate-y-[2px] active:translate-x-[2px]"
+            className="min-h-[44px] max-w-full truncate border-2 border-foreground px-3 py-2 font-mono text-[10px] font-bold uppercase transition-transform hover:bg-foreground/10 active:translate-y-[2px] active:translate-x-[2px]"
           >
             {t("library.tag", "Tag")}: {selectedTagName ? `#${selectedTagName}` : tagId.slice(0, 6)} x
           </button>

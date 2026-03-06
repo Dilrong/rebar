@@ -95,7 +95,7 @@ export default function SettingsPage() {
     <AuthGate>
       <ProtectedPageShell mainClassName="max-w-5xl">
         <header className="mb-8 border-b-4 border-foreground pb-4">
-          <h1 className="font-black text-5xl uppercase text-foreground leading-none">{t("settings.title", "SETTINGS")}</h1>
+          <h1 className="font-black text-3xl uppercase text-foreground leading-none md:text-5xl">{t("settings.title", "SETTINGS")}</h1>
         </header>
 
         <section className="mb-6 border-4 border-foreground bg-card p-5">
@@ -115,7 +115,7 @@ export default function SettingsPage() {
             type="button"
             onClick={handleSignOut}
             disabled={pendingLogout}
-            className="border-4 border-destructive bg-background px-4 py-2 font-mono text-xs font-bold uppercase text-destructive hover:bg-destructive hover:text-destructive-foreground transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm"
+            className="min-h-[44px] w-full border-4 border-destructive bg-background px-4 py-2 font-mono text-xs font-bold uppercase text-destructive shadow-brutal-sm transition-transform active:translate-y-[2px] active:translate-x-[2px] hover:bg-destructive hover:text-destructive-foreground sm:w-auto"
           >
             {pendingLogout ? "LOGGING OUT..." : t("nav.logout", "LOGOUT")}
           </button>
@@ -123,7 +123,7 @@ export default function SettingsPage() {
 
         <section className="mb-6 border-4 border-foreground bg-card p-5">
           <h2 className="mb-4 border-b-2 border-foreground pb-2 font-black text-2xl uppercase">{t("settings.typography", "TYPOGRAPHY")}</h2>
-          <div className="flex items-center gap-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <button
               type="button"
               onClick={() => {
@@ -134,8 +134,8 @@ export default function SettingsPage() {
               }}
               className={
                 fontFamily === "sans"
-                  ? "min-h-[44px] border-4 border-foreground bg-foreground px-4 py-2 font-mono text-xs font-bold text-background transition-transform active:translate-y-[2px] active:translate-x-[2px]"
-                  : "min-h-[44px] border-4 border-foreground bg-background px-4 py-2 font-mono text-xs font-bold text-foreground hover:bg-foreground hover:text-background transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm"
+                  ? "min-h-[44px] w-full border-4 border-foreground bg-foreground px-4 py-2 font-mono text-xs font-bold text-background transition-transform active:translate-y-[2px] active:translate-x-[2px]"
+                  : "min-h-[44px] w-full border-4 border-foreground bg-background px-4 py-2 font-mono text-xs font-bold text-foreground shadow-brutal-sm transition-transform active:translate-y-[2px] active:translate-x-[2px] hover:bg-foreground hover:text-background"
               }
             >
               SANS-SERIF
@@ -150,8 +150,8 @@ export default function SettingsPage() {
               }}
               className={
                 fontFamily === "mono"
-                  ? "min-h-[44px] border-4 border-foreground bg-foreground px-4 py-2 font-mono text-xs font-bold text-background transition-transform active:translate-y-[2px] active:translate-x-[2px]"
-                  : "min-h-[44px] border-4 border-foreground bg-background px-4 py-2 font-mono text-xs font-bold text-foreground hover:bg-foreground hover:text-background transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm"
+                  ? "min-h-[44px] w-full border-4 border-foreground bg-foreground px-4 py-2 font-mono text-xs font-bold text-background transition-transform active:translate-y-[2px] active:translate-x-[2px]"
+                  : "min-h-[44px] w-full border-4 border-foreground bg-background px-4 py-2 font-mono text-xs font-bold text-foreground shadow-brutal-sm transition-transform active:translate-y-[2px] active:translate-x-[2px] hover:bg-foreground hover:text-background"
               }
             >
               MONOSPACE
@@ -164,14 +164,14 @@ export default function SettingsPage() {
 
         <section className="border-4 border-foreground bg-card p-5">
           <h2 className="mb-4 border-b-2 border-foreground pb-2 font-black text-2xl uppercase">{t("settings.language", "LANGUAGE")}</h2>
-          <div className="flex items-center gap-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <button
               type="button"
               onClick={() => setLocale("ko")}
               className={
                 locale === "ko"
-                  ? "min-h-[44px] border-4 border-foreground bg-foreground px-4 py-2 font-mono text-xs font-bold text-background transition-transform active:translate-y-[2px] active:translate-x-[2px]"
-                  : "min-h-[44px] border-4 border-foreground bg-background px-4 py-2 font-mono text-xs font-bold text-foreground hover:bg-foreground hover:text-background transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm"
+                  ? "min-h-[44px] w-full border-4 border-foreground bg-foreground px-4 py-2 font-mono text-xs font-bold text-background transition-transform active:translate-y-[2px] active:translate-x-[2px]"
+                  : "min-h-[44px] w-full border-4 border-foreground bg-background px-4 py-2 font-mono text-xs font-bold text-foreground shadow-brutal-sm transition-transform active:translate-y-[2px] active:translate-x-[2px] hover:bg-foreground hover:text-background"
               }
             >
               한국어
@@ -181,8 +181,8 @@ export default function SettingsPage() {
               onClick={() => setLocale("en")}
               className={
                 locale === "en"
-                  ? "min-h-[44px] border-4 border-foreground bg-foreground px-4 py-2 font-mono text-xs font-bold text-background transition-transform active:translate-y-[2px] active:translate-x-[2px]"
-                  : "min-h-[44px] border-4 border-foreground bg-background px-4 py-2 font-mono text-xs font-bold text-foreground hover:bg-foreground hover:text-background transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm"
+                  ? "min-h-[44px] w-full border-4 border-foreground bg-foreground px-4 py-2 font-mono text-xs font-bold text-background transition-transform active:translate-y-[2px] active:translate-x-[2px]"
+                  : "min-h-[44px] w-full border-4 border-foreground bg-background px-4 py-2 font-mono text-xs font-bold text-foreground shadow-brutal-sm transition-transform active:translate-y-[2px] active:translate-x-[2px] hover:bg-foreground hover:text-background"
               }
             >
               English
@@ -225,7 +225,7 @@ export default function SettingsPage() {
           <Link
             href="/api/capture/guide"
             target="_blank"
-            className="mb-3 inline-block border-2 border-foreground bg-background px-3 py-1 font-mono text-xs font-bold uppercase text-foreground hover:bg-foreground hover:text-background transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm"
+            className="mb-3 inline-flex min-h-[44px] w-full items-center justify-center border-2 border-foreground bg-background px-3 py-1 font-mono text-xs font-bold uppercase text-foreground shadow-brutal-sm transition-transform active:translate-y-[2px] active:translate-x-[2px] hover:bg-foreground hover:text-background sm:w-auto"
           >
             {t("settings.agent.guide", "OPEN JSON GUIDE")}
           </Link>
@@ -239,7 +239,7 @@ export default function SettingsPage() {
               setCopied(true)
               window.setTimeout(() => setCopied(false), 1500)
             }}
-            className="mt-3 min-h-[44px] border-4 border-foreground bg-foreground px-4 py-2 font-mono text-xs font-bold uppercase text-background hover:bg-background hover:text-foreground transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm"
+            className="mt-3 min-h-[44px] w-full border-4 border-foreground bg-foreground px-4 py-2 font-mono text-xs font-bold uppercase text-background shadow-brutal-sm transition-transform active:translate-y-[2px] active:translate-x-[2px] hover:bg-background hover:text-foreground sm:w-auto"
           >
             {copied ? t("settings.agent.copied", "COPIED") : t("settings.agent.copy", "COPY CURL")}
           </button>

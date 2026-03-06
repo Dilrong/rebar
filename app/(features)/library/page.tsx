@@ -466,9 +466,9 @@ export default function LibraryPage() {
   }
 
   return (
-    <div className="min-h-screen p-6 bg-background font-sans selection:bg-accent selection:text-white">
+    <div className="min-h-screen bg-background p-4 font-sans selection:bg-accent selection:text-white md:p-6">
       <AuthGate>
-        <main className="max-w-5xl mx-auto animate-fade-in-up pb-24">
+        <main className="mx-auto w-full max-w-5xl animate-fade-in-up pb-24">
           <AppNav />
 
           <LibraryHeader

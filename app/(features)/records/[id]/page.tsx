@@ -86,7 +86,7 @@ export default function RecordDetailPage() {
   const [lastStateBeforeDelete, setLastStateBeforeDelete] = useState<RecordRow["state"]>("INBOX")
   const [redirectTimer, setRedirectTimer] = useState<number | null>(null)
   const [selectionPopup, setSelectionPopup] = useState<SelectionPopup>(null)
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [newTagName, setNewTagName] = useState("")
   const [checkedAssistTodos, setCheckedAssistTodos] = useState<string[]>([])
   const [showAssistCopiedToast, setShowAssistCopiedToast] = useState(false)
@@ -198,6 +198,14 @@ export default function RecordDetailPage() {
       document.removeEventListener("touchend", handleTextSelect)
     }
   }, [handleTextSelect])
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return
+    }
+
+    setIsSidebarOpen(window.matchMedia("(min-width: 1024px)").matches)
+  }, [])
 
   const updateTags = useMutation({
     mutationFn: (tagIds: string[]) =>
@@ -389,6 +397,18 @@ export default function RecordDetailPage() {
   }, [detail.data])
 
   useEffect(() => {
+    const mediaQuery = window.matchMedia("(min-width: 1024px)")
+    setIsSidebarOpen(mediaQuery.matches)
+
+    const handleChange = (event: MediaQueryListEvent) => {
+      setIsSidebarOpen(event.matches)
+    }
+
+    mediaQuery.addEventListener("change", handleChange)
+    return () => mediaQuery.removeEventListener("change", handleChange)
+  }, [])
+
+  useEffect(() => {
     return () => {
       if (redirectTimer) {
         window.clearTimeout(redirectTimer)
@@ -459,12 +479,12 @@ export default function RecordDetailPage() {
   }
 
   return (
-    <div className="min-h-screen p-6 bg-background font-sans selection:bg-accent selection:text-white">
+    <div className="min-h-screen bg-background p-4 font-sans selection:bg-accent selection:text-white md:p-6">
       <AuthGate>
-        <main className="max-w-5xl mx-auto animate-fade-in-up pb-32">
+        <main className="mx-auto w-full max-w-5xl animate-fade-in-up pb-32">
           <AppNav />
 
-          <div className="mb-4 mt-4 flex justify-between gap-4">
+          <div className="mb-4 mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <button
               type="button"
               onClick={() => {
@@ -475,30 +495,31 @@ export default function RecordDetailPage() {
 
                 router.back()
               }}
-              className="inline-flex min-h-[44px] items-center text-sm font-black uppercase text-foreground hover:bg-foreground hover:text-background border-2 border-transparent hover:border-foreground px-2 py-1 transition-colors self-start"
+              className="inline-flex min-h-[44px] w-full items-center justify-center border-2 border-transparent px-2 py-1 text-sm font-black uppercase text-foreground transition-colors hover:border-foreground hover:bg-foreground hover:text-background sm:w-auto sm:justify-start"
             >
               <ArrowLeftSquare className="w-5 h-5 mr-2" strokeWidth={2.5} /> {t("record.back", "BACK")}
             </button>
 
             <button
+              type="button"
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="inline-flex items-center font-mono text-sm font-bold text-foreground bg-muted hover:bg-foreground hover:text-background border-2 border-foreground px-3 py-1 transition-colors uppercase shadow-brutal-sm"
+              className="inline-flex min-h-[44px] items-center justify-center border-2 border-foreground bg-muted px-3 py-2 font-mono text-xs font-bold uppercase text-foreground shadow-brutal-sm transition-colors hover:bg-foreground hover:text-background sm:w-auto"
             >
-              {isSidebarOpen ? "CLOSE SIDEBAR" : "OPEN SIDEBAR"}
+              {isSidebarOpen ? t("record.hidePanels", "HIDE PANELS") : t("record.showPanels", "SHOW PANELS")}
             </button>
           </div>
 
           {detail.isLoading && (
-            <div className="flex flex-col items-center justify-center p-32 text-foreground space-y-4">
+            <div className="flex flex-col items-center justify-center space-y-4 p-16 text-foreground md:p-32">
               <LoadingSpinner className="w-12 h-12 text-accent" />
               <p className="font-mono text-xs font-bold uppercase text-muted-foreground animate-pulse">{t("record.syncing", "Syncing block data...")}</p>
             </div>
           )}
 
           {detail.data && (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-10">
               <div className={`flex flex-col gap-8 ${isSidebarOpen ? "lg:col-span-8" : "lg:col-span-12"}`}>
-                <article className="border-4 border-foreground bg-card p-6 md:p-10 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.1)] relative">
+                <article className="relative border-4 border-foreground bg-card p-5 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.1)] md:p-10">
                   <div className="flex flex-wrap gap-2 mb-8 border-b-4 border-foreground pb-4">
                     <span className="font-mono text-xs font-bold bg-foreground text-background px-2 py-0.5 uppercase">ID:{detail.data.record.id.substring(0, 8)}</span>
                     <span className="font-mono text-xs font-bold border-2 border-foreground text-foreground px-2 py-0.5 uppercase">TYPE:{detail.data.record.kind}</span>
@@ -508,7 +529,7 @@ export default function RecordDetailPage() {
                   </div>
 
                   {detail.data.record.source_title && (
-                    <h1 className="text-2xl md:text-3xl font-black text-foreground mb-6 uppercase leading-tight bg-accent text-white inline-block px-3 py-1">
+                    <h1 className="mb-6 inline-flex max-w-full break-words bg-accent px-3 py-1 text-2xl font-black uppercase leading-tight text-white md:text-3xl">
                       {detail.data.record.source_title}
                     </h1>
                   )}
@@ -516,7 +537,7 @@ export default function RecordDetailPage() {
                   <div ref={articleRef} className="relative">
                     <MarkdownContent
                       content={detail.data.record.content}
-                      className="text-xl md:text-2xl leading-[1.6]"
+                      className="text-lg leading-[1.6] sm:text-xl md:text-2xl"
                       highlights={markdownHighlights}
                       onHighlightClick={handleHighlightClick}
                     />
@@ -524,7 +545,7 @@ export default function RecordDetailPage() {
 
                   {detail.data.record.url && (
                     <div className="mt-10 pt-6 border-t-4 border-border">
-                      <a href={detail.data.record.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center font-mono text-sm font-bold text-foreground bg-muted hover:bg-foreground hover:text-background px-3 py-2 border-2 border-foreground transition-colors uppercase">
+                      <a href={detail.data.record.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-[44px] w-full items-center justify-center border-2 border-foreground bg-muted px-3 py-2 font-mono text-sm font-bold uppercase text-foreground transition-colors hover:bg-foreground hover:text-background sm:w-auto sm:justify-start">
                         <LinkIcon className="w-4 h-4 mr-2" strokeWidth={3} />
                         {t("record.externalLink", "EXTERNAL_LINK")}
                       </a>
@@ -548,7 +569,7 @@ export default function RecordDetailPage() {
                         type="button"
                         onClick={quickArchive}
                         disabled={isRecordMutating}
-                        className="bg-background text-foreground hover:bg-accent hover:text-white font-black text-xl px-10 py-5 uppercase shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] border-4 border-foreground transition-all flex items-center justify-center gap-3 w-full md:w-auto"
+                        className="flex w-full items-center justify-center gap-3 border-4 border-foreground bg-background px-6 py-4 text-center text-lg font-black uppercase text-foreground shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-accent hover:text-white hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] sm:px-10 sm:text-xl md:w-auto"
                       >
                         {updateRecord.isPending ? "ARCHIVING..." : (
                           <><span>{t("record.quickArchive", "ARCHIVE DOCUMENT")}</span> <ArrowLeftSquare className="w-6 h-6 rotate-180" strokeWidth={3} /></>
@@ -560,7 +581,7 @@ export default function RecordDetailPage() {
               </div>
 
               {isSidebarOpen && (
-                <section className="lg:col-span-4 flex flex-col gap-6">
+                <section className="flex flex-col gap-6 lg:col-span-4">
                   <RecordAssistPanel
                     t={t}
                     pending={assist.isPending}
@@ -672,17 +693,18 @@ export default function RecordDetailPage() {
         <div
           style={{
             position: "fixed",
-            left: `${selectionPopup.x}px`,
-            top: `${selectionPopup.y}px`,
+            left: `clamp(1rem, ${selectionPopup.x}px, calc(100vw - 1rem))`,
+            top: `max(1rem, ${selectionPopup.y}px)`,
             transform: "translate(-50%, -100%)",
-            zIndex: 9999
+            zIndex: 9999,
+            maxWidth: "calc(100vw - 2rem)"
           }}
         >
           <button
             type="button"
             onClick={() => addHighlight.mutate(selectionPopup.text)}
             disabled={addHighlight.isPending}
-            className="flex items-center gap-2 border-4 border-foreground bg-yellow-400 text-black px-4 py-2 font-mono text-xs font-black uppercase shadow-brutal-sm hover:bg-yellow-300 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all whitespace-nowrap"
+            className="flex w-full items-center justify-center gap-2 border-4 border-foreground bg-yellow-400 px-4 py-2 text-center font-mono text-xs font-black uppercase text-black shadow-brutal-sm transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-none hover:bg-yellow-300"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
               <path d="m9 11-6 6v3h9l3-3" /><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4" />

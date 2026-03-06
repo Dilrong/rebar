@@ -12,8 +12,8 @@ export default function ProtectedPageShell({
   rootClassName?: string
 }) {
   return (
-    <div className={cn("min-h-screen bg-background p-6 font-sans selection:bg-accent selection:text-white", rootClassName)}>
-      <main className={cn("mx-auto animate-fade-in-up pb-24", mainClassName)}>
+    <div className={cn("min-h-screen bg-background p-4 font-sans selection:bg-accent selection:text-white md:p-6", rootClassName)}>
+      <main className={cn("mx-auto w-full animate-fade-in-up pb-24", mainClassName)}>
         <AppNav />
         {children}
       </main>

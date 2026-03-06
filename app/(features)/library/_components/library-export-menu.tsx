@@ -31,7 +31,7 @@ export function LibraryExportMenu({
   onMenuItemKeyDown
 }: LibraryExportMenuProps) {
   return (
-    <div ref={exportMenuWrapRef} className="relative">
+    <div ref={exportMenuWrapRef} className="relative w-full sm:w-auto">
       <button
         ref={exportTriggerRef}
         type="button"
@@ -43,7 +43,7 @@ export function LibraryExportMenu({
           }
         }}
         disabled={exportPending}
-        className="min-h-[44px] inline-flex items-center gap-2 border-4 border-foreground bg-background px-4 py-3 font-mono text-xs font-bold uppercase hover:bg-foreground hover:text-background disabled:opacity-60 shadow-brutal-sm transition-transform active:translate-y-[2px] active:translate-x-[2px]"
+        className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 border-4 border-foreground bg-background px-4 py-3 font-mono text-xs font-bold uppercase shadow-brutal-sm transition-transform active:translate-y-[2px] active:translate-x-[2px] hover:bg-foreground hover:text-background disabled:opacity-60 sm:w-auto"
         aria-haspopup="menu"
         aria-expanded={exportMenuOpen}
         aria-controls="library-export-menu"
@@ -52,7 +52,7 @@ export function LibraryExportMenu({
         {exportPending ? t("library.exporting", "EXPORTING...") : `${t("library.export", "EXPORT")} ▾`}
       </button>
       {exportMenuOpen ? (
-        <div id="library-export-menu" role="menu" className="absolute right-0 z-20 mt-1 min-w-[180px] border-2 border-foreground bg-background">
+        <div id="library-export-menu" role="menu" className="absolute left-0 right-0 z-20 mt-1 border-2 border-foreground bg-background sm:left-auto sm:right-0 sm:min-w-[180px]">
           <button
             ref={(node) => {
               exportItemRefs.current[0] = node

@@ -134,14 +134,14 @@ export default function SearchPage() {
   }
 
   return (
-    <div className="min-h-screen p-6 bg-background font-sans selection:bg-accent selection:text-white">
+    <div className="min-h-screen bg-background p-4 font-sans selection:bg-accent selection:text-white md:p-6">
       <AuthGate>
-        <main className="max-w-5xl mx-auto animate-fade-in-up pb-24">
+        <main className="mx-auto w-full max-w-5xl animate-fade-in-up pb-24">
           <AppNav />
 
           <header className="mb-8 border-b-4 border-foreground pb-4">
-            <h1 className="font-black text-5xl uppercase text-foreground leading-none flex items-center gap-3">
-              <Search className="w-10 h-10" strokeWidth={3} /> {t("search.title", "SEARCH")}
+            <h1 className="flex items-start gap-3 text-3xl font-black uppercase leading-none text-foreground sm:items-center sm:text-4xl md:text-5xl">
+              <Search className="h-8 w-8 sm:h-10 sm:w-10" strokeWidth={3} /> {t("search.title", "SEARCH")}
             </h1>
           </header>
 
@@ -155,7 +155,7 @@ export default function SearchPage() {
                 value={q}
                 onChange={(event) => setQ(event.target.value)}
                 placeholder={t("search.placeholder", "content / source title")}
-                className="min-h-[44px] w-full bg-background border-4 border-foreground text-foreground text-lg p-3 lg:col-span-2 focus:outline-none focus:ring-0 shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] rounded-none"
+                className="min-h-[44px] w-full bg-background border-4 border-foreground p-3 text-base text-foreground shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] rounded-none focus:outline-none focus:ring-0 lg:col-span-2 md:text-lg"
               />
               <label htmlFor="search-state" className="sr-only">
                 {t("search.allStates", "All states")}
@@ -187,8 +187,8 @@ export default function SearchPage() {
                   <option key={tag.id} value={tag.id}>#{tag.name}</option>
                 ))}
               </select>
-              <div className="flex items-center gap-2 lg:col-span-1">
-                <div className="w-full">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:col-span-1">
+                <div className="w-full min-w-0">
                   <label htmlFor="search-from-date" className="mb-1 block font-mono text-[10px] font-bold uppercase text-muted-foreground">
                     {t("history.from", "From")}
                   </label>
@@ -200,7 +200,7 @@ export default function SearchPage() {
                     className="min-h-[44px] w-full bg-background border-4 border-foreground text-foreground p-3 font-mono text-xs focus:outline-none focus:ring-0 shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] rounded-none"
                   />
                 </div>
-                <div className="w-full">
+                <div className="w-full min-w-0">
                   <label htmlFor="search-to-date" className="mb-1 block font-mono text-[10px] font-bold uppercase text-muted-foreground">
                     {t("history.to", "To")}
                   </label>

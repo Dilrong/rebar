@@ -22,7 +22,7 @@
     --muted-foreground: 0 0% 40%;
     --accent: 21 100% 50%;
     /* Construction Orange #FF5A00 */
-    --accent-foreground: 0 0% 100%;
+    --accent-foreground: 0 0% 5%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
     --border: 0 0% 5%;
@@ -51,7 +51,7 @@
     --muted: 0 0% 15%;
     --muted-foreground: 0 0% 60%;
     --accent: 21 100% 50%;
-    --accent-foreground: 0 0% 100%;
+    --accent-foreground: 0 0% 5%;
     --destructive: 0 62% 30%;
     --destructive-foreground: 0 0% 5%;
     --border: 0 0% 25%;

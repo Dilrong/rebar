@@ -59,6 +59,21 @@ describe("/api/settings/preferences", () => {
     await expect(response.json()).resolves.toEqual({ startPage: "/library", fontFamily: "sans" })
   })
 
+  it("returns defaults when preferences table is unavailable on GET", async () => {
+    maybeSingleMock.mockResolvedValueOnce({
+      data: null,
+      error: {
+        code: "PGRST205",
+        message: "Could not find the table 'public.user_preferences' in the schema cache"
+      }
+    })
+
+    const response = await GET(new NextRequest("http://localhost/api/settings/preferences", { method: "GET" }))
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toEqual({ startPage: "/library", fontFamily: "sans" })
+  })
+
   it("persists and returns selected start page", async () => {
     upsertSingleMock.mockResolvedValueOnce({ data: { start_page: "/review" }, error: null })
 
@@ -72,5 +87,26 @@ describe("/api/settings/preferences", () => {
 
     expect(response.status).toBe(200)
     await expect(response.json()).resolves.toEqual({ startPage: "/review", fontFamily: "sans" })
+  })
+
+  it("returns requested values when preferences table is unavailable on PATCH", async () => {
+    maybeSingleMock.mockResolvedValueOnce({
+      data: null,
+      error: {
+        code: "PGRST205",
+        message: "Could not find the table 'public.user_preferences' in the schema cache"
+      }
+    })
+
+    const response = await PATCH(
+      new NextRequest("http://localhost/api/settings/preferences", {
+        method: "PATCH",
+        body: JSON.stringify({ fontFamily: "mono" }),
+        headers: { "Content-Type": "application/json" }
+      })
+    )
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toEqual({ startPage: "/library", fontFamily: "mono" })
   })
 })

@@ -110,25 +110,25 @@ export default function ReviewHistoryPage() {
   const maxPage = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   return (
-    <div className="min-h-screen p-6 bg-background font-sans selection:bg-accent selection:text-white">
+    <div className="min-h-screen bg-background p-4 font-sans selection:bg-accent selection:text-white md:p-6">
       <AuthGate>
-        <main className="max-w-5xl mx-auto animate-fade-in-up pb-24">
+        <main className="mx-auto w-full max-w-5xl animate-fade-in-up pb-24">
           <AppNav />
 
-          <header className="mb-8 border-b-4 border-foreground pb-4 flex items-end justify-between">
-            <h1 className="font-black text-5xl uppercase text-foreground leading-none flex items-center gap-3">
+          <header className="mb-8 flex flex-col gap-3 border-b-4 border-foreground pb-4 sm:flex-row sm:items-end sm:justify-between">
+            <h1 className="flex items-center gap-3 text-3xl font-black uppercase leading-none text-foreground md:text-5xl">
               <Clock3 className="w-10 h-10" strokeWidth={3} /> {t("history.title", "REVIEW HISTORY")}
             </h1>
             <Link
               href="/review"
-              className="font-mono text-xs font-bold uppercase border-2 border-foreground px-3 py-1 bg-background hover:bg-foreground hover:text-background"
+              className="inline-flex min-h-[44px] items-center justify-center border-2 border-foreground bg-background px-3 py-1 font-mono text-xs font-bold uppercase hover:bg-foreground hover:text-background"
             >
               {t("history.back", "BACK TO REVIEW")}
             </Link>
           </header>
 
           <section className="mb-6 border-4 border-foreground bg-card p-4">
-            <div className="flex flex-wrap gap-3 items-end">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <label htmlFor="history-action" className="font-mono text-xs font-bold uppercase">
                 {t("history.action", "Action")}
                 <select
@@ -240,7 +240,7 @@ export default function ReviewHistoryPage() {
                   setTo("")
                   setPage(1)
                 }}
-                className="min-h-[44px] px-3 py-2 border-2 border-foreground font-mono text-xs font-bold uppercase bg-background text-foreground"
+                className="min-h-[44px] px-3 py-2 border-2 border-foreground bg-background font-mono text-xs font-bold uppercase text-foreground sm:col-span-2 xl:col-span-4"
               >
                 {t("history.reset", "RESET")}
               </button>
@@ -317,7 +317,7 @@ export default function ReviewHistoryPage() {
             </div>
           ) : null}
 
-          <div className="mt-8 flex items-center justify-between border-2 border-foreground p-3">
+          <div className="mt-8 flex flex-col gap-3 border-2 border-foreground p-3 sm:flex-row sm:items-center sm:justify-between">
             <button
               type="button"
               onClick={() => setPage((prev) => Math.max(1, prev - 1))}

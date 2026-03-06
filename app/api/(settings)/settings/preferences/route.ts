@@ -16,6 +16,10 @@ const UpdatePreferencesSchema = z.object({
 const DEFAULT_START_PAGE: StartPage = "/library"
 const DEFAULT_FONT_FAMILY: FontFamily = "sans"
 
+function isMissingPreferencesTableError(error: { code?: string | null; message?: string | null } | null | undefined) {
+  return error?.code === "PGRST205" && error.message?.includes("user_preferences")
+}
+
 export async function GET(request: NextRequest) {
   const limitResult = await checkRateLimitDistributed({
     key: `settings:preferences:get:${resolveClientKey(request.headers)}`,
@@ -39,6 +43,9 @@ export async function GET(request: NextRequest) {
     .maybeSingle()
 
   if (result.error) {
+    if (isMissingPreferencesTableError(result.error)) {
+      return ok({ startPage: DEFAULT_START_PAGE, fontFamily: DEFAULT_FONT_FAMILY })
+    }
     return internalError("settings", result.error)
   }
 
@@ -82,6 +89,12 @@ export async function PATCH(request: NextRequest) {
   let fontFamilyToSave = parsed.data.fontFamily
 
   if (existingResult?.error) {
+    if (isMissingPreferencesTableError(existingResult.error)) {
+      return ok({
+        startPage: startPageToSave ?? DEFAULT_START_PAGE,
+        fontFamily: fontFamilyToSave ?? DEFAULT_FONT_FAMILY
+      })
+    }
     return internalError("settings", existingResult.error)
   }
 

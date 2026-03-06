@@ -81,7 +81,7 @@ export function RecordManagePanel({
           <option value="ARCHIVED">{getStateLabel("ARCHIVED", t)}</option>
           <option value="TRASHED">{getStateLabel("TRASHED", t)}</option>
         </select>
-        <div className="flex gap-2 pt-2">
+        <div className="flex flex-col gap-2 pt-2 sm:flex-row">
           <button
             type="button"
             onClick={onRequestSave}
