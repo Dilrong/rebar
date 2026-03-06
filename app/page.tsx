@@ -30,10 +30,6 @@ export default function HomePage() {
   const [onboardingDismissed, setOnboardingDismissed] = useState(false)
 
   useEffect(() => {
-    if (typeof window === "undefined") {
-      return
-    }
-
     setOnboardingDismissed(window.localStorage.getItem(ONBOARDING_DISMISS_KEY) === "1")
   }, [])
 
@@ -101,15 +97,99 @@ export default function HomePage() {
     <div className="min-h-screen flex flex-col p-4 md:p-6 bg-background font-sans">
       <main className="max-w-5xl w-full mx-auto mt-8 md:mt-24 space-y-8 md:space-y-12 animate-fade-in-up">
 
-        <header className="space-y-4 md:space-y-6 border-l-4 md:border-l-8 border-accent pl-4 md:pl-6 py-2 relative">
-          <div className="absolute -left-[4px] md:-left-[8px] top-0 bottom-0 w-[4px] md:w-[8px] bg-accent animate-pulse-brutal" aria-hidden="true" />
-          <h1 className="font-black text-5xl sm:text-6xl md:text-8xl tracking-tighter uppercase text-foreground leading-[0.9] break-words text-glitch cursor-default transition-all">
-            {t("home.title.line1", "DATA")}<br />{t("home.title.line2", "INFRASTRUCTURE")}.
+        <header className="flex flex-col gap-6 md:gap-8 border-[3px] md:border-4 border-foreground p-6 md:p-8 bg-card shadow-brutal-sm md:shadow-brutal relative overflow-hidden group/hero">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-accent/5 rounded-full blur-3xl pointer-events-none group-hover/hero:bg-accent/10 transition-colors duration-500" aria-hidden="true" />
+
+          <div className="flex flex-wrap gap-2 relative z-10">
+            <span className="bg-foreground text-background px-3 py-1 font-mono text-xs font-bold uppercase shadow-[2px_2px_0_0_rgba(255,255,255,0.2)] dark:shadow-[2px_2px_0_0_rgba(0,0,0,0.8)] border border-transparent">For Developers</span>
+            <span className="bg-foreground text-background px-3 py-1 font-mono text-xs font-bold uppercase shadow-[2px_2px_0_0_rgba(255,255,255,0.2)] dark:shadow-[2px_2px_0_0_rgba(0,0,0,0.8)] border border-transparent">For Researchers</span>
+            <span className="bg-foreground text-background px-3 py-1 font-mono text-xs font-bold uppercase shadow-[2px_2px_0_0_rgba(255,255,255,0.2)] dark:shadow-[2px_2px_0_0_rgba(0,0,0,0.8)] border border-transparent">For Builders</span>
+          </div>
+
+          <h1 className="font-black text-5xl sm:text-6xl md:text-7xl tracking-tighter uppercase text-foreground leading-[0.9] break-words relative z-10">
+            {t("home.hero.title", "INFRASTRUCTURE FOR")}<br />
+            <span className="text-accent underline decoration-8 underline-offset-8">{t("home.hero.subtitle", "YOUR THINKING")}</span>
           </h1>
-          <p className="text-lg md:text-2xl font-mono text-muted-foreground uppercase tracking-wider font-bold max-w-2xl bg-foreground text-background inline-block px-3 py-1 shadow-brutal-sm">
-            {t("home.subtitle", "SSOT // SYSTEM.READY")}
+
+          <p className="font-sans text-lg md:text-xl font-bold max-w-3xl opacity-90 leading-relaxed border-l-[6px] border-accent pl-4 relative z-10 break-keep">
+            {t("home.hero.desc", "Traditional note apps are warehouses where ideas go to die. REBAROPS는 정보를 저장하는 창고가 아니라 지식을 흐르게 하는 강력한 파이프라인(SSOT) 시스템입니다. 파편화된 스크랩을 멈추고 파이프라인을 구축하십시오.")}
           </p>
+
+          <div className="pt-2 relative z-10 flex flex-wrap gap-4">
+            <Link href="/capture" className="bg-accent text-accent-foreground font-black text-lg md:text-xl uppercase px-8 py-4 border-4 border-foreground shadow-[4px_4px_0_0_rgba(0,0,0,1)] dark:shadow-[4px_4px_0_0_rgba(255,255,255,1)] hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all cursor-pointer">
+              Initialize Pipeline
+            </Link>
+            <Link href="/review" className="bg-background text-foreground font-black text-lg md:text-xl uppercase px-8 py-4 border-4 border-foreground shadow-[4px_4px_0_0_rgba(0,0,0,1)] dark:shadow-[4px_4px_0_0_rgba(255,255,255,1)] hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all flex items-center gap-2 cursor-pointer">
+              <Terminal className="w-5 h-5" /> View Workflow
+            </Link>
+          </div>
         </header>
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-0 border-[3px] md:border-4 border-foreground bg-foreground text-background shadow-brutal-sm">
+          <div className="p-3 md:p-4 text-center border-b-[3px] lg:border-b-0 border-r-[3px] border-background/30 font-mono text-[10px] sm:text-xs font-bold uppercase flex items-center justify-center gap-2 transition-colors hover:bg-background/10">
+            <CheckSquare className="w-4 h-4 text-accent" /> 100% OWNERSHIP
+          </div>
+          <div className="p-3 md:p-4 text-center border-b-[3px] lg:border-b-0 lg:border-r-[3px] border-background/30 font-mono text-[10px] sm:text-xs font-bold uppercase flex items-center justify-center gap-2 transition-colors hover:bg-background/10">
+            <Database className="w-4 h-4 text-accent" /> NO VENDOR LOCK-IN
+          </div>
+          <div className="p-3 md:p-4 text-center border-r-[3px] border-background/30 font-mono text-[10px] sm:text-xs font-bold uppercase flex items-center justify-center gap-2 transition-colors hover:bg-background/10">
+            <Terminal className="w-4 h-4 text-accent" /> AI-READY CONTEXT
+          </div>
+          <div className="p-3 md:p-4 text-center font-mono text-[10px] sm:text-xs font-bold uppercase flex items-center justify-center gap-2 transition-colors hover:bg-background/10">
+            <CheckSquare className="w-4 h-4 text-accent" /> SSOT GUARANTEED
+          </div>
+        </div>
+
+        <section className="flex flex-col gap-6 md:gap-8 lg:pt-4">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b-[3px] md:border-4 border-foreground pb-4 md:p-4 bg-background">
+            <div className="flex items-center gap-3 px-1 md:px-0">
+              <span className="w-3 h-3 bg-accent animate-pulse-brutal" aria-hidden="true" />
+              <h2 className="font-black text-3xl md:text-5xl tracking-tighter uppercase">
+                The Knowledge Pipeline
+              </h2>
+            </div>
+            <p className="font-mono text-xs md:text-sm font-bold bg-foreground text-background px-3 py-1 uppercase border-l-4 border-accent inline-block self-start sm:self-auto ml-1 sm:ml-0 shadow-brutal-sm whitespace-nowrap">
+              Flow: Capture → Review → SSOT
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-0 border-[3px] md:border-4 border-foreground bg-card shadow-brutal-sm md:shadow-brutal">
+
+            <div className="p-6 md:p-8 flex flex-col gap-5 border-b-[3px] lg:border-b-0 lg:border-r-[3px] border-foreground hover:bg-foreground hover:text-background transition-colors group cursor-default">
+              <div className="flex justify-between items-start">
+                <span className="font-black text-6xl text-foreground/20 group-hover:text-background/20 transition-colors">01</span>
+                <span className="border-2 border-foreground group-hover:border-background group-hover:bg-background group-hover:text-foreground px-2 py-1 font-mono text-[10px] md:text-xs font-bold uppercase transition-colors">Extension</span>
+              </div>
+              <h3 className="font-black text-3xl uppercase">Capture</h3>
+              <p className="font-sans text-[15px] md:text-base font-bold opacity-90 break-keep leading-relaxed border-t-2 border-foreground/20 group-hover:border-background/20 pt-4 mt-auto">
+                가장 무자비한 수집. 크롬 익스텐션을 통해 웹의 모든 텍스트, 아티클, 레퍼런스를 클릭 한 번으로 Inbox에 가둡니다.
+              </p>
+            </div>
+
+            <div className="p-6 md:p-8 flex flex-col gap-5 border-b-[3px] lg:border-b-0 lg:border-r-[3px] border-foreground hover:bg-foreground hover:text-background transition-colors group cursor-default">
+              <div className="flex justify-between items-start">
+                <span className="font-black text-6xl text-foreground/20 group-hover:text-background/20 transition-colors">02</span>
+                <span className="border-2 border-foreground group-hover:border-background group-hover:bg-background group-hover:text-foreground px-2 py-1 font-mono text-[10px] md:text-xs font-bold uppercase transition-colors">Routine</span>
+              </div>
+              <h3 className="font-black text-3xl uppercase">Review</h3>
+              <p className="font-sans text-[15px] md:text-base font-bold opacity-90 break-keep leading-relaxed border-t-2 border-foreground/20 group-hover:border-background/20 pt-4 mt-auto">
+                노이즈 제거. 매일 할당된 분량의 데이터를 강제 리뷰하여 무가치한 것을 버리고 데이터에 핵심적인 맥락을 부여합니다.
+              </p>
+            </div>
+
+            <div className="p-6 md:p-8 flex flex-col gap-5 bg-accent text-accent-foreground hover:bg-foreground hover:text-background transition-colors group cursor-default">
+              <div className="flex justify-between items-start">
+                <span className="font-black text-6xl text-background/30 group-hover:text-accent/30 transition-colors">03</span>
+                <span className="border-2 border-background group-hover:border-accent group-hover:bg-accent group-hover:text-accent-foreground px-2 py-1 font-mono text-[10px] md:text-xs font-bold uppercase transition-colors shadow-[2px_2px_0_0_rgba(0,0,0,0.5)] group-hover:shadow-none">SSOT</span>
+              </div>
+              <h3 className="font-black text-3xl uppercase drop-shadow-[2px_2px_0_rgba(0,0,0,0.5)] group-hover:drop-shadow-none">Vault</h3>
+              <p className="font-sans text-[15px] md:text-base font-bold break-keep leading-relaxed border-t-2 border-background/30 group-hover:border-accent/30 pt-4 mt-auto drop-shadow-[1px_1px_0_rgba(0,0,0,0.2)] group-hover:drop-shadow-none">
+                파이프라인 완성. 철저히 정제된 정보를 영구적인 단일 데이터베이스에 보관합니다. AI가 즉각 활용할 수 있는 인프라가 됩니다.
+              </p>
+            </div>
+
+          </div>
+        </section>
 
         {onboarding.show ? (
           <section className="border-[3px] md:border-4 border-foreground bg-card p-4 md:p-6 shadow-brutal-sm md:shadow-brutal transition-transform hover:-translate-y-1">
@@ -213,7 +293,7 @@ export default function HomePage() {
                 <Database className="w-8 h-8 group-hover:text-accent transition-colors" strokeWidth={2.5} />
                 <span className="font-mono text-xs font-bold border-2 border-current px-2 py-0.5 group-hover:border-accent group-hover:text-accent transition-colors">{t("home.badge.library", "LIBRARY")}</span>
               </div>
-              <h2 className="font-black text-3xl uppercase mt-auto relative z-10 transition-transform group-hover:translate-x-1">{t("home.library.title", "Vault")}</h2>
+              <h2 className="font-black text-3xl uppercase mt-auto relative z-10 transition-transform group-hover:translate-x-1">{t("home.library.title", "Library")}</h2>
             </Link>
           </div>
 

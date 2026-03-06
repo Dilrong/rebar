@@ -8,10 +8,13 @@ import { useI18n } from "@app-shared/i18n/i18n-provider"
 import { getSupabaseBrowser } from "@/lib/supabase-browser"
 import {
   getStartPagePreference,
-  getStartPagePreferenceServer,
+  getFontFamilyPreference,
+  getPreferencesServer,
   setStartPagePreference,
-  setStartPagePreferenceServer,
-  type StartPage
+  setFontFamilyPreference,
+  setPreferencesServer,
+  type StartPage,
+  type FontFamily
 } from "@feature-lib/settings/preferences"
 
 type AccountInfo = {
@@ -24,6 +27,7 @@ export default function SettingsPage() {
   const { locale, setLocale, t } = useI18n()
   const [account, setAccount] = useState<AccountInfo>({ id: null, email: null, createdAt: null })
   const [startPage, setStartPage] = useState<StartPage>("/library")
+  const [fontFamily, setFontFamily] = useState<FontFamily>("sans")
   const [origin, setOrigin] = useState("http://localhost:3000")
   const [copied, setCopied] = useState(false)
   const [pendingLogout, setPendingLogout] = useState(false)
@@ -54,14 +58,19 @@ export default function SettingsPage() {
     })
 
     const localStartPage = getStartPagePreference()
+    const localFontFamily = getFontFamilyPreference()
     setStartPage(localStartPage)
-    void getStartPagePreferenceServer().then((serverStartPage) => {
-      if (!serverStartPage) {
-        return
-      }
+    setFontFamily(localFontFamily)
 
-      setStartPage(serverStartPage)
-      setStartPagePreference(serverStartPage)
+    void getPreferencesServer().then((serverPrefs) => {
+      if (serverPrefs.startPage) {
+        setStartPage(serverPrefs.startPage)
+        setStartPagePreference(serverPrefs.startPage)
+      }
+      if (serverPrefs.fontFamily) {
+        setFontFamily(serverPrefs.fontFamily)
+        setFontFamilyPreference(serverPrefs.fontFamily)
+      }
     })
     setOrigin(window.location.origin)
   }, [])
@@ -111,6 +120,45 @@ export default function SettingsPage() {
           </button>
         </section>
 
+        <section className="mb-6 border-4 border-foreground bg-card p-5">
+          <h2 className="mb-4 border-b-2 border-foreground pb-2 font-black text-2xl uppercase">{t("settings.typography", "typography")}</h2>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setFontFamily("sans")
+                setFontFamilyPreference("sans")
+                void setPreferencesServer({ fontFamily: "sans" })
+              }}
+              className={
+                fontFamily === "sans"
+                  ? "min-h-[44px] border-4 border-foreground bg-foreground px-4 py-2 font-mono text-xs font-bold text-background transition-transform active:translate-y-[2px] active:translate-x-[2px]"
+                  : "min-h-[44px] border-4 border-foreground bg-background px-4 py-2 font-mono text-xs font-bold text-foreground hover:bg-foreground hover:text-background transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm"
+              }
+            >
+              SANS-SERIF
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setFontFamily("mono")
+                setFontFamilyPreference("mono")
+                void setPreferencesServer({ fontFamily: "mono" })
+              }}
+              className={
+                fontFamily === "mono"
+                  ? "min-h-[44px] border-4 border-foreground bg-foreground px-4 py-2 font-mono text-xs font-bold text-background transition-transform active:translate-y-[2px] active:translate-x-[2px]"
+                  : "min-h-[44px] border-4 border-foreground bg-background px-4 py-2 font-mono text-xs font-bold text-foreground hover:bg-foreground hover:text-background transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm"
+              }
+            >
+              MONOSPACE
+            </button>
+          </div>
+          <p className="mt-3 font-mono text-xs font-bold text-muted-foreground">
+            {t("settings.typographyDesc", "Select primary interface font style (Readable vs Brutalist)")}
+          </p>
+        </section>
+
         <section className="border-4 border-foreground bg-card p-5">
           <h2 className="mb-4 border-b-2 border-foreground pb-2 font-black text-2xl uppercase">{t("settings.language", "LANGUAGE")}</h2>
           <div className="flex items-center gap-2">
@@ -154,13 +202,13 @@ export default function SettingsPage() {
               const next = event.target.value as StartPage
               setStartPage(next)
               setStartPagePreference(next)
-              void setStartPagePreferenceServer(next)
+              void setPreferencesServer({ startPage: next })
             }}
             className="w-full min-h-[44px] border-4 border-foreground bg-background p-3 font-mono text-xs font-bold uppercase text-foreground focus:outline-none focus:ring-0 shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] rounded-none"
           >
             <option value="/review">{t("settings.start.review", "Review")}</option>
             <option value="/capture">{t("settings.start.capture", "Capture")}</option>
-            <option value="/library">{t("settings.start.library", "Vault")}</option>
+            <option value="/library">{t("settings.start.library", "Library")}</option>
             <option value="/search">{t("settings.start.search", "Search")}</option>
           </select>
           <p className="mt-3 font-mono text-xs font-bold text-muted-foreground">{t("settings.startHint", "Applies to the REBAR_ logo link.")}</p>

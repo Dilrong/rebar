@@ -39,7 +39,7 @@ export function LibraryHeader({
       <div className="absolute top-0 right-0 w-16 h-16 md:w-24 md:h-24 bg-accent opacity-20 pointer-events-none" style={{ clipPath: 'polygon(100% 0, 0 0, 100% 100%)' }} />
       <h1 className="font-black text-4xl sm:text-5xl uppercase text-foreground leading-none flex items-center gap-3 relative z-10 transition-transform hover:translate-x-1 cursor-default">
         <Database className="w-8 h-8 md:w-10 md:h-10 text-accent" strokeWidth={3} />
-        <span className="text-glitch transition-all">{t("library.title", "VAULT")}</span>
+        <span className="text-glitch transition-all">{t("library.title", "LIBRARY")}</span>
       </h1>
       <div className="flex flex-wrap items-center gap-2 md:gap-3 relative z-10">
         <span className="min-h-[44px] flex flex-col md:flex-row md:items-center justify-center font-mono text-xs md:text-sm font-bold border-[3px] md:border-4 border-foreground text-foreground bg-background px-3 py-1 shadow-brutal-sm uppercase">
@@ -62,9 +62,9 @@ export function LibraryHeader({
         />
         <Link
           href="/capture"
-          className="max-md:hidden min-h-[44px] inline-flex items-center justify-center gap-2 font-mono text-xs font-bold uppercase border-4 border-foreground px-4 py-3 bg-background hover:bg-foreground hover:text-background shadow-brutal-sm transition-transform active:translate-y-[2px] active:translate-x-[2px]"
+          className="max-md:hidden btn-cta"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-4 h-4 mr-2" />
           {t("library.newRecord", "NEW RECORD")}
         </Link>
       </div>

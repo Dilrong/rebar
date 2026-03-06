@@ -2,10 +2,10 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import {
   START_PAGE_KEY,
   getStartPagePreference,
-  getStartPagePreferenceServer,
+  getPreferencesServer,
   parseStartPage,
   setStartPagePreference,
-  setStartPagePreferenceServer
+  setPreferencesServer
 } from "@feature-lib/settings/preferences"
 
 function makeLocalStorage(seed: Record<string, string> = {}): Storage {
@@ -90,9 +90,9 @@ describe("server preference helpers", () => {
     const fetchMock = vi.fn(async () => new Response(JSON.stringify({ startPage: "/capture" }), { status: 200 }))
     vi.stubGlobal("fetch", fetchMock)
 
-    const value = await getStartPagePreferenceServer()
+    const value = await getPreferencesServer()
 
-    expect(value).toBe("/capture")
+    expect(value.startPage).toBe("/capture")
     expect(fetchMock).toHaveBeenCalledWith("/api/settings/preferences", {
       method: "GET",
       cache: "no-store"
@@ -102,18 +102,20 @@ describe("server preference helpers", () => {
   it("returns null on API failure or malformed payload", async () => {
     const notOkFetch = vi.fn(async () => new Response(JSON.stringify({ startPage: "/review" }), { status: 500 }))
     vi.stubGlobal("fetch", notOkFetch)
-    await expect(getStartPagePreferenceServer()).resolves.toBeNull()
+    let prefs = await getPreferencesServer()
+    expect(prefs.startPage).toBeNull()
 
     const malformedFetch = vi.fn(async () => new Response(JSON.stringify({ startPage: "/invalid" }), { status: 200 }))
     vi.stubGlobal("fetch", malformedFetch)
-    await expect(getStartPagePreferenceServer()).resolves.toBeNull()
+    prefs = await getPreferencesServer()
+    expect(prefs.startPage).toBeNull()
   })
 
   it("returns false when PATCH fails and true when it succeeds", async () => {
     const okFetch = vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }))
     vi.stubGlobal("fetch", okFetch)
 
-    await expect(setStartPagePreferenceServer("/review")).resolves.toBe(true)
+    await expect(setPreferencesServer({ startPage: "/review" })).resolves.toBe(true)
     expect(okFetch).toHaveBeenCalledWith("/api/settings/preferences", {
       method: "PATCH",
       headers: {
@@ -124,12 +126,12 @@ describe("server preference helpers", () => {
 
     const notOkFetch = vi.fn(async () => new Response(JSON.stringify({ error: "x" }), { status: 400 }))
     vi.stubGlobal("fetch", notOkFetch)
-    await expect(setStartPagePreferenceServer("/review")).resolves.toBe(false)
+    await expect(setPreferencesServer({ startPage: "/review" })).resolves.toBe(false)
 
     const throwFetch = vi.fn(async () => {
       throw new Error("network")
     })
     vi.stubGlobal("fetch", throwFetch)
-    await expect(setStartPagePreferenceServer("/review")).resolves.toBe(false)
+    await expect(setPreferencesServer({ startPage: "/review" })).resolves.toBe(false)
   })
 })
