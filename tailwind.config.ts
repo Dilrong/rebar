@@ -76,9 +76,21 @@ const config = {
                     from: { transform: "translateX(100%)" },
                     to: { transform: "translateX(0)" },
                 },
+                "slide-out-left": {
+                    from: { opacity: "1", transform: "translateX(0)" },
+                    to: { opacity: "0", transform: "translateX(-10%)" },
+                },
                 "slide-out-right": {
                     from: { transform: "translateX(0)" },
                     to: { transform: "translateX(100%)" },
+                },
+                "scale-in": {
+                    from: { opacity: "0", transform: "scale(0.92)" },
+                    to: { opacity: "1", transform: "scale(1)" },
+                },
+                "scale-out": {
+                    from: { opacity: "1", transform: "scale(1)" },
+                    to: { opacity: "0", transform: "scale(0.92)" },
                 },
                 "pulse-brutal": {
                     "0%, 100%": { opacity: "1" },
@@ -108,7 +120,10 @@ const config = {
                 "fade-in-up": "fade-in-up 0.4s ease-out forwards",
                 "slide-up-fade": "slide-up-fade 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
                 "slide-in-right": "slide-in-right 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+                "slide-out-left": "slide-out-left 0.24s cubic-bezier(0.16, 1, 0.3, 1) forwards",
                 "slide-out-right": "slide-out-right 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+                "scale-in": "scale-in 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+                "scale-out": "scale-out 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards",
                 "pulse-brutal": "pulse-brutal 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite",
                 "marquee": "marquee 25s linear infinite",
                 "accordion-down": "accordion-down 0.2s ease-out",

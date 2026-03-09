@@ -12,6 +12,8 @@ type ReviewCurrentCardProps = {
   record: RecordRow
   mutationPending: boolean
   archivePending: boolean
+  transitionPhase?: "idle" | "stamping" | "exiting" | "entering"
+  stampLabel?: string | null
   actExpanded: boolean
   deferExpanded: boolean
   errorMessage: string | null
@@ -31,6 +33,8 @@ export function ReviewCurrentCard({
   record,
   mutationPending,
   archivePending,
+  transitionPhase = "idle",
+  stampLabel = null,
   actExpanded,
   deferExpanded,
   errorMessage,
@@ -41,9 +45,22 @@ export function ReviewCurrentCard({
   onSelectDefer,
   onRetry
 }: ReviewCurrentCardProps) {
+  const isAnimatingOut = transitionPhase === "stamping" || transitionPhase === "exiting"
+
   return (
-    <div className="relative flex w-full flex-1 flex-col border-[3px] md:border-4 border-foreground bg-card p-4 sm:p-6 shadow-brutal-sm md:shadow-brutal md:p-10 transition-all duration-300" key={record.id}>
+    <div
+      className={`relative flex w-full flex-1 flex-col border-[3px] md:border-4 border-foreground bg-card p-4 sm:p-6 shadow-brutal-sm md:shadow-brutal md:p-10 transition-all duration-300 ${transitionPhase === "entering" ? "animate-slide-in-right" : ""} ${transitionPhase === "exiting" ? "animate-slide-out-left" : ""} ${isAnimatingOut ? "pointer-events-none" : ""}`}
+      key={record.id}
+    >
       <div className="absolute top-0 right-0 w-8 h-8 md:w-16 md:h-16 bg-accent opacity-20 pointer-events-none" style={{ clipPath: 'polygon(100% 0, 0 0, 100% 100%)' }} />
+      {stampLabel ? (
+        <div
+          className="stamp-overlay"
+          data-visible={transitionPhase === "stamping" ? "true" : "false"}
+        >
+          {stampLabel}
+        </div>
+      ) : null}
       <div className="flex-1 flex flex-col py-4 md:py-6 relative z-10">
         <div className="mb-6 flex flex-wrap items-center gap-2 border-b-4 border-foreground pb-4 md:mb-8">
           <span className="bg-foreground text-background font-mono text-xs font-bold px-2 py-1 uppercase border-2 border-foreground text-glitch cursor-default transition-all shadow-brutal-sm hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5">ID:{record.id.substring(0, 8)}</span>
@@ -75,7 +92,7 @@ export function ReviewCurrentCard({
             type="button"
             onClick={onArchive}
             disabled={mutationPending}
-            aria-label="보관"
+            aria-label={t("review.triage.archive", "보관")}
             className="group/btn relative min-h-[64px] border-4 border-foreground bg-accent px-4 py-3 text-left text-white transition-all duration-200 active:translate-y-[4px] active:translate-x-[4px] disabled:opacity-50 focus-visible:outline-none focus-visible:ring-0 shadow-brutal active:shadow-none hover:bg-foreground hover:shadow-brutal-sm overflow-hidden"
           >
             <div className="absolute inset-0 bg-white/20 -translate-x-[100%] group-hover/btn:animate-[marquee_1s_ease-in-out_forwards]" />

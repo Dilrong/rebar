@@ -2,7 +2,6 @@
 
 import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useForm } from "react-hook-form"
 import { useEffect, useRef, useState, useCallback, useMemo } from "react"
 import AuthGate from "@shared/auth/auth-gate"
 import AppNav from "@shared/layout/app-nav"
@@ -10,12 +9,12 @@ import { useI18n } from "@app-shared/i18n/i18n-provider"
 import { apiFetch } from "@/lib/client-http"
 import { getStateLabel } from "@/lib/i18n/state-label"
 import type { AnnotationRow, RecordNoteVersionRow, RecordRow, TagRow } from "@/lib/types"
-import { Link as LinkIcon, Hash, ArrowLeftSquare } from "lucide-react"
+import { Link as LinkIcon, Hash as HashIcon, ArrowLeftSquare, History, SlidersHorizontal } from "lucide-react"
 import { LoadingSpinner } from "@shared/ui/loading"
 import { Toast } from "@shared/ui/toast"
+import { BottomSheet } from "@shared/ui/bottom-sheet"
 import { ConfirmDialog } from "../_components/confirm-dialog"
 import { MarkdownContent } from "@shared/ui/markdown-content"
-import { RecordAssistPanel } from "../_components/record-assist-panel"
 import { RecordManagePanel } from "../_components/record-manage-panel"
 import { RecordTagsPanel } from "../_components/record-tags-panel"
 import { RecordHistoryPanel } from "../_components/record-history-panel"
@@ -31,23 +30,6 @@ type TagsResponse = {
   data: TagRow[]
 }
 
-type AssistResponse = {
-  data: {
-    summary: string[]
-    questions: string[]
-    todos: string[]
-    signals: {
-      topKeywords: string[]
-    }
-  }
-}
-
-type AnnotationInput = {
-  kind: "highlight" | "comment" | "correction"
-  body: string
-  anchor?: string
-}
-
 type SelectionPopup = {
   x: number
   y: number
@@ -55,6 +37,8 @@ type SelectionPopup = {
 } | null
 
 const MAX_HIGHLIGHT_ANCHOR_CHARS = 500
+
+type RecordPanelKey = "manage" | "tags" | "history"
 
 function resolveFromPath(value: string | null): string | null {
   if (!value) {
@@ -87,10 +71,12 @@ export default function RecordDetailPage() {
   const [lastStateBeforeDelete, setLastStateBeforeDelete] = useState<RecordRow["state"]>("INBOX")
   const [redirectTimer, setRedirectTimer] = useState<number | null>(null)
   const [selectionPopup, setSelectionPopup] = useState<SelectionPopup>(null)
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [isDesktopViewport, setIsDesktopViewport] = useState(false)
+  const [desktopPanel, setDesktopPanel] = useState<RecordPanelKey | null>(null)
+  const [mobilePanel, setMobilePanel] = useState<RecordPanelKey | null>(null)
+  const [editNote, setEditNote] = useState("")
+  const [libraryContextIds, setLibraryContextIds] = useState<string[]>([])
   const [newTagName, setNewTagName] = useState("")
-  const [checkedAssistTodos, setCheckedAssistTodos] = useState<string[]>([])
-  const [showAssistCopiedToast, setShowAssistCopiedToast] = useState(false)
   const articleRef = useRef<HTMLDivElement>(null)
 
   const detail = useQuery({
@@ -104,23 +90,6 @@ export default function RecordDetailPage() {
     queryKey: ["tags"],
     queryFn: () => apiFetch<TagsResponse>("/api/tags"),
     staleTime: 1000 * 60 * 10 // 10 minutes
-  })
-
-  const form = useForm<AnnotationInput>({
-    defaultValues: { kind: "comment", body: "" }
-  })
-
-  const addAnnotation = useMutation({
-    mutationFn: (payload: AnnotationInput) =>
-      apiFetch(`/api/records/${id}/annotations`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      }),
-    onSuccess: () => {
-      form.reset({ kind: "comment", body: "" })
-      queryClient.invalidateQueries({ queryKey: ["record-detail", id] })
-    }
   })
 
   const addHighlight = useMutation({
@@ -142,16 +111,6 @@ export default function RecordDetailPage() {
       apiFetch(`/api/records/${id}/annotations/${annotationId}`, { method: "DELETE" }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["record-detail", id] })
-    }
-  })
-
-  const assist = useMutation({
-    mutationFn: () =>
-      apiFetch<AssistResponse>(`/api/records/${id}/assist`, {
-        method: "POST"
-      }),
-    onSuccess: () => {
-      setCheckedAssistTodos([])
     }
   })
 
@@ -200,14 +159,6 @@ export default function RecordDetailPage() {
     }
   }, [handleTextSelect])
 
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return
-    }
-
-    setIsSidebarOpen(window.matchMedia("(min-width: 1024px)").matches)
-  }, [])
-
   const updateTags = useMutation({
     mutationFn: (tagIds: string[]) =>
       apiFetch<{ record: RecordRow }>(`/api/records/${id}`, {
@@ -248,6 +199,7 @@ export default function RecordDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["record-detail", id] })
       queryClient.invalidateQueries({ queryKey: ["records"] })
+      queryClient.invalidateQueries({ queryKey: ["search"] })
     }
   })
 
@@ -308,9 +260,56 @@ export default function RecordDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["record-detail", id] })
       queryClient.invalidateQueries({ queryKey: ["records"] })
+      queryClient.invalidateQueries({ queryKey: ["search"] })
+      queryClient.invalidateQueries({ queryKey: ["record-counts"] })
       queryClient.invalidateQueries({ queryKey: ["review-today"] })
       setShowUpdateToast(true)
       window.setTimeout(() => setShowUpdateToast(false), 5000)
+    }
+  })
+
+  const updateNote = useMutation<
+    { record: RecordRow },
+    Error,
+    string | null,
+    { previousDetail?: DetailResponse }
+  >({
+    mutationFn: (currentNote) =>
+      apiFetch<{ record: RecordRow }>(`/api/records/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ current_note: currentNote })
+      }),
+    onMutate: async (currentNote) => {
+      await queryClient.cancelQueries({ queryKey: ["record-detail", id] })
+      const previousDetail = queryClient.getQueryData<DetailResponse>(["record-detail", id])
+
+      queryClient.setQueryData<DetailResponse>(["record-detail", id], (current) => {
+        if (!current) {
+          return current
+        }
+
+        return {
+          ...current,
+          record: {
+            ...current.record,
+            current_note: currentNote,
+            note_updated_at: currentNote ? new Date().toISOString() : null
+          }
+        }
+      })
+
+      return { previousDetail }
+    },
+    onError: (_error, _currentNote, context) => {
+      if (context?.previousDetail) {
+        queryClient.setQueryData(["record-detail", id], context.previousDetail)
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["record-detail", id] })
+      queryClient.invalidateQueries({ queryKey: ["records"] })
+      queryClient.invalidateQueries({ queryKey: ["search"] })
     }
   })
 
@@ -349,6 +348,8 @@ export default function RecordDetailPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["records"] })
+      queryClient.invalidateQueries({ queryKey: ["search"] })
+      queryClient.invalidateQueries({ queryKey: ["record-counts"] })
       queryClient.invalidateQueries({ queryKey: ["review-today"] })
       setShowDeleteToast(true)
       const timer = window.setTimeout(() => {
@@ -375,17 +376,18 @@ export default function RecordDetailPage() {
         deleteAnnotation.mutate(highlightId)
       }
     },
-    [deleteAnnotation.mutate, t]
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mutate is stable per React Query docs
+    [t]
   )
 
-  const toggleTag = (tagId: string) => {
+  const toggleTag = useCallback((tagId: string) => {
     const current = detail.data?.tags.map((tag) => tag.id) ?? []
     const next = current.includes(tagId)
       ? current.filter((idItem) => idItem !== tagId)
       : [...current, tagId]
 
     updateTags.mutate(next)
-  }
+  }, [detail.data?.tags, updateTags])
 
   useEffect(() => {
     if (!detail.data) {
@@ -395,14 +397,18 @@ export default function RecordDetailPage() {
     setEditUrl(detail.data.record.url ?? "")
     setEditSourceTitle(detail.data.record.source_title ?? "")
     setEditState(detail.data.record.state)
+    setEditNote(detail.data.record.current_note ?? "")
   }, [detail.data])
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(min-width: 1024px)")
-    setIsSidebarOpen(mediaQuery.matches)
+    setIsDesktopViewport(mediaQuery.matches)
 
     const handleChange = (event: MediaQueryListEvent) => {
-      setIsSidebarOpen(event.matches)
+      setIsDesktopViewport(event.matches)
+      if (event.matches) {
+        setMobilePanel(null)
+      }
     }
 
     mediaQuery.addEventListener("change", handleChange)
@@ -417,7 +423,27 @@ export default function RecordDetailPage() {
     }
   }, [redirectTimer])
 
-  const requestSaveRecord = () => {
+  useEffect(() => {
+    if (typeof window === "undefined" || !backHref?.startsWith("/library")) {
+      setLibraryContextIds([])
+      return
+    }
+
+    const raw = window.sessionStorage.getItem(`library:navigation:${backHref}`)
+    if (!raw) {
+      setLibraryContextIds([])
+      return
+    }
+
+    try {
+      const parsed = JSON.parse(raw) as { ids?: string[] }
+      setLibraryContextIds(Array.isArray(parsed.ids) ? parsed.ids : [])
+    } catch {
+      setLibraryContextIds([])
+    }
+  }, [backHref])
+
+  const requestSaveRecord = useCallback(() => {
     if (editState === "TRASHED" && detail.data?.record.state !== "TRASHED") {
       setPendingTrashConfirm(true)
       return
@@ -428,7 +454,7 @@ export default function RecordDetailPage() {
       url: editUrl,
       state: editState
     })
-  }
+  }, [detail.data?.record.state, editSourceTitle, editState, editUrl, updateRecord])
 
   const quickArchive = () => {
     updateRecord.mutate({
@@ -438,9 +464,9 @@ export default function RecordDetailPage() {
     })
   }
 
-  const requestDeleteRecord = () => {
+  const requestDeleteRecord = useCallback(() => {
     setPendingDeleteConfirm(true)
-  }
+  }, [])
 
   const undoDelete = () => {
     if (redirectTimer) {
@@ -456,28 +482,140 @@ export default function RecordDetailPage() {
     })
   }
 
-  const toggleAssistTodo = (todo: string) => {
-    setCheckedAssistTodos((current) =>
-      current.includes(todo)
-        ? current.filter((item) => item !== todo)
-        : [...current, todo]
-    )
-  }
-
-  const copyAssistTodos = async () => {
-    const todos = assist.data?.data.todos ?? []
-    if (todos.length === 0) {
+  const requestSaveNote = useCallback(() => {
+    if (!detail.data || updateNote.isPending) {
       return
     }
 
-    const markdown = todos
-      .map((todo) => `- [${checkedAssistTodos.includes(todo) ? "x" : " "}] ${todo}`)
-      .join("\n")
+    const nextNote = editNote.trim().length > 0 ? editNote : null
+    const currentNote = detail.data.record.current_note ?? null
+    if (nextNote === currentNote) {
+      return
+    }
 
-    await navigator.clipboard.writeText(markdown)
-    setShowAssistCopiedToast(true)
-    window.setTimeout(() => setShowAssistCopiedToast(false), 2000)
+    updateNote.mutate(nextNote)
+  }, [detail.data, editNote, updateNote])
+
+  const togglePanel = (panel: RecordPanelKey) => {
+    if (isDesktopViewport) {
+      setDesktopPanel((current) => (current === panel ? null : panel))
+      return
+    }
+
+    setMobilePanel(panel)
   }
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.metaKey || event.ctrlKey || event.altKey) {
+        return
+      }
+
+      const target = event.target as HTMLElement | null
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) {
+        return
+      }
+
+      const key = event.key.toLowerCase()
+
+      if (key === "escape") {
+        event.preventDefault()
+        if (backHref) {
+          router.push(backHref)
+          return
+        }
+
+        router.back()
+        return
+      }
+
+      if (!backHref?.startsWith("/library")) {
+        return
+      }
+
+      const currentIndex = libraryContextIds.indexOf(id)
+      if (currentIndex < 0) {
+        return
+      }
+
+      if (key === "j" && currentIndex < libraryContextIds.length - 1) {
+        event.preventDefault()
+        router.push(`/records/${libraryContextIds[currentIndex + 1]}?from=${encodeURIComponent(backHref)}`)
+      }
+
+      if (key === "k" && currentIndex > 0) {
+        event.preventDefault()
+        router.push(`/records/${libraryContextIds[currentIndex - 1]}?from=${encodeURIComponent(backHref)}`)
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown)
+    return () => window.removeEventListener("keydown", onKeyDown)
+  }, [backHref, id, libraryContextIds, router])
+
+  const panelContent = useMemo(() => ({
+    manage: (
+      <RecordManagePanel
+        t={t}
+        editSourceTitle={editSourceTitle}
+        editUrl={editUrl}
+        editState={editState}
+        isRecordMutating={isRecordMutating}
+        updatePending={updateRecord.isPending}
+        deletePending={deleteRecord.isPending}
+        onEditSourceTitleChange={setEditSourceTitle}
+        onEditUrlChange={setEditUrl}
+        onEditStateChange={setEditState}
+        onRequestSave={requestSaveRecord}
+        onRequestDelete={requestDeleteRecord}
+      />
+    ),
+    tags: (
+      <RecordTagsPanel
+        t={t}
+        tags={tags.data?.data ?? []}
+        selectedTagIds={selectedTagIds}
+        newTagName={newTagName}
+        isTagMutating={isTagMutating}
+        updateTagsError={updateTags.error?.message ?? null}
+        createTagPending={createTag.isPending}
+        onToggleTag={toggleTag}
+        onNewTagNameChange={setNewTagName}
+        onCreateTag={() => createTag.mutate(newTagName.trim())}
+      />
+    ),
+    history: (
+      <RecordHistoryPanel
+        t={t}
+        annotations={detail.data?.annotations ?? []}
+        noteVersions={detail.data?.note_versions ?? []}
+        updateRecordError={updateRecord.error?.message ?? null}
+        deleteRecordError={deleteRecord.error?.message ?? null}
+      />
+    )
+  }), [
+    createTag,
+    deleteRecord.error?.message,
+    deleteRecord.isPending,
+    detail.data?.annotations,
+    detail.data?.note_versions,
+    editSourceTitle,
+    editState,
+    editUrl,
+    isRecordMutating,
+    isTagMutating,
+    newTagName,
+    requestDeleteRecord,
+    requestSaveRecord,
+    selectedTagIds,
+    t,
+    tags.data?.data,
+    toggleTag,
+    updateRecord.error?.message,
+    updateRecord.isPending,
+    updateTags,
+    updateTags.error?.message
+  ])
 
   return (
     <div className="min-h-screen bg-background p-4 font-sans selection:bg-accent selection:text-white md:p-6">
@@ -485,29 +623,50 @@ export default function RecordDetailPage() {
         <main className="mx-auto w-full max-w-5xl animate-fade-in-up pb-32">
           <AppNav />
 
-          <div className="mb-4 mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <button
-              type="button"
-              onClick={() => {
-                if (backHref) {
-                  router.push(backHref)
-                  return
-                }
+          <div className="mb-4 mt-4 flex flex-col gap-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <button
+                type="button"
+                onClick={() => {
+                  if (backHref) {
+                    router.push(backHref)
+                    return
+                  }
 
-                router.back()
-              }}
-              className="inline-flex min-h-[44px] w-full items-center justify-center border-2 border-transparent px-2 py-1 text-sm font-black uppercase text-foreground transition-colors hover:border-foreground hover:bg-foreground hover:text-background sm:w-auto sm:justify-start"
-            >
-              <ArrowLeftSquare className="w-5 h-5 mr-2" strokeWidth={2.5} /> {t("record.back", "BACK")}
-            </button>
+                  router.back()
+                }}
+                className="inline-flex min-h-[44px] w-full items-center justify-center border-2 border-transparent px-2 py-1 text-sm font-black uppercase text-foreground transition-colors hover:border-foreground hover:bg-foreground hover:text-background sm:w-auto sm:justify-start"
+              >
+                <ArrowLeftSquare className="w-5 h-5 mr-2" strokeWidth={2.5} /> {t("record.back", "BACK")}
+              </button>
+            </div>
 
-            <button
-              type="button"
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="inline-flex min-h-[44px] items-center justify-center border-2 border-foreground bg-muted px-3 py-2 font-mono text-xs font-bold uppercase text-foreground shadow-brutal-sm transition-colors hover:bg-foreground hover:text-background sm:w-auto"
-            >
-              {isSidebarOpen ? t("record.hidePanels", "HIDE PANELS") : t("record.showPanels", "SHOW PANELS")}
-            </button>
+            <div className="flex gap-2 lg:hidden">
+              <button
+                type="button"
+                onClick={() => togglePanel("manage")}
+                className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-2 border-2 border-foreground bg-background px-3 py-2 font-mono text-[10px] font-bold uppercase shadow-brutal-sm transition-all hover:bg-foreground hover:text-background active:translate-x-1 active:translate-y-1 active:shadow-none"
+              >
+                <SlidersHorizontal className="h-4 w-4" strokeWidth={2.5} />
+                MANAGE
+              </button>
+              <button
+                type="button"
+                onClick={() => togglePanel("tags")}
+                className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-2 border-2 border-foreground bg-background px-3 py-2 font-mono text-[10px] font-bold uppercase shadow-brutal-sm transition-all hover:bg-foreground hover:text-background active:translate-x-1 active:translate-y-1 active:shadow-none"
+              >
+                <HashIcon className="h-4 w-4" strokeWidth={2.5} />
+                TAGS
+              </button>
+              <button
+                type="button"
+                onClick={() => togglePanel("history")}
+                className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-2 border-2 border-foreground bg-background px-3 py-2 font-mono text-[10px] font-bold uppercase shadow-brutal-sm transition-all hover:bg-foreground hover:text-background active:translate-x-1 active:translate-y-1 active:shadow-none"
+              >
+                <History className="h-4 w-4" strokeWidth={2.5} />
+                LOG
+              </button>
+            </div>
           </div>
 
           {detail.isLoading && (
@@ -518,8 +677,8 @@ export default function RecordDetailPage() {
           )}
 
           {detail.data && (
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-10">
-              <div className={`flex flex-col gap-8 ${isSidebarOpen ? "lg:col-span-8" : "lg:col-span-12"}`}>
+            <div className={`grid grid-cols-1 gap-6 ${isDesktopViewport ? (desktopPanel ? "lg:grid-cols-[minmax(0,1fr)_72px_minmax(280px,360px)]" : "lg:grid-cols-[minmax(0,1fr)_72px]") : ""}`}>
+              <div className="flex flex-col gap-8">
                 <article className="relative border-4 border-foreground bg-card p-5 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.1)] md:p-10">
                   <div className="flex flex-wrap gap-2 mb-8 border-b-4 border-foreground pb-4">
                     <span className="font-mono text-xs font-bold bg-foreground text-background px-2 py-0.5 uppercase">ID:{detail.data.record.id.substring(0, 8)}</span>
@@ -544,17 +703,35 @@ export default function RecordDetailPage() {
                     />
                   </div>
 
-                  {detail.data.record.current_note ? (
-                    <div className="mt-8 border-t-4 border-border pt-6">
-                      <p className="mb-3 font-mono text-[10px] font-bold uppercase text-muted-foreground">
+                  <div className="mt-8 border-t-4 border-border pt-6">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <p className="font-mono text-[10px] font-bold uppercase text-muted-foreground">
                         {t("record.currentNote", "CURRENT NOTE")}
                       </p>
-                      <MarkdownContent
-                        content={detail.data.record.current_note}
-                        className="text-base leading-[1.7] sm:text-lg"
-                      />
+                      <p className="font-mono text-[10px] font-bold uppercase text-muted-foreground">
+                        {updateNote.isPending ? t("record.pending", "SAVING...") : "CMD+ENTER / BLUR"}
+                      </p>
                     </div>
-                  ) : null}
+                    <textarea
+                      value={editNote}
+                      onChange={(event) => setEditNote(event.target.value)}
+                      onBlur={requestSaveNote}
+                      onKeyDown={(event) => {
+                        if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+                          event.preventDefault()
+                          requestSaveNote()
+                          event.currentTarget.blur()
+                        }
+                      }}
+                      placeholder={t("record.annotation.placeholder", "ENTER NOTE")}
+                      className="min-h-[160px] w-full resize-y border-4 border-foreground bg-background p-4 text-base leading-[1.7] text-foreground focus:outline-none focus:ring-0"
+                    />
+                    {updateNote.error ? (
+                      <p className="mt-2 font-mono text-[10px] font-bold uppercase text-destructive">
+                        {updateNote.error.message}
+                      </p>
+                    ) : null}
+                  </div>
 
                   {detail.data.record.url && (
                     <div className="mt-10 pt-6 border-t-4 border-border">
@@ -567,9 +744,9 @@ export default function RecordDetailPage() {
 
                   {detail.data.tags && detail.data.tags.length > 0 && (
                     <div className="flex items-center gap-2 mt-6 flex-wrap">
-                      <Hash className="w-5 h-5 text-accent" strokeWidth={3} />
+                      <HashIcon className="w-5 h-5 text-accent" strokeWidth={3} />
                       {detail.data.tags.map((tag: Pick<TagRow, "id" | "name">) => (
-                        <span key={tag.id} className="font-mono text-xs font-bold uppercase border-b-2 border-foreground text-foreground">
+                        <span key={tag.id} className="font-mono text-xs font-bold uppercase border-b-2 border-foreground text-foreground animate-scale-in">
                           {tag.name}
                         </span>
                       ))}
@@ -593,56 +770,38 @@ export default function RecordDetailPage() {
                 </article>
               </div>
 
-              {isSidebarOpen && (
-                <section className="flex flex-col gap-6 lg:col-span-4">
-                  <RecordAssistPanel
-                    t={t}
-                    pending={assist.isPending}
-                    errorMessage={assist.error?.message ?? null}
-                    data={assist.data?.data ?? null}
-                    checkedTodos={checkedAssistTodos}
-                    onRun={() => assist.mutate()}
-                    onToggleTodo={toggleAssistTodo}
-                    onCopyTodos={copyAssistTodos}
-                  />
+              <aside className="hidden lg:flex lg:flex-col lg:gap-3 lg:pt-2">
+                <button
+                  type="button"
+                  onClick={() => togglePanel("manage")}
+                  className={`inline-flex min-h-[56px] items-center justify-center border-4 border-foreground bg-background shadow-brutal-sm transition-all hover:bg-foreground hover:text-background active:translate-x-1 active:translate-y-1 active:shadow-none ${desktopPanel === "manage" ? "bg-foreground text-background" : ""}`}
+                  aria-label="Manage"
+                >
+                  <SlidersHorizontal className="h-5 w-5" strokeWidth={2.5} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => togglePanel("tags")}
+                  className={`inline-flex min-h-[56px] items-center justify-center border-4 border-foreground bg-background shadow-brutal-sm transition-all hover:bg-foreground hover:text-background active:translate-x-1 active:translate-y-1 active:shadow-none ${desktopPanel === "tags" ? "bg-foreground text-background" : ""}`}
+                  aria-label="Tags"
+                >
+                  <HashIcon className="h-5 w-5" strokeWidth={2.5} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => togglePanel("history")}
+                  className={`inline-flex min-h-[56px] items-center justify-center border-4 border-foreground bg-background shadow-brutal-sm transition-all hover:bg-foreground hover:text-background active:translate-x-1 active:translate-y-1 active:shadow-none ${desktopPanel === "history" ? "bg-foreground text-background" : ""}`}
+                  aria-label="History"
+                >
+                  <History className="h-5 w-5" strokeWidth={2.5} />
+                </button>
+              </aside>
 
-                  <RecordManagePanel
-                    t={t}
-                    editSourceTitle={editSourceTitle}
-                    editUrl={editUrl}
-                    editState={editState}
-                    isRecordMutating={isRecordMutating}
-                    updatePending={updateRecord.isPending}
-                    deletePending={deleteRecord.isPending}
-                    onEditSourceTitleChange={setEditSourceTitle}
-                    onEditUrlChange={setEditUrl}
-                    onEditStateChange={setEditState}
-                    onRequestSave={requestSaveRecord}
-                    onRequestDelete={requestDeleteRecord}
-                  />
-
-                  <RecordTagsPanel
-                    t={t}
-                    tags={tags.data?.data ?? []}
-                    selectedTagIds={selectedTagIds}
-                    newTagName={newTagName}
-                    isTagMutating={isTagMutating}
-                    updateTagsError={updateTags.error?.message ?? null}
-                    createTagPending={createTag.isPending}
-                    onToggleTag={toggleTag}
-                    onNewTagNameChange={setNewTagName}
-                    onCreateTag={() => createTag.mutate(newTagName.trim())}
-                  />
-
-                  <RecordHistoryPanel
-                    t={t}
-                    annotations={detail.data.annotations}
-                    noteVersions={detail.data.note_versions}
-                    updateRecordError={updateRecord.error?.message ?? null}
-                    deleteRecordError={deleteRecord.error?.message ?? null}
-                  />
+              {desktopPanel ? (
+                <section className="hidden lg:block">
+                  {panelContent[desktopPanel]}
                 </section>
-              )}
+              ) : null}
             </div>
           )}
           {detail.error ? (
@@ -696,13 +855,6 @@ export default function RecordDetailPage() {
           onClose={() => setShowDeleteToast(false)}
         />
       ) : null}
-      {showAssistCopiedToast ? (
-        <Toast
-          message={t("record.assist.copied", "Copied action todos")}
-          tone="success"
-          onClose={() => setShowAssistCopiedToast(false)}
-        />
-      ) : null}
       {selectionPopup ? (
         <div
           style={{
@@ -718,7 +870,7 @@ export default function RecordDetailPage() {
             type="button"
             onClick={() => addHighlight.mutate(selectionPopup.text)}
             disabled={addHighlight.isPending}
-            className="flex w-full items-center justify-center gap-2 border-4 border-foreground bg-yellow-400 px-4 py-2 text-center font-mono text-xs font-black uppercase text-black shadow-brutal-sm transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-none hover:bg-yellow-300"
+            className="flex w-full items-center justify-center gap-2 border-4 border-foreground bg-accent px-4 py-2 text-center font-mono text-xs font-black uppercase text-white shadow-brutal-sm transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-none hover:bg-accent/80"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
               <path d="m9 11-6 6v3h9l3-3" /><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4" />
@@ -727,6 +879,13 @@ export default function RecordDetailPage() {
           </button>
         </div>
       ) : null}
+      <BottomSheet
+        open={Boolean(mobilePanel)}
+        title={mobilePanel === "manage" ? "MANAGE" : mobilePanel === "tags" ? "TAGS" : "LOG HISTORY"}
+        onClose={() => setMobilePanel(null)}
+      >
+        {mobilePanel ? panelContent[mobilePanel] : null}
+      </BottomSheet>
     </div>
   )
 }

@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { useEffect, useMemo, useState } from "react"
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react"
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Search } from "lucide-react"
 import AuthGate from "@shared/auth/auth-gate"
@@ -31,6 +31,39 @@ type TagsResponse = {
   data: TagRow[]
 }
 
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+}
+
+function highlightText(text: string, query: string) {
+  const tokens = Array.from(
+    new Set(
+      query
+        .trim()
+        .split(/\s+/)
+        .filter((token) => token.length > 0)
+    )
+  )
+
+  if (tokens.length === 0) {
+    return text
+  }
+
+  const matcher = new RegExp(`(${tokens.map((token) => escapeRegExp(token)).join("|")})`, "gi")
+
+  return text.split(matcher).map((part, index) => {
+    if (tokens.some((token) => token.toLowerCase() === part.toLowerCase())) {
+      return (
+        <mark key={`${part}-${index}`} className="bg-accent text-accent-foreground border-2 border-foreground px-1 font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.1)]">
+          {part}
+        </mark>
+      )
+    }
+
+    return <Fragment key={`${part}-${index}`}>{part}</Fragment>
+  })
+}
+
 export default function SearchPage() {
   const { t } = useI18n()
   const router = useRouter()
@@ -44,6 +77,7 @@ export default function SearchPage() {
   const [toDate, setToDate] = useState("")
   const [semantic, setSemantic] = useState(false)
   const [didInitFromUrl, setDidInitFromUrl] = useState(false)
+  const [activeIndex, setActiveIndex] = useState(-1)
   const controlClassName = "min-h-[44px] w-full min-w-0 rounded-none border-4 border-foreground bg-background p-3 font-mono text-xs text-foreground shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] focus:outline-none focus:ring-0 dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)]"
 
   useEffect(() => {
@@ -124,17 +158,73 @@ export default function SearchPage() {
 
   const searchBackHref = queryString ? `/search?${queryString}` : "/search"
 
-  const toRecordHref = (recordId: string) =>
-    `/records/${recordId}?from=${encodeURIComponent(searchBackHref)}`
+  const toRecordHref = useCallback(
+    (recordId: string) => `/records/${recordId}?from=${encodeURIComponent(searchBackHref)}`,
+    [searchBackHref]
+  )
 
-  const qc = useQueryClient()
-  function prefetchRecord(id: string) {
-    qc.prefetchQuery({
+  const queryClient = useQueryClient()
+  const prefetchRecord = useCallback((id: string) => {
+    queryClient.prefetchQuery({
       queryKey: ["record-detail", id],
       queryFn: () => apiFetch<{ record: RecordRow }>(`/api/records/${id}`),
       staleTime: 1000 * 60 * 5
     })
-  }
+  }, [queryClient])
+
+  useEffect(() => {
+    const resultLength = result.data?.data.length ?? 0
+    if (resultLength === 0) {
+      setActiveIndex(-1)
+      return
+    }
+
+    setActiveIndex((current) => {
+      if (current < 0) {
+        return 0
+      }
+
+      return Math.min(current, resultLength - 1)
+    })
+  }, [result.data?.data.length])
+
+  useEffect(() => {
+    const rows = result.data?.data ?? []
+    if (rows.length === 0) {
+      return
+    }
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null
+      if (target && target.tagName === "SELECT") {
+        return
+      }
+
+      if (target && target.tagName === "INPUT" && target.id !== "search-query") {
+        return
+      }
+
+      if (event.key === "ArrowDown") {
+        event.preventDefault()
+        setActiveIndex((current) => (current + 1) % rows.length)
+        return
+      }
+
+      if (event.key === "ArrowUp") {
+        event.preventDefault()
+        setActiveIndex((current) => (current <= 0 ? rows.length - 1 : current - 1))
+        return
+      }
+
+      if (event.key === "Enter" && activeIndex >= 0) {
+        event.preventDefault()
+        router.push(toRecordHref(rows[activeIndex]!.id))
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown)
+    return () => window.removeEventListener("keydown", onKeyDown)
+  }, [activeIndex, result.data?.data, router, toRecordHref])
 
   return (
     <div className="min-h-screen bg-background p-4 font-sans selection:bg-accent selection:text-white md:p-6">
@@ -156,6 +246,7 @@ export default function SearchPage() {
               <input
                 id="search-query"
                 value={q}
+                autoFocus
                 onChange={(event) => setQ(event.target.value)}
                 placeholder={t("search.placeholder", "content / source title")}
                 className={`${controlClassName} placeholder:font-mono placeholder:text-xs placeholder:text-muted-foreground lg:col-span-2`}
@@ -272,13 +363,16 @@ export default function SearchPage() {
           {result.error ? <ErrorState message={result.error.message} onRetry={() => result.refetch()} /> : null}
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-            {(result.data?.data ?? []).map((record) => (
+            {(result.data?.data ?? []).map((record, index) => (
               <Link
                 key={record.id}
                 href={toRecordHref(record.id)}
                 onMouseEnter={() => prefetchRecord(record.id)}
-                onFocus={() => prefetchRecord(record.id)}
-                className="group flex h-48 flex-col border-[3px] md:border-4 border-foreground bg-card p-4 md:p-5 shadow-brutal-sm md:shadow-brutal hover:bg-foreground hover:text-background active:translate-x-1 active:translate-y-1 active:shadow-none transition-all md:h-72"
+                onFocus={() => {
+                  prefetchRecord(record.id)
+                  setActiveIndex(index)
+                }}
+                className={`group flex h-48 flex-col border-[3px] md:border-4 border-foreground bg-card p-4 md:p-5 shadow-brutal-sm md:shadow-brutal hover:bg-foreground hover:text-background active:translate-x-1 active:translate-y-1 active:shadow-none transition-all md:h-72 ${activeIndex === index ? "bg-foreground text-background translate-x-1 translate-y-1 shadow-none" : ""}`}
               >
                 <div className="flex gap-2 mb-3">
                   {record.favicon_url && (
@@ -304,7 +398,7 @@ export default function SearchPage() {
                   </p>
                 ) : null}
                 <p className="font-bold text-lg leading-tight line-clamp-5 flex-1">
-                  {stripMarkdown(record.content)}
+                  {highlightText(stripMarkdown(record.content), debouncedQ)}
                 </p>
                 {semantic && record.semantic_matches && record.semantic_matches.length > 0 ? (
                   <p className="mt-2 font-mono text-[10px] font-bold uppercase text-muted-foreground line-clamp-1 group-hover:text-background/70">

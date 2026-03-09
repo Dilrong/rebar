@@ -46,7 +46,8 @@ export const UpdateRecordSchema = z
     state: RecordStateSchema.optional(),
     tag_ids: z.array(z.string().uuid()).optional(),
     url: z.string().url().optional(),
-    source_title: z.string().min(1).optional()
+    source_title: z.string().min(1).optional(),
+    current_note: z.string().nullable().optional()
   })
   .refine((value) => Object.keys(value).length > 0, {
     message: "At least one field must be provided"

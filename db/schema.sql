@@ -348,6 +348,8 @@ CREATE OR REPLACE FUNCTION public.update_record_with_tags(
   p_url TEXT,
   p_update_source_title BOOLEAN,
   p_source_title TEXT,
+  p_update_current_note BOOLEAN,
+  p_current_note TEXT,
   p_update_tags BOOLEAN,
   p_tag_ids UUID[]
 )
@@ -388,10 +390,23 @@ BEGIN
     END IF;
   END IF;
 
+  IF p_update_current_note AND v_record.current_note IS DISTINCT FROM p_current_note THEN
+    IF v_record.current_note IS NOT NULL THEN
+      INSERT INTO public.record_note_versions (record_id, user_id, body, import_channel)
+      VALUES (p_record_id, p_user_id, v_record.current_note, NULL);
+    END IF;
+  END IF;
+
   UPDATE public.records
   SET state = CASE WHEN p_update_state THEN p_state ELSE state END,
       url = CASE WHEN p_update_url THEN p_url ELSE url END,
-      source_title = CASE WHEN p_update_source_title THEN p_source_title ELSE source_title END
+      source_title = CASE WHEN p_update_source_title THEN p_source_title ELSE source_title END,
+      current_note = CASE WHEN p_update_current_note THEN p_current_note ELSE current_note END,
+      note_updated_at = CASE
+        WHEN p_update_current_note AND v_record.current_note IS DISTINCT FROM p_current_note
+          THEN CASE WHEN p_current_note IS NULL THEN NULL ELSE now() END
+        ELSE note_updated_at
+      END
   WHERE id = p_record_id
   RETURNING * INTO v_record;
 

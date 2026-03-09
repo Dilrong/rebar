@@ -57,7 +57,7 @@ type CsvPreview = {
 }
 
 type ImportMode = "manual" | "url" | "batch" | "csv" | "ocr"
-type CaptureToastKind = "saved" | "ingested" | "ocrFilled" | "retryDone"
+type CaptureToastKind = "ingested" | "ocrFilled" | "retryDone"
 
 const TOAST_DURATION_MS = 5000
 
@@ -243,8 +243,10 @@ export default function CapturePage() {
   const [ocrFile, setOcrFile] = useState<File | null>(null)
   const [ocrFileName, setOcrFileName] = useState<string | null>(null)
   const [showSavedToast, setShowSavedToast] = useState(false)
-  const [toastKind, setToastKind] = useState<CaptureToastKind>("saved")
+  const [toastKind, setToastKind] = useState<CaptureToastKind>("ingested")
   const [latestSavedRecordId, setLatestSavedRecordId] = useState<string | null>(null)
+  const [savedCount, setSavedCount] = useState(0)
+  const [lastSavedPreview, setLastSavedPreview] = useState<string | null>(null)
   const [pendingIngestCount, setPendingIngestCount] = useState<number | null>(null)
   const [ocrProgress, setOcrProgress] = useState<number | null>(null)
   const [ingestResult, setIngestResult] = useState<IngestResponse | null>(null)
@@ -291,7 +293,10 @@ export default function CapturePage() {
     onSuccess: (createdRecord) => {
       setDuplicateRecordId(null)
       form.reset({ kind: "note", content: "", url: "", source_title: "", tag_ids: [] })
-      openToast("saved", createdRecord.id)
+      setSavedCount((current) => current + 1)
+      setLastSavedPreview(
+        (createdRecord.source_title ?? createdRecord.content).replace(/\s+/g, " ").trim().slice(0, 48) || null
+      )
     },
     onError: (error: Error & { status?: number; payload?: unknown }) => {
       if (error.status === 409 && error.payload && typeof error.payload === "object") {
@@ -610,11 +615,11 @@ export default function CapturePage() {
                 form={form}
                 tags={tags.data?.data ?? []}
                 selectedTagIds={selectedTagIds}
+                savedCount={savedCount}
+                lastSavedPreview={lastSavedPreview}
                 onSubmit={onSubmit}
                 mutationPending={mutation.isPending}
                 mutationErrorMessage={mutation.error?.message ?? null}
-                mutationSuccess={mutation.isSuccess}
-                showSavedToast={showSavedToast}
                 duplicateRecordId={duplicateRecordId}
                 onMergeDuplicate={handleMergeDuplicate}
               />
@@ -629,9 +634,9 @@ export default function CapturePage() {
               ? t("capture.ocrFilledForm", "텍스트를 수동 입력 폼에 채웠습니다")
               : toastKind === "ingested"
                 ? t("capture.ingestToastDone", "일괄 가져오기가 완료되었습니다")
-                : toastKind === "retryDone"
-                  ? t("capture.retryDone", "대기 중이던 인입이 모두 처리되었습니다.")
-                  : t("toast.saved", "Saved")
+              : toastKind === "retryDone"
+                ? t("capture.retryDone", "대기 중이던 인입이 모두 처리되었습니다.")
+                  : t("capture.ocrFilledForm", "텍스트를 수동 입력 폼에 채웠습니다")
           }
           actionLabel={latestSavedRecordId ? t("toast.openRecord", "Open") : undefined}
           onAction={

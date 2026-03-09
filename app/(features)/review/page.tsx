@@ -7,13 +7,13 @@ import AppNav from "@shared/layout/app-nav"
 import { useI18n } from "@app-shared/i18n/i18n-provider"
 import { apiFetch } from "@/lib/client-http"
 import type { RecordRow } from "@/lib/types"
-import { EmptyState } from "@shared/ui/empty-state"
 import { LoadingState } from "@shared/ui/loading-state"
-import { Toast } from "@shared/ui/toast"
 import { ReviewStatsPanel } from "./_components/review-stats-panel"
 import { ReviewUpNext } from "./_components/review-up-next"
 import { ReviewHeader } from "./_components/review-header"
 import { ReviewCurrentCard } from "./_components/review-current-card"
+import { ReviewCompleteScreen } from "./_components/review-complete-screen"
+import { ReviewUndoBar } from "./_components/review-undo-bar"
 
 type ReviewTodayResponse = {
   data: RecordRow[]
@@ -49,13 +49,29 @@ type UndoBufferEntry = {
   index: number
 }
 
+type CardTransitionPhase = "idle" | "stamping" | "exiting" | "entering"
+
+type CardTransitionState = {
+  phase: CardTransitionPhase
+  stampLabel: string | null
+  recordId: string | null
+}
+
 export default function ReviewPage() {
   const { t } = useI18n()
   const queryClient = useQueryClient()
   const [undoTargetId, setUndoTargetId] = useState<string | null>(null)
+  const [undoSequence, setUndoSequence] = useState(0)
   const [actExpanded, setActExpanded] = useState(false)
   const [deferExpanded, setDeferExpanded] = useState(false)
+  const [cardTransition, setCardTransition] = useState<CardTransitionState>({
+    phase: "idle",
+    stampLabel: null,
+    recordId: null
+  })
   const undoTimerRef = useRef<number | null>(null)
+  const transitionTimerRef = useRef<number | null>(null)
+  const mutationTimerRef = useRef<number | null>(null)
   const undoBufferRef = useRef<Map<string, UndoBufferEntry>>(new Map())
 
   const stats = useQuery({
@@ -125,6 +141,7 @@ export default function ReviewPage() {
       })
 
       setUndoTargetId(variables.id)
+      setUndoSequence((current) => current + 1)
       setActExpanded(false)
       setDeferExpanded(false)
       if (undoTimerRef.current) {
@@ -151,6 +168,7 @@ export default function ReviewPage() {
 
       undoBufferRef.current.delete(variables.id)
       setUndoTargetId((current) => (current === variables.id ? null : current))
+      setCardTransition({ phase: "idle", stampLabel: null, recordId: null })
 
       if (undoTimerRef.current) {
         window.clearTimeout(undoTimerRef.current)
@@ -246,7 +264,52 @@ export default function ReviewPage() {
 
   const first = today.data?.data[0]
   const nextQueue = today.data?.data.slice(1, 6) ?? []
-  const reviewBackHref = "/review"
+
+  useEffect(() => {
+    return () => {
+      if (transitionTimerRef.current) {
+        window.clearTimeout(transitionTimerRef.current)
+      }
+      if (mutationTimerRef.current) {
+        window.clearTimeout(mutationTimerRef.current)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    const nextId = first?.id ?? null
+    setCardTransition((current) => {
+      if (!nextId) {
+        return { phase: "idle", stampLabel: null, recordId: null }
+      }
+
+      if (current.recordId && current.recordId !== nextId) {
+        return { phase: "entering", stampLabel: null, recordId: nextId }
+      }
+
+      if (current.phase === "exiting" && current.recordId === nextId) {
+        return { phase: "idle", stampLabel: null, recordId: nextId }
+      }
+
+      return current.recordId ? current : { phase: "idle", stampLabel: null, recordId: nextId }
+    })
+  }, [first?.id])
+
+  useEffect(() => {
+    if (cardTransition.phase !== "entering") {
+      return
+    }
+
+    const timer = window.setTimeout(() => {
+      setCardTransition((current) =>
+        current.phase === "entering"
+          ? { phase: "idle", stampLabel: null, recordId: current.recordId }
+          : current
+      )
+    }, 200)
+
+    return () => window.clearTimeout(timer)
+  }, [cardTransition.phase])
 
   function toggleActPanel(): void {
     setActExpanded((prev) => {
@@ -287,13 +350,13 @@ export default function ReviewPage() {
       const key = event.key.toLowerCase()
       if (key === "a") {
         event.preventDefault()
-        mutation.mutate({ id: currentId, decisionType: "ARCHIVE" })
+        triggerDecision({ id: currentId, decisionType: "ARCHIVE" }, "ARCHIVED")
       } else if (key === "s") {
         event.preventDefault()
-        mutation.mutate({ id: currentId, decisionType: "ACT", actionType: "TODO" })
+        triggerDecision({ id: currentId, decisionType: "ACT", actionType: "TODO" }, "PINNED")
       } else if (key === "d") {
         event.preventDefault()
-        mutation.mutate({ id: currentId, decisionType: "DEFER", deferReason: "NO_TIME" })
+        triggerDecision({ id: currentId, decisionType: "DEFER", deferReason: "NO_TIME" }, "DEFERRED")
       } else if (key === "u" && undoTargetId) {
         event.preventDefault()
         undoMutation.mutate(undoTargetId)
@@ -305,7 +368,40 @@ export default function ReviewPage() {
 
     window.addEventListener("keydown", onKeyDown)
     return () => window.removeEventListener("keydown", onKeyDown)
-  }, [first, mutation, undoMutation, undoTargetId])
+  }, [cardTransition.phase, first, mutation.isPending, undoMutation, undoTargetId])
+
+  function triggerDecision(payload: DecisionPayload, stampLabel: string) {
+    if (mutation.isPending || undoMutation.isPending || cardTransition.phase !== "idle") {
+      return
+    }
+
+    setActExpanded(false)
+    setDeferExpanded(false)
+    setCardTransition({
+      phase: "stamping",
+      stampLabel,
+      recordId: payload.id
+    })
+
+    if (transitionTimerRef.current) {
+      window.clearTimeout(transitionTimerRef.current)
+    }
+    if (mutationTimerRef.current) {
+      window.clearTimeout(mutationTimerRef.current)
+    }
+
+    transitionTimerRef.current = window.setTimeout(() => {
+      setCardTransition((current) =>
+        current.recordId === payload.id
+          ? { ...current, phase: "exiting" }
+          : current
+      )
+
+      mutationTimerRef.current = window.setTimeout(() => {
+        mutation.mutate(payload)
+      }, 200)
+    }, 300)
+  }
 
   return (
     <div className="min-h-screen bg-background p-4 font-sans md:p-6">
@@ -313,7 +409,11 @@ export default function ReviewPage() {
         <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col animate-fade-in-up">
           <AppNav />
 
-          <ReviewHeader t={t} remaining={today.data?.total || 0} />
+          <ReviewHeader
+            t={t}
+            reviewed={stats.data?.today_reviewed ?? 0}
+            remaining={stats.data?.today_remaining ?? 0}
+          />
 
           <ReviewStatsPanel
             reviewed={stats.data?.today_reviewed ?? 0}
@@ -324,48 +424,53 @@ export default function ReviewPage() {
 
           {today.isLoading ? <LoadingState label={t("review.fetching", "Fetching blocks...")} /> : null}
 
-          {today.isSuccess && !first && (
-            <EmptyState
-              title={t("review.empty", "ALL CAUGHT UP")}
-              description={t("review.noPending", "No pending operations.")}
-              actionLabel={t("review.goCapture", "Add new item")}
-              actionHref="/capture"
+          {today.isSuccess && !first ? (
+            <ReviewCompleteScreen
+              t={t}
+              reviewed={stats.data?.today_reviewed ?? 0}
+              streakDays={stats.data?.streak_days ?? 0}
+              totalActive={stats.data?.total_active ?? 0}
             />
-          )}
+          ) : null}
 
           {first ? (
             <ReviewCurrentCard
               t={t}
               record={first}
-              mutationPending={mutation.isPending}
+              mutationPending={mutation.isPending || cardTransition.phase !== "idle"}
               archivePending={mutation.isPending && mutation.variables?.decisionType === "ARCHIVE"}
+              transitionPhase={cardTransition.recordId === first.id ? cardTransition.phase : "idle"}
+              stampLabel={cardTransition.recordId === first.id ? cardTransition.stampLabel : null}
               actExpanded={actExpanded}
               deferExpanded={deferExpanded}
               errorMessage={mutation.error?.message ?? null}
-              onArchive={() => mutation.mutate({ id: first.id, decisionType: "ARCHIVE" })}
+              onArchive={() => triggerDecision({ id: first.id, decisionType: "ARCHIVE" }, "ARCHIVED")}
               onToggleAct={toggleActPanel}
               onToggleDefer={toggleDeferPanel}
-              onSelectAct={(actionType) => mutation.mutate({ id: first.id, decisionType: "ACT", actionType })}
-              onSelectDefer={(deferReason) => mutation.mutate({ id: first.id, decisionType: "DEFER", deferReason })}
+              onSelectAct={(actionType) => triggerDecision({ id: first.id, decisionType: "ACT", actionType }, actionType === "TODO" ? "TODO" : actionType === "SHARE" ? "SHARED" : "EXPERIMENT")}
+              onSelectDefer={(deferReason) => triggerDecision({ id: first.id, decisionType: "DEFER", deferReason }, "DEFERRED")}
               onRetry={() => {
                 mutation.reset()
+                setCardTransition({ phase: "idle", stampLabel: null, recordId: first.id })
                 today.refetch()
               }}
             />
           ) : null}
 
-          <ReviewUpNext queue={nextQueue} reviewBackHref={reviewBackHref} t={t} />
+          <ReviewUpNext queue={nextQueue} reviewBackHref="/review" t={t} />
         </main>
       </AuthGate>
-      {undoTargetId ? (
-        <Toast
-          message={t("review.undoReady", "ACKNOWLEDGED. [UNDO] available")}
-          actionLabel={t("toast.undo", "Undo")}
-          onAction={() => undoMutation.mutate(undoTargetId)}
-          onClose={() => setUndoTargetId(null)}
-          tone="success"
-        />
-      ) : null}
+      <ReviewUndoBar
+        t={t}
+        open={Boolean(undoTargetId)}
+        sequence={undoSequence}
+        onUndo={() => {
+          if (undoTargetId) {
+            undoMutation.mutate(undoTargetId)
+          }
+        }}
+        onClose={() => setUndoTargetId(null)}
+      />
     </div>
   )
 }

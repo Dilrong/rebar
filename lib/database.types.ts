@@ -74,6 +74,8 @@ export type Database = {
         p_url: string | null
         p_update_source_title: boolean
         p_source_title: string | null
+        p_update_current_note: boolean
+        p_current_note: string | null
         p_update_tags: boolean
         p_tag_ids: string[]
       }, RecordRowWithGenerated[]>

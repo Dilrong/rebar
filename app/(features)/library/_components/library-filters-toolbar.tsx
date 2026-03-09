@@ -10,6 +10,7 @@ const STATE_TABS: Array<Exclude<StateFilter, "ALL">> = ["INBOX", "ACTIVE", "PINN
 type LibraryFiltersToolbarProps = {
   t: (key: string, fallback?: string) => string
   state: StateFilter
+  stateCounts?: Partial<Record<Exclude<StateFilter, "ALL">, number>>
   kind: string
   q: string
   tagId: string
@@ -28,6 +29,7 @@ type LibraryFiltersToolbarProps = {
 export function LibraryFiltersToolbar({
   t,
   state,
+  stateCounts = {},
   kind,
   q,
   tagId,
@@ -61,6 +63,9 @@ export function LibraryFiltersToolbar({
             className={`min-h-[44px] shrink-0 px-4 py-2 border-4 border-foreground font-mono text-xs font-bold uppercase flex items-center justify-center transition-transform active:translate-y-[2px] active:translate-x-[2px] ${state === tab ? "bg-foreground text-background shadow-brutal" : "bg-background text-foreground hover:bg-foreground/10"}`}
           >
             {getStateLabel(tab, t)}
+            <span className="ml-2 inline-flex min-w-[1.5rem] items-center justify-center rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-bold text-white">
+              {stateCounts[tab] ?? 0}
+            </span>
           </button>
         ))}
       </div>

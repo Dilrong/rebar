@@ -1,6 +1,6 @@
 import Link from "next/link"
-import { AlertTriangle, CheckSquare } from "lucide-react"
-import type { FormEventHandler } from "react"
+import { AlertTriangle, ArrowUpRight, Link as LinkIcon } from "lucide-react"
+import { useMemo, useState, type FormEventHandler, type KeyboardEvent } from "react"
 import type { UseFormReturn } from "react-hook-form"
 import { LoadingSpinner } from "@shared/ui/loading"
 import type { CreateRecordInput } from "@/lib/schemas"
@@ -11,11 +11,11 @@ type CaptureManualFormProps = {
   form: UseFormReturn<CreateRecordInput>
   tags: TagRow[]
   selectedTagIds: string[]
+  savedCount: number
+  lastSavedPreview: string | null
   onSubmit: FormEventHandler<HTMLFormElement>
   mutationPending: boolean
   mutationErrorMessage: string | null
-  mutationSuccess: boolean
-  showSavedToast: boolean
   duplicateRecordId: string | null
   onMergeDuplicate: () => void
 }
@@ -29,61 +29,97 @@ export function CaptureManualForm({
   form,
   tags,
   selectedTagIds,
+  savedCount,
+  lastSavedPreview,
   onSubmit,
   mutationPending,
   mutationErrorMessage,
-  mutationSuccess,
-  showSavedToast,
   duplicateRecordId,
   onMergeDuplicate
 }: CaptureManualFormProps) {
+  const [showAdvanced, setShowAdvanced] = useState(false)
   const { errors } = form.formState
   const kindError = getErrorMessage(errors.kind?.message)
   const contentError = getErrorMessage(errors.content?.message)
   const urlError = getErrorMessage(errors.url?.message)
   const sourceTitleError = getErrorMessage(errors.source_title?.message)
   const tagIdsError = getErrorMessage(errors.tag_ids?.message)
+  const content = form.watch("content") ?? ""
+  const kind = form.watch("kind")
+  const currentUrl = form.watch("url") ?? ""
+
+  const detectedUrl = useMemo(() => {
+    const match = content.match(/https?:\/\/[^\s]+/i)
+    return match?.[0] ?? null
+  }, [content])
+
+  const handleTextareaKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+      event.preventDefault()
+      event.currentTarget.form?.requestSubmit()
+    }
+  }
 
   return (
     <form className="space-y-8" onSubmit={onSubmit}>
-      <div className="space-y-2">
-        <label htmlFor="capture-kind" className="font-mono text-sm font-bold uppercase text-foreground">{`>> ${t("capture.dataType", "DATA.TYPE")}`}</label>
-        <div className="relative">
-          <select
-            id="capture-kind"
-            {...form.register("kind")}
-            aria-invalid={Boolean(kindError)}
-            aria-describedby={kindError ? "capture-kind-error" : undefined}
-            className="min-h-[44px] w-full bg-background border-4 border-foreground text-foreground p-4 focus:outline-none focus:ring-0 shadow-brutal-sm focus:shadow-none focus:translate-x-1 focus:translate-y-1 transition-all duration-200 appearance-none cursor-pointer font-bold uppercase rounded-none"
-          >
-            <option value="quote">{t("capture.kind.quote", "Quote / Highlight")}</option>
-            <option value="note">{t("capture.kind.note", "Personal Note")}</option>
-            <option value="link">{t("capture.kind.link", "Web Link")}</option>
-            <option value="ai">{t("capture.kind.ai", "AI Content")}</option>
-          </select>
-          <div className="absolute top-1/2 right-4 -translate-y-1/2 pointer-events-none font-black text-xl">
-            ▼
-          </div>
-        </div>
-        {kindError ? (
-          <p id="capture-kind-error" role="alert" className="font-mono text-[10px] font-bold uppercase text-destructive">
-            ERR: {kindError}
+      {savedCount > 0 ? (
+        <div className="border-2 border-accent bg-accent/10 p-3">
+          <p className="font-mono text-[10px] font-bold uppercase text-accent">
+            {t("capture.savedCount", "ITEMS SAVED")}
           </p>
-        ) : null}
-      </div>
+          <p className="mt-1 font-mono text-xs font-bold uppercase text-foreground">
+            {savedCount}건 저장됨{lastSavedPreview ? ` — 마지막: ${lastSavedPreview}` : ""}
+          </p>
+        </div>
+      ) : null}
+
+      {detectedUrl && kind !== "link" ? (
+        <div className="border-2 border-foreground bg-background p-3">
+          <p className="font-mono text-[10px] font-bold uppercase text-muted-foreground">
+            {t("capture.urlDetected", "URL DETECTED — SWITCH TO LINK?")}
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              form.setValue("kind", "link", { shouldDirty: true, shouldValidate: true })
+              if (!currentUrl) {
+                form.setValue("url", detectedUrl, { shouldDirty: true, shouldValidate: true })
+              }
+            }}
+            className="mt-3 inline-flex min-h-[44px] items-center justify-center gap-2 border-4 border-foreground bg-background px-4 py-2 font-mono text-xs font-bold uppercase shadow-brutal-sm transition-all hover:bg-foreground hover:text-background active:translate-x-1 active:translate-y-1 active:shadow-none"
+          >
+            <LinkIcon className="h-4 w-4" strokeWidth={2.5} />
+            {t("capture.kind.link", "Web Link")}
+          </button>
+        </div>
+      ) : null}
 
       <div className="space-y-2">
-        <label htmlFor="capture-content" className="font-mono text-sm font-bold uppercase text-foreground">{`>> ${t("capture.dataPayload", "DATA.PAYLOAD")}`}</label>
+        <div className="flex items-center justify-between gap-3">
+          <label htmlFor="capture-content" className="font-mono text-sm font-bold uppercase text-foreground">{`>> ${t("capture.quickMode", "QUICK INPUT")}`}</label>
+          <button
+            type="button"
+            onClick={() => setShowAdvanced((current) => !current)}
+            className="inline-flex min-h-[40px] items-center gap-2 border-2 border-foreground bg-background px-3 py-2 font-mono text-[10px] font-bold uppercase shadow-brutal-sm transition-all hover:bg-foreground hover:text-background active:translate-x-1 active:translate-y-1 active:shadow-none"
+          >
+            {showAdvanced ? "HIDE" : t("capture.advancedMode", "ADVANCED OPTIONS")}
+            <ArrowUpRight className={`h-4 w-4 transition-transform ${showAdvanced ? "rotate-180" : ""}`} strokeWidth={2.5} />
+          </button>
+        </div>
         <textarea
           id="capture-content"
-          rows={6}
+          rows={8}
           placeholder={t("capture.contentPlaceholder", "Paste your content")}
           aria-invalid={Boolean(contentError)}
           aria-describedby={contentError ? "capture-content-error" : undefined}
           className="w-full bg-background border-4 border-foreground text-foreground text-lg md:text-xl p-4 focus:outline-none focus:ring-0 shadow-brutal-sm focus:shadow-none focus:translate-x-1 focus:translate-y-1 transition-all duration-200 resize-y placeholder:text-muted-foreground/50 rounded-none"
           {...form.register("content")}
+          onKeyDown={handleTextareaKeyDown}
           autoFocus
         />
+        <p className="font-mono text-[10px] font-bold uppercase text-muted-foreground">
+          Cmd+Enter / Ctrl+Enter
+        </p>
         {contentError ? (
           <p id="capture-content-error" role="alert" className="font-mono text-[10px] font-bold uppercase text-destructive">
             ERR: {contentError}
@@ -91,87 +127,117 @@ export function CaptureManualForm({
         ) : null}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 border-t-4 border-dashed border-border pt-8">
-        <div className="space-y-2">
-          <label htmlFor="capture-meta-url" className="font-mono text-sm font-bold uppercase text-foreground">{`>> ${t("capture.metaUrl", "META.URL")}`}</label>
-          <input
-            id="capture-meta-url"
-            placeholder="https://..."
-            aria-invalid={Boolean(urlError)}
-            aria-describedby={urlError ? "capture-meta-url-error" : undefined}
-            className="min-h-[44px] w-full bg-background border-4 border-foreground text-foreground p-3 focus:outline-none focus:ring-0 shadow-brutal-sm focus:shadow-none focus:translate-x-1 focus:translate-y-1 transition-all duration-200 placeholder:text-muted-foreground/40 font-mono text-sm rounded-none"
-            {...form.register("url")}
-          />
-          {urlError ? (
-            <p id="capture-meta-url-error" role="alert" className="font-mono text-[10px] font-bold uppercase text-destructive">
-              ERR: {urlError}
-            </p>
-          ) : null}
-        </div>
-
-        <div className="space-y-2">
-          <label htmlFor="capture-meta-ref" className="font-mono text-sm font-bold uppercase text-foreground">{`>> ${t("capture.metaRef", "META.REF")}`}</label>
-          <input
-            id="capture-meta-ref"
-            placeholder="SOURCE IDENTIFIER"
-            aria-invalid={Boolean(sourceTitleError)}
-            aria-describedby={sourceTitleError ? "capture-meta-ref-error" : undefined}
-            className="min-h-[44px] w-full bg-background border-4 border-foreground text-foreground p-3 focus:outline-none focus:ring-0 shadow-brutal-sm focus:shadow-none focus:translate-x-1 focus:translate-y-1 transition-all duration-200 placeholder:text-muted-foreground/40 font-mono text-sm uppercase rounded-none"
-            {...form.register("source_title")}
-          />
-          {sourceTitleError ? (
-            <p id="capture-meta-ref-error" role="alert" className="font-mono text-[10px] font-bold uppercase text-destructive">
-              ERR: {sourceTitleError}
-            </p>
-          ) : null}
-        </div>
-      </div>
-
-      <fieldset
-        className="space-y-3 border-t-2 border-border pt-6"
-        aria-invalid={Boolean(tagIdsError)}
-        aria-describedby={tagIdsError ? "capture-tags-error" : undefined}
-      >
-        <legend className="font-mono text-sm font-bold uppercase text-foreground">{`>> ${t("capture.tags", "TAGS")}`}</legend>
-        <div className="flex flex-wrap gap-2">
-          {tags.map((tag) => {
-            const checked = selectedTagIds.includes(tag.id)
-            const inputId = `capture-tag-${tag.id}`
-
-            return (
-              <div key={tag.id}>
-                <input
-                  id={inputId}
-                  type="checkbox"
-                  className="peer sr-only"
-                  checked={checked}
-                  onChange={() => {
-                    const current = form.getValues("tag_ids") ?? []
-                    const next = checked
-                      ? current.filter((id) => id !== tag.id)
-                      : [...current, tag.id]
-                    form.setValue("tag_ids", next)
-                  }}
-                />
-                <label
-                  htmlFor={inputId}
-                  className={`min-h-[44px] px-4 py-2 border-4 font-mono text-xs font-bold uppercase flex items-center justify-center transition-all duration-200 active:translate-y-1 active:translate-x-1 hover:bg-foreground hover:text-background shadow-brutal-sm hover:shadow-none hover:translate-x-1 hover:translate-y-1 cursor-pointer peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-accent peer-focus-visible:outline-offset-2 ${checked
-                    ? "border-foreground bg-foreground text-background"
-                    : "border-foreground bg-background text-foreground"
-                    }`}
-                >
-                  #{tag.name}
-                </label>
+      {showAdvanced ? (
+        <>
+          <div className="space-y-2 border-t-4 border-dashed border-border pt-8">
+            <label htmlFor="capture-kind" className="font-mono text-sm font-bold uppercase text-foreground">{`>> ${t("capture.dataType", "DATA.TYPE")}`}</label>
+            <div className="relative">
+              <select
+                id="capture-kind"
+                {...form.register("kind")}
+                aria-invalid={Boolean(kindError)}
+                aria-describedby={kindError ? "capture-kind-error" : undefined}
+                className="min-h-[44px] w-full bg-background border-4 border-foreground text-foreground p-4 focus:outline-none focus:ring-0 shadow-brutal-sm focus:shadow-none focus:translate-x-1 focus:translate-y-1 transition-all duration-200 appearance-none cursor-pointer font-bold uppercase rounded-none"
+              >
+                <option value="quote">{t("capture.kind.quote", "Quote / Highlight")}</option>
+                <option value="note">{t("capture.kind.note", "Personal Note")}</option>
+                <option value="link">{t("capture.kind.link", "Web Link")}</option>
+                <option value="ai">{t("capture.kind.ai", "AI Content")}</option>
+              </select>
+              <div className="absolute top-1/2 right-4 -translate-y-1/2 pointer-events-none font-black text-xl">
+                ▼
               </div>
-            )
-          })}
-        </div>
-        {tagIdsError ? (
-          <p id="capture-tags-error" role="alert" className="font-mono text-[10px] font-bold uppercase text-destructive">
-            ERR: {tagIdsError}
-          </p>
-        ) : null}
-      </fieldset>
+            </div>
+            {kindError ? (
+              <p id="capture-kind-error" role="alert" className="font-mono text-[10px] font-bold uppercase text-destructive">
+                ERR: {kindError}
+              </p>
+            ) : null}
+          </div>
+
+          <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+            <div className="space-y-2">
+              <label htmlFor="capture-meta-url" className="font-mono text-sm font-bold uppercase text-foreground">{`>> ${t("capture.metaUrl", "META.URL")}`}</label>
+              <input
+                id="capture-meta-url"
+                placeholder="https://..."
+                aria-invalid={Boolean(urlError)}
+                aria-describedby={urlError ? "capture-meta-url-error" : undefined}
+                className="min-h-[44px] w-full bg-background border-4 border-foreground text-foreground p-3 focus:outline-none focus:ring-0 shadow-brutal-sm focus:shadow-none focus:translate-x-1 focus:translate-y-1 transition-all duration-200 placeholder:text-muted-foreground/40 font-mono text-sm rounded-none"
+                {...form.register("url")}
+              />
+              {urlError ? (
+                <p id="capture-meta-url-error" role="alert" className="font-mono text-[10px] font-bold uppercase text-destructive">
+                  ERR: {urlError}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="capture-meta-ref" className="font-mono text-sm font-bold uppercase text-foreground">{`>> ${t("capture.metaRef", "META.REF")}`}</label>
+              <input
+                id="capture-meta-ref"
+                placeholder="SOURCE IDENTIFIER"
+                aria-invalid={Boolean(sourceTitleError)}
+                aria-describedby={sourceTitleError ? "capture-meta-ref-error" : undefined}
+                className="min-h-[44px] w-full bg-background border-4 border-foreground text-foreground p-3 focus:outline-none focus:ring-0 shadow-brutal-sm focus:shadow-none focus:translate-x-1 focus:translate-y-1 transition-all duration-200 placeholder:text-muted-foreground/40 font-mono text-sm uppercase rounded-none"
+                {...form.register("source_title")}
+              />
+              {sourceTitleError ? (
+                <p id="capture-meta-ref-error" role="alert" className="font-mono text-[10px] font-bold uppercase text-destructive">
+                  ERR: {sourceTitleError}
+                </p>
+              ) : null}
+            </div>
+          </div>
+
+          <fieldset
+            className="space-y-3 border-t-2 border-border pt-6"
+            aria-invalid={Boolean(tagIdsError)}
+            aria-describedby={tagIdsError ? "capture-tags-error" : undefined}
+          >
+            <legend className="font-mono text-sm font-bold uppercase text-foreground">{`>> ${t("capture.tags", "TAGS")}`}</legend>
+            <div className="flex flex-wrap gap-2">
+              {tags.map((tag) => {
+                const checked = selectedTagIds.includes(tag.id)
+                const inputId = `capture-tag-${tag.id}`
+
+                return (
+                  <div key={tag.id}>
+                    <input
+                      id={inputId}
+                      type="checkbox"
+                      className="peer sr-only"
+                      checked={checked}
+                      onChange={() => {
+                        const current = form.getValues("tag_ids") ?? []
+                        const next = checked
+                          ? current.filter((id) => id !== tag.id)
+                          : [...current, tag.id]
+                        form.setValue("tag_ids", next)
+                      }}
+                    />
+                    <label
+                      htmlFor={inputId}
+                      className={`min-h-[44px] px-4 py-2 border-4 font-mono text-xs font-bold uppercase flex items-center justify-center transition-all duration-200 active:translate-y-1 active:translate-x-1 hover:bg-foreground hover:text-background shadow-brutal-sm hover:shadow-none hover:translate-x-1 hover:translate-y-1 cursor-pointer peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-accent peer-focus-visible:outline-offset-2 ${checked
+                        ? "border-foreground bg-foreground text-background animate-scale-in"
+                        : "border-foreground bg-background text-foreground"
+                        }`}
+                    >
+                      #{tag.name}
+                    </label>
+                  </div>
+                )
+              })}
+            </div>
+            {tagIdsError ? (
+              <p id="capture-tags-error" role="alert" className="font-mono text-[10px] font-bold uppercase text-destructive">
+                ERR: {tagIdsError}
+              </p>
+            ) : null}
+          </fieldset>
+        </>
+      ) : null}
 
       <div className="pt-6 border-t-4 border-foreground flex flex-col items-start gap-4">
         {mutationErrorMessage ? (
@@ -202,13 +268,6 @@ export function CaptureManualForm({
                 {t("capture.openExisting", "기존 항목 보기")}
               </Link>
             </div>
-          </div>
-        ) : null}
-
-        {mutationSuccess && !showSavedToast ? (
-          <div className="flex items-center text-accent-foreground bg-accent font-mono text-xs font-bold px-3 py-2 uppercase animate-pulse">
-            <CheckSquare className="w-4 h-4 mr-2" strokeWidth={3} />
-            {t("capture.committed", "COMMITTED TO DATABASE.")}
           </div>
         ) : null}
 

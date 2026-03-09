@@ -152,7 +152,7 @@ export async function PATCH(
   const supabase = getSupabaseAdmin()
   const existing = await supabase
     .from("records")
-    .select("id, state, source_id, url, source_title")
+    .select("id, state, source_id, url, source_title, current_note")
     .eq("id", parsedParams.data.id)
     .eq("user_id", userId)
     .single()
@@ -188,8 +188,12 @@ export async function PATCH(
 
   const shouldUpdateUrl = Object.prototype.hasOwnProperty.call(parsedBody.data, "url")
   const shouldUpdateSourceTitle = Object.prototype.hasOwnProperty.call(parsedBody.data, "source_title")
+  const shouldUpdateCurrentNote = Object.prototype.hasOwnProperty.call(parsedBody.data, "current_note")
   const nextUrl = shouldUpdateUrl ? parsedBody.data.url ?? null : existing.data.url ?? null
   const nextSourceTitle = shouldUpdateSourceTitle ? parsedBody.data.source_title ?? null : existing.data.source_title ?? null
+  const nextCurrentNote = shouldUpdateCurrentNote
+    ? (parsedBody.data.current_note?.trim().length ? parsedBody.data.current_note : null)
+    : existing.data.current_note ?? null
 
   const updated = await supabase
     .rpc("update_record_with_tags", {
@@ -201,6 +205,8 @@ export async function PATCH(
       p_url: shouldUpdateUrl ? nextUrl : null,
       p_update_source_title: shouldUpdateSourceTitle,
       p_source_title: shouldUpdateSourceTitle ? nextSourceTitle : null,
+      p_update_current_note: shouldUpdateCurrentNote,
+      p_current_note: shouldUpdateCurrentNote ? nextCurrentNote : null,
       p_update_tags: shouldUpdateTags,
       p_tag_ids: nextTagIds
     })

@@ -1,3 +1,5 @@
+import { Flame } from "lucide-react"
+
 type ReviewStatsPanelProps = {
   reviewed: number
   remaining: number
@@ -19,7 +21,12 @@ export function ReviewStatsPanel({ reviewed, remaining, streakDays, totalRecords
       </p>
       <p className="font-mono text-xs font-bold uppercase relative z-10 flex flex-col gap-1">
         <span className="text-muted-foreground opacity-80 text-[10px] tracking-wider">STREAK</span>
-        <span className="text-lg md:text-xl text-foreground font-black">{streakDays}d</span>
+        <span className="flex items-center gap-2 text-lg md:text-xl text-foreground font-black">
+          <span>{streakDays}d</span>
+          {streakDays > 3 ? (
+            <Flame className={streakDays > 7 ? "h-6 w-6 text-accent" : "h-5 w-5 text-accent"} strokeWidth={2.5} />
+          ) : null}
+        </span>
       </p>
       <p className="font-mono text-xs font-bold uppercase relative z-10 flex flex-col gap-1">
         <span className="text-muted-foreground opacity-80 text-[10px] tracking-wider">TOTAL</span>

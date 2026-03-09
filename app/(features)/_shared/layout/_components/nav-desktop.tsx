@@ -15,7 +15,6 @@ type NavDesktopProps = {
   syncFetching: boolean
   syncError: boolean
   onSync: () => void
-  onOpenQuickSearch: () => void
   onToggleTheme: () => void
 }
 
@@ -30,7 +29,6 @@ export function NavDesktop({
   syncFetching,
   syncError,
   onSync,
-  onOpenQuickSearch,
   onToggleTheme
 }: NavDesktopProps) {
   return (
@@ -86,15 +84,13 @@ export function NavDesktop({
         >
           <RefreshCw className={cn("h-5 w-5", syncFetching && "animate-spin")} strokeWidth={2.5} />
         </button>
-        <span
-          className={cn(
-            "hidden xl:inline-block border-2 px-2 py-1 font-mono text-[10px] font-bold uppercase",
-            syncError ? "border-destructive text-destructive" : "border-foreground text-muted-foreground"
-          )}
-          aria-live="polite"
-        >
-          {syncStatusLabel}
-        </span>
+        {syncError ? (
+          <span
+            className="inline-flex h-3 w-3 border-2 border-foreground bg-destructive shadow-brutal-sm"
+            aria-label={syncStatusLabel}
+            title={syncStatusLabel}
+          />
+        ) : null}
 
         {authEmail ? (
           <Link
@@ -114,17 +110,6 @@ export function NavDesktop({
           </Link>
         )}
 
-        <div className="w-px h-6 bg-border mx-1"></div>
-
-        <button
-          type="button"
-          onClick={onOpenQuickSearch}
-          className="min-h-[44px] min-w-[44px] flex items-center justify-center border-2 border-transparent text-muted-foreground hover:border-foreground hover:text-foreground hover:shadow-brutal-sm hover:-translate-x-1 hover:-translate-y-1 active:translate-x-1 active:translate-y-1 active:shadow-none transition-all duration-200"
-          aria-label="Quick search"
-          title="Quick Search (⌘K)"
-        >
-          <Search className="h-5 w-5" strokeWidth={2.5} />
-        </button>
         <button
           onClick={onToggleTheme}
           className="min-h-[44px] min-w-[44px] flex items-center justify-center border-2 border-transparent text-muted-foreground hover:border-foreground hover:text-foreground hover:shadow-brutal-sm hover:-translate-x-1 hover:-translate-y-1 active:translate-x-1 active:translate-y-1 active:shadow-none transition-all duration-200"

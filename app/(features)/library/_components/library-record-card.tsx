@@ -12,6 +12,7 @@ type LibraryRecordCardProps = {
   onToggleSelected: (id: string) => void
   onPrefetch: (id: string) => void
   toRecordHref: (recordId: string) => string
+  onOpenRecord: (recordId: string) => void
   t: (key: string, fallback?: string) => string
   activatePending: boolean
   inboxPending: boolean
@@ -28,6 +29,7 @@ export const LibraryRecordCard = memo(function LibraryRecordCard({
   onToggleSelected,
   onPrefetch,
   toRecordHref,
+  onOpenRecord,
   t,
   activatePending,
   inboxPending,
@@ -49,7 +51,7 @@ export const LibraryRecordCard = memo(function LibraryRecordCard({
     <div
       onMouseEnter={handlePrefetch}
       onFocus={handlePrefetch}
-      className="group relative flex min-h-[14rem] flex-col overflow-hidden border-[3px] border-foreground bg-card bg-noise p-4 text-foreground shadow-brutal transition-all duration-200 hover:-translate-y-1 hover:-translate-x-1 hover:bg-foreground hover:text-background hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] active:translate-x-1 active:translate-y-1 active:shadow-none dark:hover:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.1)] md:min-h-[18rem] md:border-4 md:p-6"
+      className={`group relative flex min-h-[14rem] flex-col overflow-hidden border-[3px] border-foreground bg-card bg-noise p-4 text-foreground shadow-brutal transition-all duration-200 hover:-translate-y-1 hover:-translate-x-1 hover:bg-foreground hover:text-background hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] active:translate-x-1 active:translate-y-1 active:shadow-none dark:hover:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.1)] md:min-h-[18rem] md:border-4 md:p-6 ${selected ? "ring-4 ring-accent -translate-y-1" : ""}`}
     >
       <div className="absolute top-0 right-0 w-24 h-24 bg-background opacity-5 md:opacity-10 group-hover:opacity-20 transition-opacity pointer-events-none" style={{ clipPath: 'polygon(100% 0, 0 0, 100% 100%)' }} />
       <div className="flex justify-between items-start mb-3 md:mb-4 relative z-10">
@@ -77,7 +79,7 @@ export const LibraryRecordCard = memo(function LibraryRecordCard({
             {record.kind}
           </span>
           <span
-            className={`mt-1 inline-flex h-fit border-2 px-1.5 py-0.5 font-mono text-[10px] font-bold uppercase transition-all ${record.state === "INBOX"
+            className={`mt-1 inline-flex h-fit border-2 px-1.5 py-0.5 font-mono text-[10px] font-bold uppercase transition-colors duration-300 ${record.state === "INBOX"
               ? "border-accent text-accent shadow-[2px_2px_0px_0px_theme(colors.accent.DEFAULT)] group-hover:border-background group-hover:text-background group-hover:shadow-[2px_2px_0px_0px_var(--background)]"
               : "border-current shadow-[2px_2px_0px_0px_currentColor] group-hover:border-background group-hover:shadow-[2px_2px_0px_0px_var(--background)]"
               }`}
@@ -119,7 +121,11 @@ export const LibraryRecordCard = memo(function LibraryRecordCard({
         ) : null}
       </div>
 
-      <Link href={toRecordHref(id)} className="flex-1 overflow-hidden flex flex-col relative z-10">
+      <Link
+        href={toRecordHref(id)}
+        onClick={() => onOpenRecord(id)}
+        className="flex-1 overflow-hidden flex flex-col relative z-10"
+      >
         <p className="font-bold text-base md:text-lg leading-tight line-clamp-5 flex-1 mb-4 group-hover:text-glitch transition-all">
           {stripMarkdown(record.content)}
         </p>

@@ -29,6 +29,13 @@ type RecordsResponse = {
   next_cursor?: string | null
 }
 
+type RecordCountsResponse = {
+  inbox: number
+  active: number
+  pinned: number
+  archived: number
+}
+
 type TagsResponse = {
   data: TagRow[]
 }
@@ -112,10 +119,12 @@ export default function LibraryPage() {
   const [exportPending, setExportPending] = useState(false)
   const [exportError, setExportError] = useState<string | null>(null)
   const [cursor, setCursor] = useState<string | null>(null)
+  const [loadMorePending, setLoadMorePending] = useState(false)
   const [allRecords, setAllRecords] = useState<RecordRow[]>([])
   const [editingTagId, setEditingTagId] = useState<string | null>(null)
   const [editingTagName, setEditingTagName] = useState("")
   const [didInitFromUrl, setDidInitFromUrl] = useState(false)
+  const restoredScrollRef = useRef(false)
 
   useEffect(() => {
     const queryState = searchParams.get("state")
@@ -190,17 +199,13 @@ export default function LibraryPage() {
     return params.toString()
   }, [debouncedQ, kind, order, sort, state, tagId])
 
-  const qc = useQueryClient()
-
   const prefetchRecord = useCallback((id: string) => {
-    qc.prefetchQuery({
+    queryClient.prefetchQuery({
       queryKey: ["record-detail", id],
       queryFn: () => apiFetch<{ record: RecordRow }>(`/api/records/${id}`),
       staleTime: 1000 * 60 * 5
     })
-  }, [qc])
-
-
+  }, [queryClient])
 
   const records = useQuery({
     queryKey: ["records", queryString, sort, order],
@@ -215,6 +220,9 @@ export default function LibraryPage() {
   })
 
   const libraryBackHref = queryString ? `/library?${queryString}` : "/library"
+  const scrollStorageKey = useMemo(() => `library:scroll:${libraryBackHref}`, [libraryBackHref])
+  const navigationStorageKey = useMemo(() => `library:navigation:${libraryBackHref}`, [libraryBackHref])
+  const isTransitioning = records.isFetching && !records.isLoading && !loadMorePending
 
   const toRecordHref = useCallback((recordId: string) =>
     `/records/${recordId}?from=${encodeURIComponent(libraryBackHref)}`, [libraryBackHref])
@@ -223,6 +231,12 @@ export default function LibraryPage() {
     queryKey: ["tags"],
     queryFn: () => apiFetch<TagsResponse>("/api/tags"),
     staleTime: 1000 * 60 * 10 // 10 minutes
+  })
+
+  const recordCounts = useQuery({
+    queryKey: ["record-counts"],
+    queryFn: () => apiFetch<RecordCountsResponse>("/api/records/counts"),
+    staleTime: 1000 * 60 * 2
   })
 
   const selectedTagName = (tags.data?.data ?? []).find((tag) => tag.id === tagId)?.name ?? null
@@ -271,6 +285,7 @@ export default function LibraryPage() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["records"] })
+      queryClient.invalidateQueries({ queryKey: ["record-counts"] })
     }
   })
 
@@ -283,6 +298,7 @@ export default function LibraryPage() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["records"] })
+      queryClient.invalidateQueries({ queryKey: ["record-counts"] })
       queryClient.invalidateQueries({ queryKey: ["review-stats"] })
       queryClient.invalidateQueries({ queryKey: ["review-today"] })
     }
@@ -298,6 +314,7 @@ export default function LibraryPage() {
     onSuccess: () => {
       setSelectedIds([])
       queryClient.invalidateQueries({ queryKey: ["records"] })
+      queryClient.invalidateQueries({ queryKey: ["record-counts"] })
     }
   })
 
@@ -422,16 +439,27 @@ export default function LibraryPage() {
     }
   }
 
-  const loadMore = async () => {
-    if (!cursor) return
+  const loadMore = useCallback(async () => {
+    if (!cursor || loadMorePending) {
+      return
+    }
+
     const params = new URLSearchParams(queryString)
     params.set("cursor", cursor)
+    setLoadMorePending(true)
     try {
       const data = await apiFetch<RecordsResponse>(`/api/records?${params.toString()}`)
-      setAllRecords((prev) => [...prev, ...data.data])
+      setAllRecords((prev) => {
+        const seen = new Set(prev.map((record) => record.id))
+        const nextRows = data.data.filter((record) => !seen.has(record.id))
+        return [...prev, ...nextRows]
+      })
       setCursor(data.next_cursor ?? null)
     } catch { }
-  }
+    finally {
+      setLoadMorePending(false)
+    }
+  }, [cursor, loadMorePending, queryString])
 
   const handleRenameTag = (tag: TagRow) => {
     setEditingTagId(tag.id)
@@ -455,6 +483,17 @@ export default function LibraryPage() {
   const handleActivate = useCallback((id: string) => activate.mutate(id), [activate])
   const handleInboxTodo = useCallback((id: string) => inboxDecision.mutate({ id, decisionType: "ACT", actionType: "TODO" }), [inboxDecision])
   const handleInboxArchive = useCallback((id: string) => inboxDecision.mutate({ id, decisionType: "ARCHIVE" }), [inboxDecision])
+  const handleOpenRecord = useCallback((recordId: string) => {
+    if (typeof window === "undefined") {
+      return
+    }
+
+    window.sessionStorage.setItem(scrollStorageKey, String(window.scrollY))
+    window.sessionStorage.setItem(
+      navigationStorageKey,
+      JSON.stringify({ ids: allRecords.map((record) => record.id), currentId: recordId })
+    )
+  }, [allRecords, navigationStorageKey, scrollStorageKey])
 
   const visibleIds = (records.data?.data ?? []).map((record) => record.id)
   const toggleSelect = useCallback((id: string) => {
@@ -559,6 +598,67 @@ export default function LibraryPage() {
     setExportMenuIndex(0)
   }
 
+  useEffect(() => {
+    restoredScrollRef.current = false
+  }, [scrollStorageKey])
+
+  useEffect(() => {
+    if (!didInitFromUrl || !records.isSuccess || restoredScrollRef.current) {
+      return
+    }
+
+    if (typeof window === "undefined") {
+      return
+    }
+
+    const raw = window.sessionStorage.getItem(scrollStorageKey)
+    restoredScrollRef.current = true
+    if (raw === null) {
+      return
+    }
+
+    const top = Number(raw)
+    window.requestAnimationFrame(() => {
+      window.scrollTo({ top: Number.isFinite(top) ? top : 0 })
+      window.sessionStorage.removeItem(scrollStorageKey)
+    })
+  }, [allRecords.length, didInitFromUrl, records.isSuccess, scrollStorageKey])
+
+  const emptyState = useMemo(() => {
+    if (q.trim()) {
+      return {
+        title: t("library.emptySearch", "NO SEARCH RESULTS"),
+        description: `'${q.trim()}'에 대한 결과가 없습니다`,
+        actionLabel: t("library.clearAll", "Clear all"),
+        actionHref: "/library"
+      }
+    }
+
+    if (state === "INBOX" && !kind && !tagId) {
+      return {
+        title: t("library.emptyInbox", "INBOX IS EMPTY"),
+        description: "수집함이 비었습니다 → 캡처로 새 항목 추가",
+        actionLabel: t("library.goCapture", "Go capture"),
+        actionHref: "/capture"
+      }
+    }
+
+    if (state === "ACTIVE" && !kind && !tagId) {
+      return {
+        title: t("library.emptyActive", "NO ACTIVE ITEMS"),
+        description: "활성 항목이 없습니다 → 리뷰에서 항목을 활성화하세요",
+        actionLabel: t("nav.review", "Review"),
+        actionHref: "/review"
+      }
+    }
+
+    return {
+      title: t("library.noResults", "0 RESULTS FOUND."),
+      actionLabel: t("library.goCapture", "Go capture"),
+      actionHref: "/capture"
+    }
+  }, [kind, q, state, t, tagId])
+
   return (
     <div className="min-h-screen bg-background p-4 font-sans selection:bg-accent selection:text-white md:p-6">
       <AuthGate>
@@ -594,6 +694,12 @@ export default function LibraryPage() {
           <LibraryFiltersToolbar
             t={t}
             state={state}
+            stateCounts={{
+              INBOX: recordCounts.data?.inbox ?? 0,
+              ACTIVE: recordCounts.data?.active ?? 0,
+              PINNED: recordCounts.data?.pinned ?? 0,
+              ARCHIVED: recordCounts.data?.archived ?? 0
+            }}
             kind={kind}
             q={q}
             tagId={tagId}
@@ -661,11 +767,13 @@ export default function LibraryPage() {
           <LibraryRecordGrid
             t={t}
             isLoading={records.isLoading}
+            isUpdating={isTransitioning}
             records={allRecords}
             selectedIds={selectedIds}
             onToggleSelected={toggleSelect}
             onPrefetch={prefetchRecord}
             toRecordHref={toRecordHref}
+            onOpenRecord={handleOpenRecord}
             activatePendingRecordId={activate.isPending ? activate.variables ?? null : null}
             inboxPending={inboxDecision.isPending}
             inboxPendingRecordId={inboxDecision.variables?.id ?? null}
@@ -678,15 +786,16 @@ export default function LibraryPage() {
           <LibraryPagination
             t={t}
             hasNext={Boolean(cursor)}
-            isFetching={records.isFetching}
+            isLoadingMore={loadMorePending}
             onLoadMore={loadMore}
           />
 
           {records.isSuccess && !records.isLoading && allRecords.length === 0 ? (
             <EmptyState
-              title={t("library.noResults", "0 RESULTS FOUND.")}
-              actionLabel={t("library.goCapture", "Go capture")}
-              actionHref="/capture"
+              title={emptyState.title}
+              description={emptyState.description}
+              actionLabel={emptyState.actionLabel}
+              actionHref={emptyState.actionHref}
             />
           ) : null}
 

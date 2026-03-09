@@ -2,20 +2,17 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useTheme } from "next-themes"
-import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useI18n } from "@app-shared/i18n/i18n-provider"
 import { getSupabaseBrowser } from "@/lib/supabase-browser"
-import {
-  getStartPagePreference,
-  getPreferencesServer,
-  setStartPagePreference
-} from "@feature-lib/settings/preferences"
-import { useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import { apiFetch } from "@/lib/client-http"
 import { NavDesktop } from "./_components/nav-desktop"
 import { NavMobileTop } from "./_components/nav-mobile-top"
 import { NavMobileBottom } from "./_components/nav-mobile-bottom"
-import { QuickSearchDialog, type QuickSearchResult } from "./_components/quick-search-dialog"
+import { CommandPalette } from "@shared/ui/command-palette"
+import { BottomSheet } from "@shared/ui/bottom-sheet"
+import type { RecordRow } from "@/lib/types"
 
 type SyncHealthResponse = {
   authenticated: boolean
@@ -44,15 +41,11 @@ export default function AppNav() {
   const [mounted, setMounted] = useState(false)
   const [authEmail, setAuthEmail] = useState<string | null>(null)
   const [authError, setAuthError] = useState<string | null>(null)
-  const [homeHref, setHomeHref] = useState("/")
-  const [quickOpen, setQuickOpen] = useState(false)
-  const [quickQuery, setQuickQuery] = useState("")
-  const [quickResults, setQuickResults] = useState<QuickSearchResult[]>([])
-  const [quickActiveIndex, setQuickActiveIndex] = useState(-1)
-  const [quickLoading, setQuickLoading] = useState(false)
+  const homeHref = "/"
   const [lastSyncAt, setLastSyncAt] = useState<number | null>(null)
-  const quickDialogRef = useRef<HTMLDivElement | null>(null)
-  const quickInputRef = useRef<HTMLInputElement | null>(null)
+  const [paletteOpen, setPaletteOpen] = useState(false)
+  const [captureSheetOpen, setCaptureSheetOpen] = useState(false)
+  const [quickCaptureContent, setQuickCaptureContent] = useState("")
 
   const currentQuery = searchParams.toString()
   const currentLocation = currentQuery ? `${pathname}?${currentQuery}` : pathname
@@ -80,6 +73,32 @@ export default function AppNav() {
       ? t("nav.syncing", "SYNCING...")
       : `${t("nav.synced", "SYNCED")} ${formatSyncAge(lastSyncAt)}`
 
+  const detectedQuickCaptureUrl = useMemo(() => {
+    const match = quickCaptureContent.match(/https?:\/\/[^\s]+/i)
+    return match?.[0] ?? null
+  }, [quickCaptureContent])
+
+  const quickCaptureMutation = useMutation({
+    mutationFn: async () => {
+      const trimmed = quickCaptureContent.trim()
+      const isLink = Boolean(detectedQuickCaptureUrl) && trimmed === detectedQuickCaptureUrl
+
+      return apiFetch<RecordRow>("/api/records", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          kind: isLink ? "link" : "note",
+          content: trimmed,
+          url: isLink ? detectedQuickCaptureUrl : undefined
+        })
+      })
+    },
+    onSuccess: () => {
+      setQuickCaptureContent("")
+      setCaptureSheetOpen(false)
+    }
+  })
+
   useEffect(() => {
     setMounted(true)
     try {
@@ -103,11 +122,12 @@ export default function AppNav() {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        const target = event.target as HTMLElement | null
+        if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) {
+          return
+        }
         event.preventDefault()
-        setQuickOpen(true)
-      }
-      if (event.key === "Escape") {
-        setQuickOpen(false)
+        setPaletteOpen(true)
       }
     }
 
@@ -115,138 +135,7 @@ export default function AppNav() {
     return () => window.removeEventListener("keydown", onKeyDown)
   }, [])
 
-  useEffect(() => {
-    if (!quickOpen) {
-      setQuickLoading(false)
-      return
-    }
-    if (!quickQuery.trim()) {
-      setQuickResults([])
-      setQuickActiveIndex(-1)
-      setQuickLoading(false)
-      return
-    }
 
-    let active = true
-    setQuickLoading(true)
-
-    const timer = window.setTimeout(async () => {
-      try {
-        const response = await fetch(`/api/search?q=${encodeURIComponent(quickQuery.trim())}&limit=5`)
-        const data = (await response.json()) as { data?: Array<{ id: string; kind: string; content: string }> }
-        if (!active) {
-          return
-        }
-
-        setQuickResults(data.data ?? [])
-        setQuickActiveIndex(-1)
-      } catch {
-        if (!active) {
-          return
-        }
-
-        setQuickResults([])
-      } finally {
-        if (active) {
-          setQuickLoading(false)
-        }
-      }
-    }, 180)
-
-    return () => {
-      active = false
-      window.clearTimeout(timer)
-    }
-  }, [quickOpen, quickQuery])
-
-  useEffect(() => {
-    if (!quickOpen) {
-      setQuickActiveIndex(-1)
-      return
-    }
-
-    quickInputRef.current?.focus()
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Tab") {
-        return
-      }
-
-      const container = quickDialogRef.current
-      if (!container) {
-        return
-      }
-
-      const focusable = Array.from(
-        container.querySelectorAll<HTMLElement>(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-        )
-      ).filter((node: any) => !node.hasAttribute("disabled"))
-
-      if (focusable.length === 0) {
-        return
-      }
-
-      const first = focusable[0] as HTMLElement
-      const last = focusable[focusable.length - 1] as HTMLElement
-      const active = document.activeElement as HTMLElement | null
-
-      if (event.shiftKey && active === first) {
-        event.preventDefault()
-        last.focus()
-      } else if (!event.shiftKey && active === last) {
-        event.preventDefault()
-        first.focus()
-      }
-    }
-
-    document.addEventListener("keydown", handleKeyDown)
-    return () => document.removeEventListener("keydown", handleKeyDown)
-  }, [quickOpen])
-
-  useEffect(() => {
-    const localStartPage = getStartPagePreference()
-    setHomeHref(localStartPage)
-
-    void getPreferencesServer().then((serverPrefs) => {
-      if (!serverPrefs.startPage) {
-        return
-      }
-
-      setStartPagePreference(serverPrefs.startPage)
-      setHomeHref(serverPrefs.startPage)
-    })
-  }, [])
-
-
-  const handleQuickInputKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
-    if (!quickResults.length) {
-      return
-    }
-
-    if (event.key === "ArrowDown") {
-      event.preventDefault()
-      setQuickActiveIndex((idx: number) => (idx + 1) % quickResults.length)
-      return
-    }
-
-    if (event.key === "ArrowUp") {
-      event.preventDefault()
-      setQuickActiveIndex((idx: number) => (idx <= 0 ? quickResults.length - 1 : idx - 1))
-      return
-    }
-
-    if (event.key === "Enter") {
-      event.preventDefault()
-
-      const selected = quickResults[quickActiveIndex >= 0 ? quickActiveIndex : 0]
-      if (!selected) {
-        return
-      }
-
-      setQuickOpen(false)
-      router.push(buildRecordHref(selected.id))
-    }
-  }
 
   return (
     <>
@@ -261,7 +150,6 @@ export default function AppNav() {
         syncFetching={syncHealth.isFetching}
         syncError={syncHealth.isError}
         onSync={() => syncHealth.refetch()}
-        onOpenQuickSearch={() => setQuickOpen(true)}
         onToggleTheme={() => setTheme(theme === "dark" ? "light" : "dark")}
       />
 
@@ -278,25 +166,62 @@ export default function AppNav() {
         onToggleTheme={() => setTheme(theme === "dark" ? "light" : "dark")}
       />
 
-      <NavMobileBottom pathname={pathname} />
+      <NavMobileBottom
+        pathname={pathname}
+        captureSheetOpen={captureSheetOpen}
+        onOpenCapture={() => setCaptureSheetOpen(true)}
+      />
 
-      {authError ? <p className="font-mono text-xs text-destructive mt-[-1rem] mb-4">{authError}</p> : null}
-
-      <QuickSearchDialog
+      <CommandPalette
         t={t}
-        open={quickOpen}
-        dialogRef={quickDialogRef}
-        inputRef={quickInputRef}
-        query={quickQuery}
-        results={quickResults}
-        activeIndex={quickActiveIndex}
-        loading={quickLoading}
-        onClose={() => setQuickOpen(false)}
-        onQueryChange={setQuickQuery}
-        onInputKeyDown={handleQuickInputKeyDown}
-        onActiveIndexChange={setQuickActiveIndex}
+        open={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
         buildRecordHref={buildRecordHref}
       />
+
+      <BottomSheet
+        open={captureSheetOpen}
+        title={t("capture.quickMode", "QUICK INPUT")}
+        description={t("capture.contentPlaceholder", "Paste your content")}
+        onClose={() => setCaptureSheetOpen(false)}
+      >
+        <div className="space-y-4">
+          <textarea
+            value={quickCaptureContent}
+            onChange={(event) => setQuickCaptureContent(event.target.value)}
+            rows={7}
+            placeholder={t("capture.contentPlaceholder", "Paste your content")}
+            className="w-full resize-y border-4 border-foreground bg-background p-4 text-base font-medium text-foreground focus:outline-none focus:ring-0"
+          />
+          {quickCaptureMutation.error ? (
+            <p className="font-mono text-[10px] font-bold uppercase text-destructive">
+              {quickCaptureMutation.error.message}
+            </p>
+          ) : null}
+          <div className="flex flex-col gap-3">
+            <button
+              type="button"
+              onClick={() => quickCaptureMutation.mutate()}
+              disabled={quickCaptureMutation.isPending || quickCaptureContent.trim().length === 0}
+              className="min-h-[48px] border-4 border-foreground bg-foreground px-4 py-3 font-mono text-xs font-bold uppercase text-background shadow-brutal-sm transition-all hover:bg-accent hover:text-accent-foreground active:translate-x-1 active:translate-y-1 active:shadow-none disabled:opacity-50"
+            >
+              {quickCaptureMutation.isPending ? t("capture.transmitting", "SAVING...") : t("capture.commit", "SAVE")}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setCaptureSheetOpen(false)
+                router.push("/capture")
+              }}
+              className="min-h-[48px] border-4 border-foreground bg-background px-4 py-3 font-mono text-xs font-bold uppercase shadow-brutal-sm transition-all hover:bg-foreground hover:text-background active:translate-x-1 active:translate-y-1 active:shadow-none"
+            >
+              {t("capture.advancedMode", "ADVANCED OPTIONS")}
+            </button>
+          </div>
+        </div>
+      </BottomSheet>
+
+      {authError ? <p className="font-mono text-xs text-destructive mt-[-1rem] mb-4">{authError}</p> : null}
     </>
   )
 }
