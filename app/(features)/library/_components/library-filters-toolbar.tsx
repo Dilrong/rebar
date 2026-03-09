@@ -1,3 +1,5 @@
+import { useState } from "react"
+import { Filter } from "lucide-react"
 import { getStateLabel } from "@/lib/i18n/state-label"
 import type { TagRow } from "@/lib/types"
 
@@ -44,33 +46,14 @@ export function LibraryFiltersToolbar({
   onSortOrderChange,
   onClearAllFilters
 }: LibraryFiltersToolbarProps) {
-  return (
-    <section className="mb-8 border-4 border-foreground bg-card p-4">
-      <div className="mb-4 flex gap-2 overflow-x-auto pb-1 hide-scrollbar">
-        <button
-          key="ALL"
-          type="button"
-          onClick={() => onStateChange("ALL")}
-          className={`min-h-[44px] shrink-0 px-4 py-2 border-4 border-foreground font-mono text-xs font-bold uppercase flex items-center justify-center transition-transform active:translate-y-[2px] active:translate-x-[2px] ${state === "ALL" ? "bg-foreground text-background shadow-brutal" : "bg-background text-foreground hover:bg-foreground/10"}`}
-        >
-          {t("library.allView", "전체보기")}
-        </button>
-        {STATE_TABS.map((tab) => (
-          <button
-            key={tab}
-            type="button"
-            onClick={() => onStateChange(tab)}
-            className={`min-h-[44px] shrink-0 px-4 py-2 border-4 border-foreground font-mono text-xs font-bold uppercase flex items-center justify-center transition-transform active:translate-y-[2px] active:translate-x-[2px] ${state === tab ? "bg-foreground text-background shadow-brutal" : "bg-background text-foreground hover:bg-foreground/10"}`}
-          >
-            {getStateLabel(tab, t)}
-            <span className="ml-2 inline-flex min-w-[1.5rem] items-center justify-center rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-bold text-white">
-              {stateCounts[tab] ?? 0}
-            </span>
-          </button>
-        ))}
-      </div>
+  const [showFilters, setShowFilters] = useState(false)
 
-      <div className="flex flex-col gap-3 xl:flex-row">
+  const isDefaultSort = sort === "created_at" && order === "desc"
+  const hasActiveFilters = Boolean(state !== "ALL" || kind || tagId || !isDefaultSort)
+
+  return (
+    <section className="mb-8 border-[3px] md:border-4 border-foreground bg-card p-3 md:p-4 shadow-brutal-sm md:shadow-brutal flex flex-col gap-4">
+      <div className="flex gap-2 w-full">
         <label htmlFor="library-query" className="sr-only">
           {t("library.searchPlaceholder", "Search content/title")}
         </label>
@@ -80,105 +63,164 @@ export function LibraryFiltersToolbar({
           value={q}
           onChange={(event) => onQueryChange(event.target.value)}
           placeholder={t("library.searchPlaceholder", "Search content/title")}
-          className="min-h-[44px] bg-background border-4 border-foreground text-foreground px-4 py-3 font-mono text-sm w-full md:w-auto focus:outline-none focus:ring-0 flex-1 rounded-none shadow-brutal-sm focus:shadow-none focus:translate-x-1 focus:translate-y-1 transition-all duration-200"
+          className="min-h-[44px] bg-background border-4 border-foreground text-foreground px-4 py-3 font-mono text-sm w-full md:w-auto focus:outline-none focus:ring-0 flex-1 rounded-none shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] transition-all duration-200"
         />
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:flex xl:flex-row">
-          <label htmlFor="library-kind" className="sr-only">
-            {t("library.allKinds", "All kinds")}
-          </label>
-          <select
-            id="library-kind"
-            value={kind}
-            onChange={(event) => onKindChange(event.target.value)}
-            className="min-h-[44px] bg-background border-4 border-foreground text-foreground px-4 py-2 font-mono text-sm w-full md:w-auto focus:outline-none focus:ring-0 rounded-none shadow-brutal-sm focus:shadow-none focus:translate-x-1 focus:translate-y-1 transition-all duration-200 cursor-pointer appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22currentColor%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-[length:0.65em_0.65em] bg-[right_1rem_center] bg-no-repeat pr-10"
-          >
-            <option value="">{t("library.allKinds", "All kinds")}</option>
-            <option value="quote">quote</option>
-            <option value="note">note</option>
-            <option value="link">link</option>
-            <option value="ai">ai</option>
-          </select>
-          <label htmlFor="library-tag-filter" className="sr-only">
-            {t("library.allTags", "All tags")}
-          </label>
-          <select
-            id="library-tag-filter"
-            value={tagId}
-            onChange={(event) => onTagChange(event.target.value)}
-            className="min-h-[44px] bg-background border-4 border-foreground text-foreground px-4 py-2 font-mono text-sm w-full md:w-auto shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] focus:outline-none focus:ring-0 rounded-none transition-none"
-          >
-            <option value="">{t("library.allTags", "All tags")}</option>
-            {tags.map((tag) => (
-              <option key={tag.id} value={tag.id}>
-                #{tag.name}
-              </option>
-            ))}
-          </select>
-          <label htmlFor="library-sort" className="sr-only">
-            Sort order
-          </label>
-          <select
-            id="library-sort"
-            value={`${sort}:${order}`}
-            onChange={(event) => {
-              const [nextSort, nextOrder] = event.target.value.split(":") as [SortField, SortOrder]
-              onSortOrderChange(nextSort, nextOrder)
-            }}
-            className="min-h-[44px] bg-background border-4 border-foreground px-4 py-2 font-mono text-sm text-foreground w-full md:w-auto shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] focus:outline-none focus:ring-0 rounded-none transition-none sm:col-span-2 xl:col-span-1"
-          >
-            <option value="created_at:desc">Newest first</option>
-            <option value="created_at:asc">Oldest first</option>
-            <option value="review_count:desc">Most reviewed</option>
-            <option value="due_at:asc">Due soonest</option>
-          </select>
-        </div>
-      </div>
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        <span className="font-mono text-[10px] font-bold uppercase text-muted-foreground mr-2">{t("library.activeFilters", "Active filters")}</span>
         <button
           type="button"
-          onClick={() => onStateChange("ALL")}
-          className="min-h-[44px] max-w-full flex items-center justify-center border-2 border-foreground px-3 py-2 font-mono text-[10px] font-bold uppercase transition-transform hover:bg-foreground/10 active:translate-y-[2px] active:translate-x-[2px]"
+          onClick={() => setShowFilters((prev) => !prev)}
+          className={`flex min-h-[44px] items-center justify-center gap-2 border-[3px] px-4 font-mono text-xs font-bold transition-all active:translate-x-1 active:translate-y-1 active:shadow-none md:border-4 ${showFilters || hasActiveFilters
+              ? "border-foreground bg-foreground text-background shadow-none translate-x-1 translate-y-1"
+              : "border-foreground bg-accent text-accent-foreground shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-foreground hover:text-background dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.1)]"
+            }`}
+          aria-expanded={showFilters}
         >
-          {t("library.state", "State")}: {state === "ALL" ? t("library.allView", "전체보기") : getStateLabel(state, t)}
+          <Filter className="h-4 w-4" strokeWidth={3} />
+          <span className="hidden sm:inline">
+            {showFilters ? t("search.hideFilters", "HIDE FILTERS") : t("search.showFilters", "FILTERS")}
+          </span>
+          {hasActiveFilters && !showFilters ? (
+            <span className="flex h-4 w-4 items-center justify-center border-2 border-background bg-accent text-[10px] text-accent-foreground">
+              !
+            </span>
+          ) : null}
         </button>
-        {q ? (
-          <button
-            type="button"
-            onClick={() => onQueryChange("")}
-            className="min-h-[44px] max-w-full truncate border-2 border-foreground px-3 py-2 font-mono text-[10px] font-bold uppercase transition-transform hover:bg-foreground/10 active:translate-y-[2px] active:translate-x-[2px]"
-          >
-            {t("library.query", "Search")}: {q} x
-          </button>
-        ) : null}
-        {kind ? (
-          <button
-            type="button"
-            onClick={() => onKindChange("")}
-            className="min-h-[44px] max-w-full flex items-center justify-center border-2 border-foreground px-3 py-2 font-mono text-[10px] font-bold uppercase transition-transform hover:bg-foreground/10 active:translate-y-[2px] active:translate-x-[2px]"
-          >
-            {t("library.kind", "Kind")}: {kind} x
-          </button>
-        ) : null}
-        {tagId ? (
-          <button
-            type="button"
-            onClick={() => onTagChange("")}
-            className="min-h-[44px] max-w-full truncate border-2 border-foreground px-3 py-2 font-mono text-[10px] font-bold uppercase transition-transform hover:bg-foreground/10 active:translate-y-[2px] active:translate-x-[2px]"
-          >
-            {t("library.tag", "Tag")}: {selectedTagName ? `#${selectedTagName}` : tagId.slice(0, 6)} x
-          </button>
-        ) : null}
-        {(q || kind || tagId || state !== "ALL") ? (
-          <button
-            type="button"
-            onClick={onClearAllFilters}
-            className="min-h-[44px] flex items-center justify-center border-4 border-foreground bg-foreground px-3 py-2 font-mono text-[10px] font-bold uppercase text-background hover:bg-background hover:text-foreground transition-transform hover:shadow-brutal-sm active:translate-y-[2px] active:translate-x-[2px]"
-          >
-            {t("library.clearAll", "Clear all")}
-          </button>
-        ) : null}
       </div>
+
+      {showFilters ? (
+        <div className="animate-fade-in-up flex flex-col gap-4 border-t-4 border-foreground pt-4">
+          <div className="flex gap-2 overflow-x-auto pb-2 hide-scrollbar">
+            <button
+              key="ALL"
+              type="button"
+              onClick={() => onStateChange("ALL")}
+              className={`min-h-[44px] shrink-0 px-4 py-2 border-4 border-foreground font-mono text-xs font-bold uppercase flex items-center justify-center transition-transform active:translate-y-[2px] active:translate-x-[2px] ${state === "ALL" ? "bg-foreground text-background shadow-brutal" : "bg-background text-foreground hover:bg-foreground/10"}`}
+            >
+              {t("library.allView", "전체보기")}
+            </button>
+            {STATE_TABS.map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => onStateChange(tab)}
+                className={`min-h-[44px] shrink-0 px-4 py-2 border-4 border-foreground font-mono text-xs font-bold uppercase flex items-center justify-center transition-transform active:translate-y-[2px] active:translate-x-[2px] ${state === tab ? "bg-foreground text-background shadow-brutal" : "bg-background text-foreground hover:bg-foreground/10"}`}
+              >
+                {getStateLabel(tab, t)}
+                <span className="ml-2 inline-flex min-w-[1.5rem] items-center justify-center rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-bold text-white">
+                  {stateCounts[tab] ?? 0}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 xl:flex xl:flex-row">
+            <div className="xl:flex-1">
+              <label htmlFor="library-kind" className="mb-1 block font-mono text-[10px] font-bold uppercase text-muted-foreground">
+                {t("library.kind", "Kind")}
+              </label>
+              <select
+                id="library-kind"
+                value={kind}
+                onChange={(event) => onKindChange(event.target.value)}
+                className="min-h-[44px] bg-background border-4 border-foreground text-foreground px-4 py-2 font-mono text-sm w-full focus:outline-none focus:ring-0 rounded-none shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] transition-none cursor-pointer appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22currentColor%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-[length:0.65em_0.65em] bg-[right_1rem_center] bg-no-repeat pr-10"
+              >
+                <option value="">{t("library.allKinds", "All kinds")}</option>
+                <option value="quote">quote</option>
+                <option value="note">note</option>
+                <option value="link">link</option>
+                <option value="ai">ai</option>
+              </select>
+            </div>
+            <div className="xl:flex-1">
+              <label htmlFor="library-tag-filter" className="mb-1 block font-mono text-[10px] font-bold uppercase text-muted-foreground">
+                {t("library.tag", "Tag")}
+              </label>
+              <select
+                id="library-tag-filter"
+                value={tagId}
+                onChange={(event) => onTagChange(event.target.value)}
+                className="min-h-[44px] bg-background border-4 border-foreground text-foreground px-4 py-2 font-mono text-sm w-full shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] focus:outline-none focus:ring-0 rounded-none transition-none"
+              >
+                <option value="">{t("library.allTags", "All tags")}</option>
+                {tags.map((tag) => (
+                  <option key={tag.id} value={tag.id}>
+                    #{tag.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="xl:flex-1 sm:col-span-3 xl:col-span-1 border-t-2 border-foreground/20 sm:border-0 pt-2 sm:pt-0 mt-1 sm:mt-0">
+              <label htmlFor="library-sort" className="mb-1 block font-mono text-[10px] font-bold uppercase text-muted-foreground">
+                Sort By
+              </label>
+              <select
+                id="library-sort"
+                value={`${sort}:${order}`}
+                onChange={(event) => {
+                  const [nextSort, nextOrder] = event.target.value.split(":") as [SortField, SortOrder]
+                  onSortOrderChange(nextSort, nextOrder)
+                }}
+                className="min-h-[44px] bg-background border-4 border-foreground px-4 py-2 font-mono text-sm text-foreground w-full shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] focus:outline-none focus:ring-0 rounded-none transition-none"
+              >
+                <option value="created_at:desc">Newest first</option>
+                <option value="created_at:asc">Oldest first</option>
+                <option value="review_count:desc">Most reviewed</option>
+                <option value="due_at:asc">Due soonest</option>
+              </select>
+            </div>
+          </div>
+
+          {(q || kind || tagId || state !== "ALL") ? (
+            <div className="mt-2 flex flex-wrap items-center gap-2 border-t-2 border-foreground pt-4">
+              <span className="font-mono text-[10px] font-bold uppercase text-muted-foreground mr-2">{t("library.activeFilters", "Active filters")}</span>
+
+              {state !== "ALL" ? (
+                <button
+                  type="button"
+                  onClick={() => onStateChange("ALL")}
+                  className="min-h-[44px] max-w-full flex items-center justify-center border-2 border-foreground px-3 py-2 font-mono text-[10px] font-bold uppercase transition-transform hover:bg-foreground/10 active:translate-y-[2px] active:translate-x-[2px]"
+                >
+                  {t("library.state", "State")}: {getStateLabel(state, t)} x
+                </button>
+              ) : null}
+              {q ? (
+                <button
+                  type="button"
+                  onClick={() => onQueryChange("")}
+                  className="min-h-[44px] max-w-full truncate border-2 border-foreground px-3 py-2 font-mono text-[10px] font-bold uppercase transition-transform hover:bg-foreground/10 active:translate-y-[2px] active:translate-x-[2px]"
+                >
+                  {t("library.query", "Search")}: {q} x
+                </button>
+              ) : null}
+              {kind ? (
+                <button
+                  type="button"
+                  onClick={() => onKindChange("")}
+                  className="min-h-[44px] max-w-full flex items-center justify-center border-2 border-foreground px-3 py-2 font-mono text-[10px] font-bold uppercase transition-transform hover:bg-foreground/10 active:translate-y-[2px] active:translate-x-[2px]"
+                >
+                  {t("library.kind", "Kind")}: {kind} x
+                </button>
+              ) : null}
+              {tagId ? (
+                <button
+                  type="button"
+                  onClick={() => onTagChange("")}
+                  className="min-h-[44px] max-w-full truncate border-2 border-foreground px-3 py-2 font-mono text-[10px] font-bold uppercase transition-transform hover:bg-foreground/10 active:translate-y-[2px] active:translate-x-[2px]"
+                >
+                  {t("library.tag", "Tag")}: {selectedTagName ? `#${selectedTagName}` : tagId.slice(0, 6)} x
+                </button>
+              ) : null}
+
+              <button
+                type="button"
+                onClick={onClearAllFilters}
+                className="min-h-[44px] flex items-center justify-center border-4 border-foreground bg-foreground px-3 py-2 font-mono text-[10px] font-bold uppercase text-background hover:bg-background hover:text-foreground transition-transform hover:shadow-brutal-sm active:translate-y-[2px] active:translate-x-[2px]"
+              >
+                {t("library.clearAll", "Clear all")}
+              </button>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
     </section>
   )
 }
