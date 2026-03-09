@@ -19,7 +19,7 @@
     "http://127.0.0.1:4173/review",
     "http://127.0.0.1:4173/review/history",
     "http://127.0.0.1:4173/search",
-    "http://127.0.0.1:4173/projects",
+
     "http://127.0.0.1:4173/share"
   ]
 }
