@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 import AuthGate from "@shared/auth/auth-gate"
-import AppNav from "@shared/layout/app-nav"
+import ProtectedPageShell from "@shared/layout/protected-page-shell"
 import { apiFetch } from "@/lib/client-http"
 import { CreateRecordSchema, type CreateRecordInput } from "@/lib/schemas"
 import type { RecordRow, TagRow } from "@/lib/types"
@@ -531,10 +531,9 @@ export default function CapturePage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-background p-4 font-sans selection:bg-accent selection:text-white md:p-6">
+    <>
       <AuthGate>
-        <main className="max-w-5xl w-full mx-auto animate-fade-in-up pb-24">
-          <AppNav />
+        <ProtectedPageShell rootClassName="flex flex-col selection:bg-accent selection:text-white md:p-6" mainClassName="max-w-5xl pb-24">
 
           <div className="border-[3px] md:border-4 border-foreground bg-card p-4 md:p-10 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.1)] md:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] md:dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.1)]">
             <header className="mb-6 md:mb-10 flex flex-col md:flex-row md:items-end justify-between border-b-[3px] md:border-b-4 border-foreground pb-4 md:pb-6 gap-4">
@@ -625,7 +624,7 @@ export default function CapturePage() {
               />
             ) : null}
           </div>
-        </main>
+        </ProtectedPageShell>
       </AuthGate>
       {showSavedToast ? (
         <Toast
@@ -655,6 +654,6 @@ export default function CapturePage() {
           }}
         />
       ) : null}
-    </div>
+    </>
   )
 }

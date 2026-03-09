@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation"
 import { useRouter } from "next/navigation"
 import { useMutation } from "@tanstack/react-query"
 import AuthGate from "@shared/auth/auth-gate"
-import AppNav from "@shared/layout/app-nav"
+import ProtectedPageShell from "@shared/layout/protected-page-shell"
 import { useI18n } from "@app-shared/i18n/i18n-provider"
 import { apiFetch } from "@/lib/client-http"
 import { Toast } from "@shared/ui/toast"
@@ -110,10 +110,9 @@ export default function SharePage() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4 font-sans">
+    <>
       <AuthGate>
-        <main className="mx-auto max-w-xl pb-20">
-          <AppNav />
+        <ProtectedPageShell mainClassName="max-w-xl pb-20">
           <section className="border-4 border-foreground bg-card p-4">
             <h1 className="mb-4 border-b-4 border-foreground pb-2 font-black text-3xl uppercase">{t("share.title", "Quick Share")}</h1>
             {autoMode ? (
@@ -181,7 +180,7 @@ export default function SharePage() {
               ) : null}
             </div>
           </section>
-        </main>
+        </ProtectedPageShell>
       </AuthGate>
       {showSavedToast ? (
         <Toast
@@ -199,6 +198,6 @@ export default function SharePage() {
           }}
         />
       ) : null}
-    </div>
+    </>
   )
 }

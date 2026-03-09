@@ -4,7 +4,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useEffect, useRef, useState, useCallback, useMemo } from "react"
 import AuthGate from "@shared/auth/auth-gate"
-import AppNav from "@shared/layout/app-nav"
+import ProtectedPageShell from "@shared/layout/protected-page-shell"
 import { useI18n } from "@app-shared/i18n/i18n-provider"
 import { apiFetch } from "@/lib/client-http"
 import { getStateLabel } from "@/lib/i18n/state-label"
@@ -376,8 +376,7 @@ export default function RecordDetailPage() {
         deleteAnnotation.mutate(highlightId)
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- mutate is stable per React Query docs
-    [t]
+    [deleteAnnotation, t]
   )
 
   const toggleTag = useCallback((tagId: string) => {
@@ -618,10 +617,9 @@ export default function RecordDetailPage() {
   ])
 
   return (
-    <div className="min-h-screen bg-background p-4 font-sans selection:bg-accent selection:text-white md:p-6">
+    <>
       <AuthGate>
-        <main className="mx-auto w-full max-w-5xl animate-fade-in-up pb-32">
-          <AppNav />
+        <ProtectedPageShell rootClassName="selection:bg-accent selection:text-white md:p-6" mainClassName="max-w-5xl pb-32">
 
           <div className="mb-4 mt-4 flex flex-col gap-3">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -809,7 +807,7 @@ export default function RecordDetailPage() {
               ERR: {detail.error.message}
             </div>
           ) : null}
-        </main>
+        </ProtectedPageShell>
       </AuthGate>
       <ConfirmDialog
         open={pendingDeleteConfirm}
@@ -886,6 +884,6 @@ export default function RecordDetailPage() {
       >
         {mobilePanel ? panelContent[mobilePanel] : null}
       </BottomSheet>
-    </div>
+    </>
   )
 }
