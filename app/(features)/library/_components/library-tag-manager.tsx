@@ -1,3 +1,4 @@
+import { useState } from "react"
 import { Tag, Trash2 } from "lucide-react"
 import type { TagRow } from "@/lib/types"
 import { LoadingDots } from "@shared/ui/loading"
@@ -39,11 +40,28 @@ export function LibraryTagManager({
   onCancelRenameTag,
   onDeleteTag
 }: LibraryTagManagerProps) {
+  const [open, setOpen] = useState(false)
+
   return (
-    <section className="mb-10 border-4 border-foreground bg-card p-4">
-      <div className="flex items-center gap-2 mb-4 font-mono text-xs font-bold uppercase">
-        <Tag className="w-4 h-4" /> {t("library.tagManager", "Tag Manager")}
-      </div>
+    <section className="mb-6">
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        className={`flex min-h-[44px] w-full items-center justify-between gap-2 border-4 border-foreground px-4 py-2 font-mono text-xs font-bold uppercase transition-all active:translate-x-1 active:translate-y-1 ${open
+          ? "bg-foreground text-background"
+          : "bg-card text-foreground hover:bg-foreground hover:text-background shadow-brutal-sm"
+        }`}
+        aria-expanded={open}
+      >
+        <span className="flex items-center gap-2">
+          <Tag className="w-4 h-4" /> {t("library.tagManager", "Tag Manager")}
+          <span className="font-mono text-[10px] opacity-70">({tags.length})</span>
+        </span>
+        <span className="text-sm">{open ? "▲" : "▼"}</span>
+      </button>
+
+      {!open ? null : (
+      <div className="animate-fade-in-up border-4 border-t-0 border-foreground bg-card p-4">
       <div className="flex flex-col md:flex-row gap-3 mb-6">
         <label htmlFor="library-new-tag" className="sr-only">
           {t("library.newTag", "new tag")}
@@ -110,6 +128,8 @@ export function LibraryTagManager({
       {createError ? <p className="font-mono text-xs text-destructive mt-2">{createError}</p> : null}
       {renameError ? <p className="font-mono text-xs text-destructive mt-2">{renameError}</p> : null}
       {deleteError ? <p className="font-mono text-xs text-destructive mt-2">{deleteError}</p> : null}
+      </div>
+      )}
     </section>
   )
 }

@@ -47,6 +47,8 @@ describe("split components interaction (jsdom)", () => {
     fireEvent.click(screen.getByRole("button", { name: "URL" }))
     expect(screen.getByText("URL에서 메타데이터를 읽어 빠르게 캡처")).toBeTruthy()
 
+    // OCR is behind "MORE" toggle in simplified design
+    fireEvent.click(screen.getByRole("button", { name: /MORE/i }))
     fireEvent.click(screen.getByRole("button", { name: "OCR" }))
     expect(screen.getByText("이미지에서 텍스트 추출 후 저장")).toBeTruthy()
   })
@@ -122,7 +124,11 @@ describe("split components interaction (jsdom)", () => {
     fireEvent.change(screen.getByPlaceholderText("Search content/title"), { target: { value: "updated" } })
     expect(onQueryChange).toHaveBeenCalledWith("updated")
 
-    fireEvent.change(screen.getByRole("combobox", { name: "Sort order" }), { target: { value: "due_at:asc" } })
+    // Filters (sort, kind, tag, state tabs) are behind filter toggle
+    fireEvent.click(screen.getByRole("button", { name: /FILTERS/i }))
+
+    const sortSelect = screen.getByLabelText("Sort By")
+    fireEvent.change(sortSelect, { target: { value: "due_at:asc" } })
     expect(onSortOrderChange).toHaveBeenCalledWith("due_at", "asc")
 
     fireEvent.click(screen.getByRole("button", { name: "Clear all" }))
@@ -158,6 +164,9 @@ describe("split components interaction (jsdom)", () => {
         onMenuItemKeyDown: vi.fn()
       })
     )
+
+    // Export options are hidden behind EXPORT toggle in simplified design
+    fireEvent.click(within(container).getByRole("button", { name: /EXPORT/i }))
 
     fireEvent.change(within(container).getByDisplayValue("2026-03-01"), { target: { value: "2026-03-05" } })
     expect(onExportSinceChange).toHaveBeenCalledWith("2026-03-05")

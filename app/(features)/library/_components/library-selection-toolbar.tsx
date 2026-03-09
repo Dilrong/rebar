@@ -27,13 +27,7 @@ export function LibrarySelectionToolbar({
   onApplyBulkTags
 }: LibrarySelectionToolbarProps) {
   if (selectedCount <= 0) {
-    return (
-      <section className="mb-4 border-2 border-dashed border-foreground bg-background px-3 py-2">
-        <p className="font-mono text-[10px] font-bold uppercase text-muted-foreground">
-          {t("library.bulkTip", "카드를 선택하면 일괄 작업을 사용할 수 있습니다")}
-        </p>
-      </section>
-    )
+    return null
   }
 
   return (

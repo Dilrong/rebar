@@ -718,15 +718,6 @@ export default function LibraryPage() {
             onClearAllFilters={clearAllFilters}
           />
 
-          {state === "INBOX" ? (
-            <section className="mb-6 border-4 border-foreground bg-card p-4">
-              <p className="font-mono text-xs font-bold uppercase text-foreground">{t("library.inboxFlow", "INBOX QUICK LOOP")}</p>
-              <p className="mt-2 font-mono text-[10px] font-bold uppercase text-muted-foreground">
-                {t("library.inboxFlowHint", "카드에서 바로 활성화/할일/보관 처리")}
-              </p>
-            </section>
-          ) : null}
-
           <LibrarySelectionToolbar
             t={t}
             selectedCount={selectedIds.length}
