@@ -4,6 +4,7 @@ import { getUserId } from "@/lib/auth"
 import { PGRST_NOT_FOUND } from "@/lib/constants"
 import { fail, internalError, ok, rateLimited } from "@/lib/http"
 import { checkRateLimitDistributed, resolveClientKey } from "@/lib/rate-limit"
+import { sendRecordStateChangedEvent } from "@feature-lib/notifications/webhooks"
 import { getInvalidOwnedTagIds } from "@/lib/record-tags"
 import { isValidStateTransition, UpdateRecordSchema } from "@/lib/schemas"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
@@ -252,7 +253,35 @@ export async function PATCH(
       return internalError("record.patch", refreshed.error)
     }
 
+    if (existing.data.state !== refreshed.data.state) {
+      const webhookResult = await sendRecordStateChangedEvent({
+        userId,
+        recordId: parsedParams.data.id,
+        previousState: existing.data.state,
+        nextState: refreshed.data.state,
+        source: "record.patch"
+      })
+
+      if (!webhookResult.ok) {
+        console.error("[record.patch] webhook dispatch failed:", webhookResult.error)
+      }
+    }
+
     return ok({ record: refreshed.data as RecordRow })
+  }
+
+  if (existing.data.state !== updated.data.state) {
+    const webhookResult = await sendRecordStateChangedEvent({
+      userId,
+      recordId: parsedParams.data.id,
+      previousState: existing.data.state,
+      nextState: updated.data.state,
+      source: "record.patch"
+    })
+
+    if (!webhookResult.ok) {
+      console.error("[record.patch] webhook dispatch failed:", webhookResult.error)
+    }
   }
 
   return ok({ record: updated.data as RecordRow })
@@ -283,6 +312,21 @@ export async function DELETE(
   }
 
   const supabase = getSupabaseAdmin()
+  const existing = await supabase
+    .from("records")
+    .select("id, state")
+    .eq("id", parsed.data.id)
+    .eq("user_id", userId)
+    .single()
+
+  if (existing.error) {
+    if (existing.error.code === PGRST_NOT_FOUND) {
+      return fail("Record not found", 404)
+    }
+
+    return internalError("record.delete", existing.error)
+  }
+
   const deleted = await supabase
     .from("records")
     .update({ state: "TRASHED", updated_at: new Date().toISOString() })
@@ -297,6 +341,20 @@ export async function DELETE(
     }
 
     return internalError("record.delete", deleted.error)
+  }
+
+  if (existing.data.state !== deleted.data.state) {
+    const webhookResult = await sendRecordStateChangedEvent({
+      userId,
+      recordId: parsed.data.id,
+      previousState: existing.data.state,
+      nextState: deleted.data.state,
+      source: "record.patch"
+    })
+
+    if (!webhookResult.ok) {
+      console.error("[record.delete] webhook dispatch failed:", webhookResult.error)
+    }
   }
 
   return ok({ record: deleted.data })

@@ -10,6 +10,7 @@ const ShareBodySchema = z
   .object({
     content: z.string().optional(),
     text: z.string().optional(),
+    note: z.string().max(50_000).optional(),
     title: z.string().optional(),
     source_title: z.string().optional(),
     url: z.string().url().optional(),
@@ -54,6 +55,7 @@ export async function POST(request: NextRequest) {
     items: [
       {
         content,
+        note: parsed.data.note,
         title: parsed.data.title,
         source_title: parsed.data.source_title,
         url: parsed.data.url,

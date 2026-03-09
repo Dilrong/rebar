@@ -1,37 +1,50 @@
 import Link from "next/link"
 import { Database, Plus } from "lucide-react"
 import type { KeyboardEvent as ReactKeyboardEvent, MutableRefObject, RefObject } from "react"
+import type { ExportFormat } from "@feature-lib/export/formats"
 import { LibraryExportMenu } from "./library-export-menu"
 
 type LibraryHeaderProps = {
   t: (key: string, fallback?: string) => string
   totalRows: number
+  exportSince: string
+  exportScopeLabel: string
+  exportSincePresets: Array<{
+    key: string
+    fallback: string
+    value: string
+  }>
   exportMenuOpen: boolean
   exportPending: boolean
   exportMenuWrapRef: RefObject<HTMLDivElement | null>
   exportTriggerRef: RefObject<HTMLButtonElement | null>
   exportItemRefs: MutableRefObject<Array<HTMLButtonElement | null>>
+  onExportSinceChange: (value: string) => void
+  onClearExportSince: () => void
   onToggleMenu: () => void
   onOpenMenuFromKeyboard: () => void
   onCloseMenu: () => void
-  onExportMarkdown: () => void
-  onExportObsidian: () => void
+  onExport: (format: ExportFormat) => void
   onMenuItemKeyDown: (event: ReactKeyboardEvent<HTMLButtonElement>) => void
 }
 
 export function LibraryHeader({
   t,
   totalRows,
+  exportSince,
+  exportScopeLabel,
+  exportSincePresets,
   exportMenuOpen,
   exportPending,
   exportMenuWrapRef,
   exportTriggerRef,
   exportItemRefs,
+  onExportSinceChange,
+  onClearExportSince,
   onToggleMenu,
   onOpenMenuFromKeyboard,
   onCloseMenu,
-  onExportMarkdown,
-  onExportObsidian,
+  onExport,
   onMenuItemKeyDown
 }: LibraryHeaderProps) {
   return (
@@ -46,6 +59,48 @@ export function LibraryHeader({
           <span className="opacity-80 text-[10px] md:mr-2 tracking-widest">{t("library.rows", "ROWS")}:</span>
           <span className="font-black text-lg leading-none">{totalRows}</span>
         </span>
+        <label htmlFor="library-export-since" className="flex w-full min-w-0 flex-col sm:w-auto">
+          <span className="mb-1 font-mono text-[10px] font-bold uppercase text-muted-foreground">
+            {t("library.exportSince", "INCREMENTAL SINCE")}
+          </span>
+          <input
+            id="library-export-since"
+            type="date"
+            value={exportSince}
+            onChange={(event) => onExportSinceChange(event.target.value)}
+            className="min-h-[44px] w-full border-[3px] border-foreground bg-background px-3 py-2 font-mono text-xs font-bold text-foreground shadow-brutal-sm focus:outline-none focus:ring-0 md:border-4"
+          />
+          <span className="mt-1 font-mono text-[10px] font-bold uppercase text-muted-foreground">
+            {t("library.exportSinceHint", "LEAVE BLANK FOR FULL EXPORT")}
+          </span>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {exportSincePresets.map((preset) => (
+              <button
+                key={preset.key}
+                type="button"
+                onClick={() => onExportSinceChange(preset.value)}
+                className={`min-h-[32px] border-[3px] border-foreground px-2 py-1 font-mono text-[10px] font-bold uppercase shadow-brutal-sm transition-transform active:translate-x-[1px] active:translate-y-[1px] ${
+                  exportSince === preset.value ? "bg-foreground text-background" : "bg-background text-foreground hover:bg-foreground hover:text-background"
+                }`}
+                aria-pressed={exportSince === preset.value}
+              >
+                {t(preset.key, preset.fallback)}
+              </button>
+            ))}
+            {exportSince ? (
+              <button
+                type="button"
+                onClick={onClearExportSince}
+                className="min-h-[32px] border-[3px] border-foreground bg-background px-2 py-1 font-mono text-[10px] font-bold uppercase text-foreground shadow-brutal-sm transition-transform hover:bg-foreground hover:text-background active:translate-x-[1px] active:translate-y-[1px]"
+              >
+                {t("library.exportClearSince", "CLEAR")}
+              </button>
+            ) : null}
+          </div>
+          <span className="mt-2 font-mono text-[10px] font-bold uppercase text-muted-foreground">
+            {t("library.exportScope", "CURRENT SCOPE")}: {exportScopeLabel}
+          </span>
+        </label>
         <LibraryExportMenu
           t={t}
           exportMenuOpen={exportMenuOpen}
@@ -53,11 +108,10 @@ export function LibraryHeader({
           exportMenuWrapRef={exportMenuWrapRef}
           exportTriggerRef={exportTriggerRef}
           exportItemRefs={exportItemRefs}
+          onExport={onExport}
           onToggleMenu={onToggleMenu}
           onOpenMenuFromKeyboard={onOpenMenuFromKeyboard}
           onCloseMenu={onCloseMenu}
-          onExportMarkdown={onExportMarkdown}
-          onExportObsidian={onExportObsidian}
           onMenuItemKeyDown={onMenuItemKeyDown}
         />
         <Link

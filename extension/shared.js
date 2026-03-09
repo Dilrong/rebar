@@ -6,15 +6,22 @@ export const DEFAULT_SETTINGS = {
 export const CONTENT_LIMIT = 12000
 
 export const MSG = {
+  GET_SELECTION: "GET_SELECTION",
   GET_ARTICLE: "GET_ARTICLE",
   SHOW_BANNER: "SHOW_BANNER",
+  HIDE_BANNER: "HIDE_BANNER",
+  PICK_TAGS: "PICK_TAGS",
   CANCEL_SAVE: "CANCEL_SAVE",
   SAVE_CAPTURE: "SAVE_CAPTURE",
   GET_SETTINGS: "GET_SETTINGS"
 }
 
+export function normalizeTagList(tags) {
+  return Array.from(new Set((tags || []).map((tag) => (typeof tag === "string" ? tag.trim() : "")).filter(Boolean)))
+}
+
 export function parseTags(tagText) {
-  return (tagText || "").split(",").map((tag) => tag.trim()).filter(Boolean)
+  return normalizeTagList((tagText || "").split(","))
 }
 
 export function isValidUrl(value) {

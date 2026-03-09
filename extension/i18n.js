@@ -26,7 +26,15 @@ const messages = {
     "ext.tooManyReq": "Too many requests. Wait a moment.",
     "ext.highlightBtn": "Clip Selection",
     "ext.status.authRequired": "Login required. Please sign in to your REBAR instance.",
-    "ext.saveFailed": "Save failed"
+    "ext.saveFailed": "Save failed",
+    "ext.tagPicker.title": "Quick Tags",
+    "ext.tagPicker.desc": "Choose existing tags before saving this clip.",
+    "ext.tagPicker.empty": "No saved tags yet. Add extra tags below if needed.",
+    "ext.tagPicker.custom": "Extra tags (comma separated)",
+    "ext.tagPicker.selectedCount": "Selected tags",
+    "ext.tagPicker.confirm": "Save Clip",
+    "ext.tagPicker.cancel": "Cancel",
+    "ext.tagPicker.loadFailed": "Could not load tags. You can still add custom tags below."
   },
   ko: {
     "ext.articleBtn": "아티클 스크랩",
@@ -55,7 +63,15 @@ const messages = {
     "ext.tooManyReq": "요청이 너무 많습니다. 잠시 후 다시 시도해주세요.",
     "ext.highlightBtn": "선택 텍스트 스크랩",
     "ext.status.authRequired": "로그인이 필요합니다. REBAR에 로그인해주세요.",
-    "ext.saveFailed": "저장 실패"
+    "ext.saveFailed": "저장 실패",
+    "ext.tagPicker.title": "빠른 태그",
+    "ext.tagPicker.desc": "저장 전에 기존 태그를 선택하세요.",
+    "ext.tagPicker.empty": "저장된 태그가 없습니다. 필요하면 아래에 직접 추가하세요.",
+    "ext.tagPicker.custom": "추가 태그 (쉼표로 구분)",
+    "ext.tagPicker.selectedCount": "선택된 태그",
+    "ext.tagPicker.confirm": "클립 저장",
+    "ext.tagPicker.cancel": "취소",
+    "ext.tagPicker.loadFailed": "태그를 불러올 수 없습니다. 아래에서 직접 태그를 추가할 수 있습니다."
   }
 }
 

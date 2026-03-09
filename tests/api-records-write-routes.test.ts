@@ -7,6 +7,7 @@ const processIngestMock = vi.fn<
   (userId: string, payload: { items: Array<Record<string, unknown>> }, options?: Record<string, unknown>) =>
     Promise<{ created: number; ids: string[]; skipped_empty: number; skipped_duplicate: number; total: number }>
 >()
+const sendRecordStateChangedEventMock = vi.fn<(payload: unknown) => Promise<{ ok: boolean; skipped?: boolean; status?: number }>>()
 
 const mockState = {
   ownedTagRows: [] as Array<{ id: string; name: string }>,
@@ -49,6 +50,10 @@ vi.mock("@feature-lib/capture/ingest", () => ({
     payload: { items: Array<Record<string, unknown>> },
     options?: Record<string, unknown>
   ) => processIngestMock(userId, payload, options)
+}))
+
+vi.mock("@feature-lib/notifications/webhooks", () => ({
+  sendRecordStateChangedEvent: (payload: unknown) => sendRecordStateChangedEventMock(payload)
 }))
 
 vi.mock("@/lib/supabase-admin", () => ({
@@ -104,7 +109,13 @@ vi.mock("@/lib/supabase-admin", () => ({
     rpc: (fn: string, args: Record<string, unknown>) => {
       mockState.rpcCalls.push({ fn, args })
       return {
-        single: async () => ({ data: { id: "rec-1" }, error: null })
+        single: async () => ({
+          data: {
+            id: "rec-1",
+            state: typeof args.p_state === "string" ? args.p_state : mockState.selectedRecord.state
+          },
+          error: null
+        })
       }
     }
   })
@@ -124,6 +135,7 @@ describe("records write routes enforce owned tag ids", () => {
       skipped_duplicate: 0,
       total: 1
     })
+    sendRecordStateChangedEventMock.mockResolvedValue({ ok: true, status: 200 })
     mockState.ownedTagRows = [{ id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", name: "owned" }]
     mockState.rpcCalls = []
   })
@@ -231,6 +243,36 @@ describe("records write routes enforce owned tag ids", () => {
         p_update_tags: true,
         p_tag_ids: ["aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"]
       }
+    })
+    expect(sendRecordStateChangedEventMock).not.toHaveBeenCalled()
+  })
+
+  it("dispatches export webhook when record state changes", async () => {
+    mockState.selectedRecord.state = "ACTIVE"
+    mockState.rpcCalls = []
+    sendRecordStateChangedEventMock.mockClear()
+
+    const response = await PATCH(
+      new NextRequest("http://localhost/api/records/11111111-1111-1111-1111-111111111111", {
+        method: "PATCH",
+        body: JSON.stringify({
+          state: "PINNED"
+        }),
+        headers: { "Content-Type": "application/json" }
+      }),
+      {
+        params: Promise.resolve({ id: "11111111-1111-1111-1111-111111111111" })
+      }
+    )
+
+    expect(response.status).toBe(200)
+    expect(mockState.rpcCalls).toHaveLength(1)
+    expect(sendRecordStateChangedEventMock).toHaveBeenCalledWith({
+      userId: "user-1",
+      recordId: "11111111-1111-1111-1111-111111111111",
+      previousState: "ACTIVE",
+      nextState: "PINNED",
+      source: "record.patch"
     })
   })
 })

@@ -4,6 +4,7 @@ import { getUserId } from "@/lib/auth"
 import { PGRST_NOT_FOUND } from "@/lib/constants"
 import { fail, internalError, ok, rateLimited } from "@/lib/http"
 import { checkRateLimitDistributed, resolveClientKey } from "@/lib/rate-limit"
+import { sendRecordStateChangedEvent } from "@feature-lib/notifications/webhooks"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
 import type { RecordRow, ReviewLogRow } from "@/lib/types"
 
@@ -81,7 +82,7 @@ export async function POST(
 
   const currentRecord = await supabase
     .from("records")
-    .select("updated_at, review_count")
+    .select("state, updated_at, review_count")
     .eq("id", parsed.data.id)
     .eq("user_id", userId)
     .single()
@@ -94,7 +95,7 @@ export async function POST(
     return internalError("review.undo", currentRecord.error)
   }
 
-  const currentRecordRow = currentRecord.data as Pick<RecordRow, "updated_at" | "review_count">
+  const currentRecordRow = currentRecord.data as Pick<RecordRow, "state" | "updated_at" | "review_count">
 
   if (currentRecordRow.review_count !== lastLogRow.prev_review_count + 1) {
     return fail("Undo target is stale", 409)
@@ -146,6 +147,20 @@ export async function POST(
 
   if (inserted.error) {
     return internalError("review.undo", inserted.error)
+  }
+
+  if (currentRecordRow.state !== restored.data.state) {
+    const webhookResult = await sendRecordStateChangedEvent({
+      userId,
+      recordId: parsed.data.id,
+      previousState: currentRecordRow.state,
+      nextState: restored.data.state,
+      source: "review"
+    })
+
+    if (!webhookResult.ok) {
+      console.error("[review.undo] webhook dispatch failed:", webhookResult.error)
+    }
   }
 
   return ok({ record: restored.data as RecordRow })

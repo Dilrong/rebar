@@ -11,6 +11,8 @@ import { useI18n } from "@app-shared/i18n/i18n-provider"
 import { EmptyState } from "@shared/ui/empty-state"
 import { ErrorState } from "@shared/ui/error-state"
 import { useDebouncedValue } from "@shared/hooks/use-debounced-value"
+import { EXPORT_FORMATS, buildExportFilename, type ExportFormat } from "@feature-lib/export/formats"
+import { getStateLabel } from "@/lib/i18n/state-label"
 import { LibraryHeader } from "./_components/library-header"
 import { LibraryFiltersToolbar } from "./_components/library-filters-toolbar"
 import { LibrarySelectionToolbar } from "./_components/library-selection-toolbar"
@@ -19,6 +21,7 @@ import { LibraryRecordGrid } from "./_components/library-record-grid"
 import { LibraryPagination } from "./_components/library-pagination"
 
 import type { RecordRow, TagRow } from "@/lib/types"
+import type { RecordKind } from "@/lib/schemas"
 
 type RecordsResponse = {
   data: RecordRow[]
@@ -40,6 +43,50 @@ type InboxDecisionPayload = {
 const STATE_TABS = ["INBOX", "ACTIVE", "PINNED", "ARCHIVED"] as const
 type StateFilter = "ALL" | (typeof STATE_TABS)[number]
 
+function getFilenameFromDisposition(disposition: string | null) {
+  if (!disposition) {
+    return null
+  }
+
+  const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i)
+  if (utf8Match?.[1]) {
+    try {
+      return decodeURIComponent(utf8Match[1])
+    } catch {
+      return utf8Match[1]
+    }
+  }
+
+  const quotedMatch = disposition.match(/filename="([^"]+)"/i)
+  if (quotedMatch?.[1]) {
+    return quotedMatch[1]
+  }
+
+  const bareMatch = disposition.match(/filename=([^;]+)/i)
+  return bareMatch?.[1]?.trim() ?? null
+}
+
+function toDateInputValue(date: Date) {
+  const normalized = new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
+  return normalized.toISOString().slice(0, 10)
+}
+
+function getExportKindLabel(kind: RecordKind, t: (key: string, fallback?: string) => string) {
+  if (kind === "quote") {
+    return t("capture.kind.quote", "Quote / Highlight")
+  }
+
+  if (kind === "note") {
+    return t("capture.kind.note", "Note")
+  }
+
+  if (kind === "link") {
+    return t("capture.kind.link", "Web Link")
+  }
+
+  return t("capture.kind.ai", "AI Content")
+}
+
 export default function LibraryPage() {
   const { t } = useI18n()
   const router = useRouter()
@@ -56,6 +103,7 @@ export default function LibraryPage() {
   const [order, setOrder] = useState<"asc" | "desc">("desc")
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [bulkTagIds, setBulkTagIds] = useState<string[]>([])
+  const [exportSince, setExportSince] = useState("")
   const [exportMenuOpen, setExportMenuOpen] = useState(false)
   const [exportMenuIndex, setExportMenuIndex] = useState(0)
   const exportMenuWrapRef = useRef<HTMLDivElement | null>(null)
@@ -178,6 +226,41 @@ export default function LibraryPage() {
   })
 
   const selectedTagName = (tags.data?.data ?? []).find((tag) => tag.id === tagId)?.name ?? null
+  const exportSincePresets = useMemo(() => {
+    const now = new Date()
+    const last7 = new Date(now)
+    last7.setDate(last7.getDate() - 7)
+    const last30 = new Date(now)
+    last30.setDate(last30.getDate() - 30)
+
+    return [
+      { key: "library.exportPresetToday", fallback: "TODAY", value: toDateInputValue(now) },
+      { key: "library.exportPreset7d", fallback: "LAST 7D", value: toDateInputValue(last7) },
+      { key: "library.exportPreset30d", fallback: "LAST 30D", value: toDateInputValue(last30) }
+    ]
+  }, [])
+
+  const exportScopeLabel = useMemo(() => {
+    const parts: string[] = []
+
+    if (state !== "ALL") {
+      parts.push(getStateLabel(state, t))
+    }
+
+    if (kind) {
+      parts.push(getExportKindLabel(kind as RecordKind, t))
+    }
+
+    if (selectedTagName) {
+      parts.push(`#${selectedTagName}`)
+    }
+
+    if (exportSince) {
+      parts.push(exportSince)
+    }
+
+    return parts.length > 0 ? parts.join(" · ") : t("library.exportScopeAll", "FULL LIBRARY (EXCLUDING TRASH)")
+  }, [exportSince, kind, selectedTagName, state, t])
 
   const activate = useMutation({
     mutationFn: (id: string) =>
@@ -269,19 +352,25 @@ export default function LibraryPage() {
     }
   })
 
-  const buildExportHref = (format: "markdown" | "obsidian") => {
+  const buildExportHref = (format: ExportFormat) => {
     const params = new URLSearchParams()
     params.set("format", format)
     if (state !== "ALL") {
       params.set("state", state)
     }
+    if (kind) {
+      params.set("kind", kind)
+    }
     if (tagId) {
       params.set("tag_id", tagId)
+    }
+    if (exportSince) {
+      params.set("since", exportSince)
     }
     return `/api/export?${params.toString()}`
   }
 
-  const handleExport = async (format: "markdown" | "obsidian") => {
+  const handleExport = async (format: ExportFormat) => {
     setExportPending(true)
     setExportError(null)
 
@@ -317,8 +406,11 @@ export default function LibraryPage() {
       const downloadUrl = window.URL.createObjectURL(blob)
       const anchor = document.createElement("a")
       const today = new Date().toISOString().slice(0, 10)
+      const filename =
+        getFilenameFromDisposition(response.headers.get("Content-Disposition")) ??
+        buildExportFilename(format, today, exportSince || null)
       anchor.href = downloadUrl
-      anchor.download = format === "obsidian" ? `rebar-obsidian-export-${today}.md` : `rebar-export-${today}.md`
+      anchor.download = filename
       document.body.appendChild(anchor)
       anchor.click()
       anchor.remove()
@@ -431,6 +523,8 @@ export default function LibraryPage() {
       return
     }
 
+    const exportMenuLength = EXPORT_FORMATS.length
+
     if (event.key === "Escape") {
       event.preventDefault()
       closeExportMenu()
@@ -439,19 +533,19 @@ export default function LibraryPage() {
 
     if (event.key === "ArrowDown") {
       event.preventDefault()
-      setExportMenuIndex((idx) => (idx + 1) % 2)
+      setExportMenuIndex((idx) => (idx + 1) % exportMenuLength)
       return
     }
 
     if (event.key === "ArrowUp") {
       event.preventDefault()
-      setExportMenuIndex((idx) => (idx <= 0 ? 1 : idx - 1))
+      setExportMenuIndex((idx) => (idx <= 0 ? exportMenuLength - 1 : idx - 1))
       return
     }
 
     if (event.key === "Tab") {
       event.preventDefault()
-      setExportMenuIndex((idx) => (event.shiftKey ? (idx <= 0 ? 1 : idx - 1) : (idx + 1) % 2))
+      setExportMenuIndex((idx) => (event.shiftKey ? (idx <= 0 ? exportMenuLength - 1 : idx - 1) : (idx + 1) % exportMenuLength))
     }
   }
 
@@ -474,16 +568,26 @@ export default function LibraryPage() {
           <LibraryHeader
             t={t}
             totalRows={records.data?.total || 0}
+            exportSince={exportSince}
+            exportScopeLabel={exportScopeLabel}
+            exportSincePresets={exportSincePresets}
             exportMenuOpen={exportMenuOpen}
             exportPending={exportPending}
             exportMenuWrapRef={exportMenuWrapRef}
             exportTriggerRef={exportTriggerRef}
             exportItemRefs={exportItemRefs}
+            onExportSinceChange={(value) => {
+              setExportSince(value)
+              setExportError(null)
+            }}
+            onClearExportSince={() => {
+              setExportSince("")
+              setExportError(null)
+            }}
             onToggleMenu={toggleExportMenu}
             onOpenMenuFromKeyboard={openExportMenuFromKeyboard}
             onCloseMenu={closeExportMenu}
-            onExportMarkdown={() => handleExport("markdown")}
-            onExportObsidian={() => handleExport("obsidian")}
+            onExport={handleExport}
             onMenuItemKeyDown={handleExportMenuKeyDown}
           />
 

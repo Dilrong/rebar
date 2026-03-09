@@ -5,6 +5,7 @@ import { PGRST_NOT_FOUND } from "@/lib/constants"
 import { fail, internalError, ok, rateLimited } from "@/lib/http"
 import { checkRateLimitDistributed, resolveClientKey } from "@/lib/rate-limit"
 import { calcNextInterval } from "@feature-lib/review/review"
+import { sendRecordStateChangedEvent } from "@feature-lib/notifications/webhooks"
 import { ReviewRecordSchema, TriageDecisionSchema, type ReviewAction, type TriageActionType, type TriageDecisionType, type TriageDeferReason } from "@/lib/schemas"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
 
@@ -166,6 +167,20 @@ export async function POST(
 
   if (logInserted.error) {
     return internalError("review", logInserted.error)
+  }
+
+  if (current.data.state !== updated.data.state) {
+    const webhookResult = await sendRecordStateChangedEvent({
+      userId,
+      recordId: parsedParams.data.id,
+      previousState: current.data.state,
+      nextState: updated.data.state,
+      source: "review"
+    })
+
+    if (!webhookResult.ok) {
+      console.error("[review] webhook dispatch failed:", webhookResult.error)
+    }
   }
 
   return ok({ record: updated.data })

@@ -50,6 +50,7 @@ describe("POST /api/capture/share", () => {
         method: "POST",
         body: JSON.stringify({
           content: "shared text",
+          note: "surrounding context",
           title: "Shared Title",
           url: "https://example.com/article",
           tags: ["alpha"],
@@ -72,6 +73,7 @@ describe("POST /api/capture/share", () => {
       items: [
         {
           content: "shared text",
+          note: "surrounding context",
           title: "Shared Title",
           source_title: undefined,
           url: "https://example.com/article",

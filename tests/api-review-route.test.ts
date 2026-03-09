@@ -7,6 +7,7 @@ const rateLimitMock = vi.fn<() => Promise<{ ok: boolean; retryAfterSec: number; 
 const currentRecordSingleMock = vi.fn<() => Promise<unknown>>()
 const updatedRecordSingleMock = vi.fn<() => Promise<unknown>>()
 const reviewLogInsertMock = vi.fn<(payload: unknown) => Promise<{ error: null | { message: string } }>>()
+const sendRecordStateChangedEventMock = vi.fn<(payload: unknown) => Promise<{ ok: boolean; skipped?: boolean; status?: number }>>()
 
 const updatedPayloads: Array<Record<string, unknown>> = []
 
@@ -17,6 +18,10 @@ vi.mock("@/lib/auth", () => ({
 vi.mock("@/lib/rate-limit", () => ({
   checkRateLimitDistributed: () => rateLimitMock(),
   resolveClientKey: () => "test-client"
+}))
+
+vi.mock("@feature-lib/notifications/webhooks", () => ({
+  sendRecordStateChangedEvent: (payload: unknown) => sendRecordStateChangedEventMock(payload)
 }))
 
 vi.mock("@/lib/supabase-admin", () => ({
@@ -87,6 +92,7 @@ describe("POST /api/review/:id", () => {
       error: null
     })
     reviewLogInsertMock.mockResolvedValue({ error: null })
+    sendRecordStateChangedEventMock.mockResolvedValue({ ok: true, status: 200 })
   })
 
   it("returns 400 for invalid triage payload", async () => {
@@ -116,6 +122,13 @@ describe("POST /api/review/:id", () => {
     expect(response.status).toBe(200)
     expect(updatedPayloads[0]?.state).toBe("ARCHIVED")
     expect(updatedPayloads[0]?.due_at).toBeNull()
+    expect(sendRecordStateChangedEventMock).toHaveBeenCalledWith({
+      userId: "user-1",
+      recordId: "11111111-1111-1111-1111-111111111111",
+      previousState: "INBOX",
+      nextState: "ARCHIVED",
+      source: "review"
+    })
     await expect(response.json()).resolves.toEqual({
       record: {
         id: "11111111-1111-1111-1111-111111111111",

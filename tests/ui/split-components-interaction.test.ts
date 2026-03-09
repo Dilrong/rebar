@@ -2,10 +2,11 @@
 
 import type { AnchorHTMLAttributes, ReactNode } from "react"
 import { createElement, useState } from "react"
-import { fireEvent, render, screen } from "@testing-library/react"
+import { fireEvent, render, screen, within } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 import { CaptureImportModeTabs } from "../../app/(features)/capture/_components/capture-import-mode-tabs"
 import { LibraryFiltersToolbar } from "../../app/(features)/library/_components/library-filters-toolbar"
+import { LibraryHeader } from "../../app/(features)/library/_components/library-header"
 import { LibraryPagination } from "../../app/(features)/library/_components/library-pagination"
 import { ReviewCurrentCard } from "../../app/(features)/review/_components/review-current-card"
 import { NavMobileBottom } from "@shared/layout/_components/nav-mobile-bottom"
@@ -126,6 +127,52 @@ describe("split components interaction (jsdom)", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Clear all" }))
     expect(onClearAllFilters).toHaveBeenCalledTimes(1)
+  })
+
+  it("updates export since input and dispatches extended export formats", () => {
+    const onExportSinceChange = vi.fn()
+    const onClearExportSince = vi.fn()
+    const onExport = vi.fn()
+
+    const { container } = render(
+      createElement(LibraryHeader, {
+        t,
+        totalRows: 3,
+        exportSince: "2026-03-01",
+        exportScopeLabel: "Pinned · #work · 2026-03-01",
+        exportSincePresets: [
+          { key: "library.exportPresetToday", fallback: "TODAY", value: "2026-03-09" },
+          { key: "library.exportPreset7d", fallback: "LAST 7D", value: "2026-03-02" }
+        ],
+        exportMenuOpen: true,
+        exportPending: false,
+        exportMenuWrapRef: { current: null },
+        exportTriggerRef: { current: null },
+        exportItemRefs: { current: [] },
+        onExportSinceChange,
+        onClearExportSince,
+        onToggleMenu: vi.fn(),
+        onOpenMenuFromKeyboard: vi.fn(),
+        onCloseMenu: vi.fn(),
+        onExport,
+        onMenuItemKeyDown: vi.fn()
+      })
+    )
+
+    fireEvent.change(within(container).getByDisplayValue("2026-03-01"), { target: { value: "2026-03-05" } })
+    expect(onExportSinceChange).toHaveBeenCalledWith("2026-03-05")
+
+    fireEvent.click(within(container).getByRole("button", { name: "LAST 7D" }))
+    expect(onExportSinceChange).toHaveBeenCalledWith("2026-03-02")
+    expect(within(container).getByText("CURRENT SCOPE: Pinned · #work · 2026-03-01")).toBeTruthy()
+    fireEvent.click(within(container).getByRole("button", { name: "CLEAR" }))
+    expect(onClearExportSince).toHaveBeenCalledTimes(1)
+
+    fireEvent.click(within(container).getByRole("menuitem", { name: "JSON (.json)" }))
+    fireEvent.click(within(container).getByRole("menuitem", { name: "CSV (.csv)" }))
+
+    expect(onExport).toHaveBeenCalledWith("json")
+    expect(onExport).toHaveBeenCalledWith("csv")
   })
 
   it("dispatches review card triage and retry actions", () => {

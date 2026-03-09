@@ -3,6 +3,7 @@ import { z } from "zod"
 import { getUserId } from "@/lib/auth"
 import { fail, internalError, ok, rateLimited } from "@/lib/http"
 import { checkRateLimitDistributed, resolveClientKey } from "@/lib/rate-limit"
+import { sendRecordStateChangedEvent } from "@feature-lib/notifications/webhooks"
 import { isValidStateTransition, RecordStateSchema } from "@/lib/schemas"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
 
@@ -72,6 +73,23 @@ export async function PATCH(request: NextRequest) {
 
     if (updated.error) {
       return internalError("records.bulk", updated.error)
+    }
+
+    const webhookResults = await Promise.all(
+      updatableIds.map((id) =>
+        sendRecordStateChangedEvent({
+          userId,
+          recordId: id,
+          previousState: byId.get(id) ?? parsed.data.state,
+          nextState: parsed.data.state,
+          source: "records.bulk"
+        })
+      )
+    )
+
+    const firstFailedWebhook = webhookResults.find((result) => !result.ok)
+    if (firstFailedWebhook && !firstFailedWebhook.ok) {
+      console.error("[records.bulk] webhook dispatch failed:", firstFailedWebhook.error)
     }
   }
 

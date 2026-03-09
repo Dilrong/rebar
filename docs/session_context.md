@@ -181,6 +181,40 @@ This document tracks recent implementation context, completed rounds, and next a
 - **DB ops**: canonical migration path documented in `db/README.md`; migration filenames normalized to sortable timestamp form
 - Full verification pass: typecheck ✓, lint ✓, tests 190 ✓
 
+### Round 19 (Completed) — Export Format Expansion and Incremental Filtering
+
+- **Export API**: `/api/export` now supports `json`, `csv`, and `logseq` in addition to existing `markdown` and `obsidian`
+- **Incremental export**: all export formats now accept `since` and filter on `records.updated_at`
+- **Provenance export**: JSON/CSV payloads now include source metadata and resolved tag names for migration/analysis use
+- **Library UX**: library export controls now expose the new formats and an incremental `since` date filter
+- Full verification pass: typecheck ✓, lint ✓, tests 195 ✓, build ✓
+
+### Round 20 (Completed) — Telegram Ingest, Review Digests, and Extension Capture Enrichment
+
+- **Telegram import**: added `/api/capture/telegram` webhook route for bot-driven link/text capture into the existing ingest pipeline
+- **Review loop automation**: added cron routes for `/api/cron/review/daily` and `/api/cron/review/weekly-digest`
+- **Notifications**: daily review and weekly digest payloads can now fan out to Telegram and/or outbound webhook targets
+- **Webhook export**: state-changing record mutations now emit outbound `record.state_changed` webhook events
+- **Readwise import**: batch JSON import parser now maps Readwise-style book/article payloads more completely, including note/anchor/source metadata
+- **Extension UX**: clipper now shows a Quick Tag picker with existing tags before save and preserves surrounding context for selection captures
+- **Reader heuristics**: content-script extraction now prioritizes Kindle Cloud Reader, Ridibooks, and Millie viewer selectors before generic article fallbacks
+- Full verification pass: typecheck ✓, lint ✓, tests 207 ✓, build ✓
+
+### Round 21 (Completed) — Email Digest Delivery
+
+- **Review loop automation**: daily review and weekly digest notifications now support direct email delivery in addition to Telegram/webhook fan-out
+- **Delivery config**: optional Resend-backed notification delivery can be enabled with sender/recipient env vars without changing cron routes
+- Full verification pass: typecheck ✓, lint ✓, tests 209 ✓, build ✓
+
+### Round 22 (Completed) — Flow Cleanup, Scope Alignment, and UX Polish
+
+- **Notification cleanup**: outbound email/telegram/webhook delivery now shares one timeout-aware helper, reducing duplication and preventing hanging notification fetches
+- **Digest usability**: weekly digest skips delivery on zero-activity weeks, while daily/weekly responses now return consistent delivery metadata
+- **Telegram ingest**: webhook parsing now accepts `text_link` entities and edited channel posts for more reliable saved-link capture
+- **Library export UX**: export now follows current library scope more closely (`kind` filter support, trash excluded by default), and the header adds quick incremental date presets plus a visible scope summary
+- **Extension UX**: quick-tag picker preserves custom preselected tags, shows selected-tag count, and newly used tags are cached immediately for the next clip
+- Full verification pass: typecheck ✓, lint ✓, tests 212 ✓, build ✓
+
 ## Active Risk Watchlist
 
 - Keep semantic search path aligned with actual DB capabilities
@@ -192,6 +226,68 @@ This document tracks recent implementation context, completed rounds, and next a
 - Investigate `/settings` pa11y navigation hang in headless CI environment
 - Watch for drift between runtime DB state and `db/schema.sql` after future migrations
 - Review whether legacy SQL RPC functions should eventually be made source-aware or retired completely
+
+## Import/Export Pipeline Roadmap
+
+Readwise 분석에서 도출한 "자연스러운 데이터 파이프라인" 전략. 핵심 원칙: 기존 사용자 프로세스에 개입하지 않는 무마찰 연동.
+
+### Active — Import 마찰 제거
+
+#### Telegram Bot Import
+- 텔레그램 봇으로 링크/텍스트 전송 → Rebar 자동 캡처
+- 기존 `/api/capture/share` 엔드포인트 재활용
+- Telegram Bot API webhook → share endpoint 연결
+- 모바일에서 "나에게 보내기" 습관을 그대로 활용
+
+#### Readwise 호환 Import
+- Readwise CSV/JSON export 포맷에 정확히 맞춘 필드 매핑
+- `highlight → content`, `book_title → source_title`, `note → current_note`, `location → anchor`
+- Readwise → Rebar 마이그레이션 경로 공식 지원
+
+#### 브라우저 확장 강화
+- 선택 텍스트 캡처 시 주변 문맥(앞뒤 1-2문단) 함께 저장
+- Quick Tag: 캡처 시 기존 태그 목록에서 선택하는 팝업
+- Kindle Cloud Reader 하이라이트 추출 content script
+- 밀리의서재/리디북스 웹뷰어 하이라이트 추출 (한국 서비스 차별화)
+
+### Active — Export 자연스러움
+
+#### Export 포맷 확장 + 증분 지원
+- JSON export: 마이그레이션/백업용
+- CSV export: 스프레드시트 분석용
+- Logseq 포맷 지원
+- 모든 export에 `since` 파라미터로 증분(incremental) export 지원
+
+#### Webhook Export (Push 방식)
+- record 상태 변경 시 외부 서비스에 webhook 발송
+- 예: PINNED → Notion DB 자동 추가 (n8n/Zapier 경유)
+- Export를 사용자가 "가져가는" 게 아니라 Rebar가 "보내주는" 구조
+
+### Active — Review Loop 강화
+
+#### Daily Review 알림 (이메일/텔레그램)
+- 현재 review interval doubling 시스템 활용
+- 매일 아침 due된 record 5개를 이메일 또는 텔레그램으로 전송
+- 앱을 열지 않아도 복습 가능
+
+#### Weekly Digest
+- 주 1회 캡처 요약 + 복습 통계
+- 캡처 수, 복습 수, 태그 분포, 가장 많이 캡처한 소스
+
+### Backlog — 장기 과제
+
+#### Email Forward Import
+- 고유 이메일 주소 발급 (`capture-{hash}@rebar.app`)
+- 이메일 본문 자동 파싱 → record 생성
+- 뉴스레터 구독을 캡처 주소로 설정하면 자동 수집
+- 구현: Cloudflare Email Workers 또는 SendGrid Inbound Parse
+- 인프라 의존성이 높아 후순위
+
+#### Obsidian 지속 Sync
+- 현재 일회성 다운로드 → Obsidian vault 자동 동기화로 전환
+- 방법 A: Obsidian Community Plugin (API 호출 → vault 파일 생성/업데이트, 템플릿 커스터마이징)
+- 방법 B: CLI 도구 `rebar sync --to obsidian --vault ~/vault` (cron 자동화)
+- Plugin 생태계 이해 및 Obsidian API 학습 필요
 
 ## Recommended Next Actions
 

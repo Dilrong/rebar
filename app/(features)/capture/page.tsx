@@ -13,6 +13,7 @@ import type { ChangeEvent } from "react"
 import { useForm } from "react-hook-form"
 import { useI18n } from "@app-shared/i18n/i18n-provider"
 import { Toast } from "@shared/ui/toast"
+import { parseExternalItems, type IngestItemInput } from "./_lib/external-import"
 import { CaptureImportModeTabs } from "./_components/capture-import-mode-tabs"
 import { CaptureUrlSection } from "./_components/capture-url-section"
 import { CaptureCsvSection } from "./_components/capture-csv-section"
@@ -29,26 +30,6 @@ type ExtractResponse = {
   title: string | null
   description: string | null
   content: string
-}
-
-type IngestItemInput = {
-  content: string
-  note?: string
-  title?: string
-  source_title?: string
-  book_title?: string
-  book_author?: string
-  author?: string
-  url?: string
-  source_url?: string
-  tags?: string[]
-  kind?: "quote" | "note" | "link" | "ai"
-  source_type?: "book" | "article" | "service" | "manual" | "ai" | "unknown"
-  source_service?: string
-  source_identity?: string
-  external_source_id?: string
-  external_item_id?: string
-  adopted_from_ai?: boolean
 }
 
 type IngestResponse = {
@@ -79,166 +60,6 @@ type ImportMode = "manual" | "url" | "batch" | "csv" | "ocr"
 type CaptureToastKind = "saved" | "ingested" | "ocrFilled" | "retryDone"
 
 const TOAST_DURATION_MS = 5000
-
-function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null
-}
-
-function asString(value: unknown): string | undefined {
-  if (typeof value !== "string") {
-    return undefined
-  }
-
-  const trimmed = value.trim()
-  return trimmed.length > 0 ? trimmed : undefined
-}
-
-function normalizeTags(value: unknown): string[] | undefined {
-  if (!Array.isArray(value)) {
-    return undefined
-  }
-
-  const result: string[] = []
-  for (const tag of value) {
-    if (typeof tag === "string") {
-      const trimmed = tag.trim()
-      if (trimmed) {
-        result.push(trimmed)
-      }
-      continue
-    }
-
-    if (isObject(tag)) {
-      const name = asString(tag.name)
-      if (name) {
-        result.push(name)
-      }
-    }
-  }
-
-  return result.length > 0 ? Array.from(new Set(result)) : undefined
-}
-
-function toIngestItem(value: unknown): IngestItemInput | null {
-  if (typeof value === "string") {
-    const content = value.trim()
-    return content ? { content } : null
-  }
-
-  if (!isObject(value)) {
-    return null
-  }
-
-  const content =
-    asString(value.content) ??
-    asString(value.text) ??
-    asString(value.highlight) ??
-    asString(value.summary)
-  const note = asString(value.note)
-
-  const resolvedContent = content ?? note
-
-  if (!resolvedContent) {
-    return null
-  }
-
-  const item: IngestItemInput = { content: resolvedContent }
-
-  const bookTitle = asString(value.book_title) ?? asString(value.bookTitle)
-  const bookAuthor = asString(value.book_author) ?? asString(value.bookAuthor) ?? asString(value.bookauthor)
-  const title = asString(value.title) ?? asString(value.source_title)
-  if (bookTitle) {
-    item.book_title = bookTitle
-  }
-  if (bookAuthor) {
-    item.book_author = bookAuthor
-  }
-  if (title) {
-    item.source_title = title
-  }
-
-  const url = asString(value.url) ?? asString(value.source_url) ?? asString(value.sourceUrl) ?? asString(value.href)
-  if (url) {
-    item.url = url
-  }
-
-  const author = asString(value.author)
-  if (author) {
-    item.author = author
-  }
-
-  const tags = normalizeTags(value.tags)
-  if (tags) {
-    item.tags = tags
-  }
-
-  const sourceType = asString(value.source_type) ?? asString(value.sourceType)
-  if (
-    sourceType === "book" ||
-    sourceType === "article" ||
-    sourceType === "service" ||
-    sourceType === "manual" ||
-    sourceType === "ai" ||
-    sourceType === "unknown"
-  ) {
-    item.source_type = sourceType
-  }
-
-  const sourceService = asString(value.source_service) ?? asString(value.service) ?? asString(value.provider)
-  if (sourceService) {
-    item.source_service = sourceService
-  }
-
-  const sourceIdentity = asString(value.source_identity) ?? asString(value.sourceIdentity)
-  if (sourceIdentity) {
-    item.source_identity = sourceIdentity
-  }
-
-  const externalSourceId = asString(value.external_source_id) ?? asString(value.externalSourceId)
-  if (externalSourceId) {
-    item.external_source_id = externalSourceId
-  }
-
-  const externalItemId = asString(value.external_item_id) ?? asString(value.externalItemId)
-  if (externalItemId) {
-    item.external_item_id = externalItemId
-  }
-
-  if (typeof value.adopted_from_ai === "boolean") {
-    item.adopted_from_ai = value.adopted_from_ai
-  }
-
-  if (content && note) {
-    item.note = note
-  }
-
-  return item
-}
-
-function parseExternalItems(raw: string): IngestItemInput[] {
-  const parsed = JSON.parse(raw) as unknown
-  let source: unknown[] = []
-
-  if (Array.isArray(parsed)) {
-    source = parsed
-  } else if (isObject(parsed)) {
-    const highlights = parsed.highlights
-    const results = parsed.results
-    const items = parsed.items
-
-    if (Array.isArray(highlights)) {
-      source = highlights
-    } else if (Array.isArray(results)) {
-      source = results
-    } else if (Array.isArray(items)) {
-      source = items
-    } else {
-      source = [parsed]
-    }
-  }
-
-  return source.map(toIngestItem).filter((item): item is IngestItemInput => item !== null)
-}
 
 function splitCsvLine(line: string): string[] {
   const cells: string[] = []
