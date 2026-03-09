@@ -34,7 +34,8 @@ const messages = {
     "ext.tagPicker.selectedCount": "Selected tags",
     "ext.tagPicker.confirm": "Save Clip",
     "ext.tagPicker.cancel": "Cancel",
-    "ext.tagPicker.loadFailed": "Could not load tags. You can still add custom tags below."
+    "ext.tagPicker.loadFailed": "Could not load tags. You can still add custom tags below.",
+    "ext.opt.permDenied": "Host permission required. Please try again."
   },
   ko: {
     "ext.articleBtn": "아티클 스크랩",
@@ -71,7 +72,8 @@ const messages = {
     "ext.tagPicker.selectedCount": "선택된 태그",
     "ext.tagPicker.confirm": "클립 저장",
     "ext.tagPicker.cancel": "취소",
-    "ext.tagPicker.loadFailed": "태그를 불러올 수 없습니다. 아래에서 직접 태그를 추가할 수 있습니다."
+    "ext.tagPicker.loadFailed": "태그를 불러올 수 없습니다. 아래에서 직접 태그를 추가할 수 있습니다.",
+    "ext.opt.permDenied": "호스트 권한이 필요합니다. 다시 시도해주세요."
   }
 }
 

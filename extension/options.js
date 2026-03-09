@@ -29,12 +29,27 @@ async function load() {
   form.defaultTags.value = data.defaultTags || DEFAULT_SETTINGS.defaultTags
 }
 
+async function requestHostPermission(urlStr) {
+  try {
+    const origin = new URL(urlStr).origin + "/*"
+    const granted = await chrome.permissions.request({ origins: [origin] })
+    return granted
+  } catch {
+    return false
+  }
+}
+
 async function save() {
   const urlStr = getFormUrl()
   if (!urlStr) return
 
   saveButton.disabled = true
   try {
+    const granted = await requestHostPermission(urlStr)
+    if (!granted) {
+      setStatus(t("ext.opt.permDenied"), "error")
+      return
+    }
     await chrome.storage.sync.set({
       rebarUrl: urlStr,
       defaultTags: form.defaultTags.value.trim() || DEFAULT_SETTINGS.defaultTags

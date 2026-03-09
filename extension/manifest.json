@@ -10,6 +10,10 @@
     "tabs",
     "contextMenus"
   ],
+  "optional_host_permissions": [
+    "https://*/*",
+    "http://*/*"
+  ],
   "action": {
     "default_title": "Save to REBAR",
     "default_icon": {
