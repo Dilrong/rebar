@@ -33,8 +33,8 @@ WITH duplicate_groups AS (
   SELECT
     user_id,
     lower(name) AS lowered_name,
-    min(id) AS keep_id,
-    array_agg(id) AS all_ids
+    (array_agg(id ORDER BY id::text))[1] AS keep_id,
+    array_agg(id ORDER BY id::text) AS all_ids
   FROM public.tags
   GROUP BY user_id, lower(name)
   HAVING count(*) > 1
@@ -56,8 +56,8 @@ WITH duplicate_groups AS (
   SELECT
     user_id,
     lower(name) AS lowered_name,
-    min(id) AS keep_id,
-    array_agg(id) AS all_ids
+    (array_agg(id ORDER BY id::text))[1] AS keep_id,
+    array_agg(id ORDER BY id::text) AS all_ids
   FROM public.tags
   GROUP BY user_id, lower(name)
   HAVING count(*) > 1
@@ -76,8 +76,8 @@ WITH duplicate_groups AS (
   SELECT
     user_id,
     lower(name) AS lowered_name,
-    min(id) AS keep_id,
-    array_agg(id) AS all_ids
+    (array_agg(id ORDER BY id::text))[1] AS keep_id,
+    array_agg(id ORDER BY id::text) AS all_ids
   FROM public.tags
   GROUP BY user_id, lower(name)
   HAVING count(*) > 1
