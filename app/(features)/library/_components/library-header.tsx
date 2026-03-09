@@ -55,7 +55,7 @@ export function LibraryHeader({
         <span className="text-glitch transition-all">{t("library.title", "LIBRARY")}</span>
       </h1>
       <div className="relative z-10 flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center md:gap-3">
-        <span className="min-h-[44px] flex w-full flex-col justify-center border-[3px] md:border-4 border-foreground bg-background px-3 py-1 font-mono text-xs font-bold uppercase text-foreground shadow-brutal-sm sm:w-auto sm:flex-row sm:items-center md:text-sm">
+        <span className="min-h-[48px] flex w-full flex-col justify-center border-[3px] md:border-4 border-foreground bg-background px-3 py-1 font-mono text-xs font-bold uppercase text-foreground shadow-brutal-sm sm:w-auto sm:flex-row sm:items-center md:text-sm">
           <span className="opacity-80 text-[10px] md:mr-2 tracking-widest">{t("library.rows", "ROWS")}:</span>
           <span className="font-black text-lg leading-none">{totalRows}</span>
         </span>
@@ -68,7 +68,7 @@ export function LibraryHeader({
             type="date"
             value={exportSince}
             onChange={(event) => onExportSinceChange(event.target.value)}
-            className="min-h-[44px] w-full border-[3px] border-foreground bg-background px-3 py-2 font-mono text-xs font-bold text-foreground shadow-brutal-sm focus:outline-none focus:ring-0 md:border-4"
+            className="min-h-[48px] w-full border-[3px] border-foreground bg-background px-3 py-2 font-mono text-xs font-bold text-foreground shadow-brutal-sm focus:outline-none focus:ring-0 md:border-4"
           />
           <span className="mt-1 font-mono text-[10px] font-bold uppercase text-muted-foreground">
             {t("library.exportSinceHint", "LEAVE BLANK FOR FULL EXPORT")}
@@ -79,9 +79,8 @@ export function LibraryHeader({
                 key={preset.key}
                 type="button"
                 onClick={() => onExportSinceChange(preset.value)}
-                className={`min-h-[32px] border-[3px] border-foreground px-2 py-1 font-mono text-[10px] font-bold uppercase shadow-brutal-sm transition-transform active:translate-x-[1px] active:translate-y-[1px] ${
-                  exportSince === preset.value ? "bg-foreground text-background" : "bg-background text-foreground hover:bg-foreground hover:text-background"
-                }`}
+                className={`min-h-[44px] border-[3px] border-foreground px-2 py-1 font-mono text-[10px] font-bold uppercase shadow-brutal-sm transition-transform active:translate-x-[1px] active:translate-y-[1px] ${exportSince === preset.value ? "bg-foreground text-background" : "bg-background text-foreground hover:bg-foreground hover:text-background"
+                  }`}
                 aria-pressed={exportSince === preset.value}
               >
                 {t(preset.key, preset.fallback)}
@@ -91,7 +90,7 @@ export function LibraryHeader({
               <button
                 type="button"
                 onClick={onClearExportSince}
-                className="min-h-[32px] border-[3px] border-foreground bg-background px-2 py-1 font-mono text-[10px] font-bold uppercase text-foreground shadow-brutal-sm transition-transform hover:bg-foreground hover:text-background active:translate-x-[1px] active:translate-y-[1px]"
+                className="min-h-[44px] border-[3px] border-foreground bg-background px-2 py-1 font-mono text-[10px] font-bold uppercase text-foreground shadow-brutal-sm transition-transform hover:bg-foreground hover:text-background active:translate-x-[1px] active:translate-y-[1px]"
               >
                 {t("library.exportClearSince", "CLEAR")}
               </button>

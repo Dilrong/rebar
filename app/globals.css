@@ -76,7 +76,7 @@
   }
 
   body {
-    @apply bg-background text-foreground antialiased selection:bg-accent/30 selection:text-foreground font-sans;
+    @apply bg-background text-foreground antialiased selection:bg-accent/30 selection:text-foreground font-sans overflow-x-hidden;
     /* Extra padding on mobile to account for fixed bottom nav + safe area */
     padding-bottom: calc(5rem + env(safe-area-inset-bottom));
   }
@@ -139,7 +139,7 @@
   }
 
   .focus-ring {
-    @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 focus-visible:shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:focus-visible:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] focus-visible:translate-x-[2px] focus-visible:translate-y-[2px] transition-all duration-200;
+    @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 focus-visible:shadow-[inset_4px_4px_0px_0px_rgba(0, 0, 0, 1)] dark:focus-visible:shadow-[inset_4px_4px_0px_0px_rgba(255, 255, 255, 0.1)] focus-visible:translate-x-[2px] focus-visible:translate-y-[2px] transition-all duration-200;
   }
 
   /* Hide scrollbar but keep functionality */
@@ -165,31 +165,32 @@
 
   /* Call To Action Emphasis Button */
   .btn-cta {
-    @apply inline-flex items-center justify-center px-6 py-3 font-bold uppercase tracking-wider text-accent-foreground bg-accent border-4 border-foreground shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] transition-all duration-200;
+    @apply inline-flex items-center justify-center px-6 py-3 font-bold uppercase tracking-wider text-accent-foreground bg-accent border-4 border-foreground shadow-[8px_8px_0px_0px_rgba(0, 0, 0, 1)] transition-all duration-200;
   }
 
   .dark .btn-cta {
-    @apply shadow-[8px_8px_0px_0px_rgba(255,255,255,0.1)];
+    @apply shadow-[8px_8px_0px_0px_rgba(255, 255, 255, 0.1)];
   }
 
   .btn-cta:hover {
-    @apply translate-x-[2px] translate-y-[2px] shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] bg-foreground text-background border-accent;
+    @apply translate-x-[2px] translate-y-[2px] shadow-[6px_6px_0px_0px_rgba(0, 0, 0, 1)] bg-foreground text-background border-accent;
   }
 
   .dark .btn-cta:hover {
-    @apply shadow-[6px_6px_0px_0px_rgba(255,255,255,0.1)];
+    @apply shadow-[6px_6px_0px_0px_rgba(255, 255, 255, 0.1)];
   }
 
   .btn-cta:active {
-    @apply translate-x-[8px] translate-y-[8px] shadow-[0px_0px_0px_0px_rgba(0,0,0,1)];
+    @apply translate-x-[4px] translate-y-[4px] shadow-[4px_4px_0px_0px_rgba(0, 0, 0, 1)];
   }
 
   .dark .btn-cta:active {
-    @apply shadow-[0px_0px_0px_0px_rgba(255,255,255,0)];
+    @apply shadow-[4px_4px_0px_0px_rgba(255, 255, 255, 0)];
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   *,
   *::before,
   *::after {

@@ -710,7 +710,7 @@ export default function RecordDetailPage() {
             left: `clamp(1rem, ${selectionPopup.x}px, calc(100vw - 1rem))`,
             top: `max(1rem, ${selectionPopup.y}px)`,
             transform: "translate(-50%, -100%)",
-            zIndex: 9999,
+            zIndex: 60,
             maxWidth: "calc(100vw - 2rem)"
           }}
         >
