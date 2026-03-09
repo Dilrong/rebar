@@ -4,7 +4,7 @@ import Link from "next/link"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react"
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Search } from "lucide-react"
+import { Filter, Search } from "lucide-react"
 import AuthGate from "@shared/auth/auth-gate"
 import AppNav from "@shared/layout/app-nav"
 import { useI18n } from "@app-shared/i18n/i18n-provider"
@@ -78,6 +78,7 @@ export default function SearchPage() {
   const [semantic, setSemantic] = useState(false)
   const [didInitFromUrl, setDidInitFromUrl] = useState(false)
   const [activeIndex, setActiveIndex] = useState(-1)
+  const [showFilters, setShowFilters] = useState(false)
   const controlClassName = "min-h-[44px] w-full min-w-0 rounded-none border-4 border-foreground bg-background p-3 font-mono text-xs text-foreground shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] focus:outline-none focus:ring-0 dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)]"
 
   useEffect(() => {
@@ -238,8 +239,8 @@ export default function SearchPage() {
             </h1>
           </header>
 
-          <section className="border-[3px] md:border-4 border-foreground bg-card p-3 md:p-4 mb-4 md:mb-6 shadow-brutal-sm md:shadow-brutal">
-            <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-5">
+          <section className="border-[3px] md:border-4 border-foreground bg-card p-3 md:p-4 mb-4 md:mb-6 shadow-brutal-sm md:shadow-brutal flex flex-col gap-4">
+            <div className="flex gap-2 w-full">
               <label htmlFor="search-query" className="sr-only">
                 {t("search.placeholder", "content / source title")}
               </label>
@@ -249,94 +250,123 @@ export default function SearchPage() {
                 autoFocus
                 onChange={(event) => setQ(event.target.value)}
                 placeholder={t("search.placeholder", "content / source title")}
-                className={`${controlClassName} placeholder:font-mono placeholder:text-xs placeholder:text-muted-foreground lg:col-span-2`}
+                className={`${controlClassName} flex-1 placeholder:font-mono placeholder:text-xs placeholder:text-muted-foreground`}
               />
-              <label htmlFor="search-state" className="sr-only">
-                {t("search.allStates", "All states")}
-              </label>
-              <select
-                id="search-state"
-                value={state}
-                onChange={(event) => setState(event.target.value)}
-                className={controlClassName}
-              >
-                <option value="">{t("search.allStates", "All states")}</option>
-                <option value="INBOX">{getStateLabel("INBOX", t)}</option>
-                <option value="ACTIVE">{getStateLabel("ACTIVE", t)}</option>
-                <option value="PINNED">{getStateLabel("PINNED", t)}</option>
-                <option value="ARCHIVED">{getStateLabel("ARCHIVED", t)}</option>
-                <option value="TRASHED">{getStateLabel("TRASHED", t)}</option>
-              </select>
-              <label htmlFor="search-tag" className="sr-only">
-                {t("search.allTags", "All tags")}
-              </label>
-              <select
-                id="search-tag"
-                value={tagId}
-                onChange={(event) => setTagId(event.target.value)}
-                className={controlClassName}
-              >
-                <option value="">{t("search.allTags", "All tags")}</option>
-                {(tags.data?.data ?? []).map((tag) => (
-                  <option key={tag.id} value={tag.id}>#{tag.name}</option>
-                ))}
-              </select>
-              <div className="grid min-w-0 grid-cols-1 gap-2 lg:col-span-1">
-                <div className="w-full min-w-0">
-                  <label htmlFor="search-from-date" className="mb-1 block font-mono text-[10px] font-bold uppercase text-muted-foreground">
-                    {t("history.from", "From")}
-                  </label>
-                  <input
-                    id="search-from-date"
-                    type="date"
-                    value={fromDate}
-                    onChange={(event) => setFromDate(event.target.value)}
-                    className={controlClassName}
-                  />
-                </div>
-                <div className="w-full min-w-0">
-                  <label htmlFor="search-to-date" className="mb-1 block font-mono text-[10px] font-bold uppercase text-muted-foreground">
-                    {t("history.to", "To")}
-                  </label>
-                  <input
-                    id="search-to-date"
-                    type="date"
-                    value={toDate}
-                    onChange={(event) => setToDate(event.target.value)}
-                    className={controlClassName}
-                  />
-                </div>
-              </div>
-            </div>
-            <div className="mt-3 flex flex-wrap items-center gap-2 border-t-2 border-foreground pt-3">
               <button
                 type="button"
-                aria-pressed={semantic}
-                onClick={() => {
-                  if (semanticButtonDisabled) {
-                    return
-                  }
-
-                  setSemantic((prev) => !prev)
-                }}
-                disabled={semanticButtonDisabled}
-                className={`min-h-[44px] border-4 px-3 py-2 font-mono text-xs font-bold uppercase transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:bg-background disabled:hover:text-foreground ${semantic
-                  ? "border-foreground bg-foreground text-background"
-                  : "border-foreground bg-background text-foreground hover:bg-foreground hover:text-background"
+                onClick={() => setShowFilters((prev) => !prev)}
+                className={`flex min-h-[44px] items-center justify-center gap-2 border-[3px] px-4 font-mono text-xs font-bold transition-all active:translate-x-1 active:translate-y-1 active:shadow-none md:border-4 ${showFilters || hasActiveFilters
+                    ? "border-foreground bg-foreground text-background shadow-none translate-x-1 translate-y-1"
+                    : "border-foreground bg-accent text-accent-foreground shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-foreground hover:text-background dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.1)]"
                   }`}
+                aria-expanded={showFilters}
               >
-                {semantic ? t("search.semanticOn", "SEMANTIC ON") : t("search.semanticOff", "SEMANTIC OFF")}
+                <Filter className="h-4 w-4" strokeWidth={3} />
+                <span className="hidden sm:inline">
+                  {showFilters ? t("search.hideFilters", "HIDE FILTERS") : t("search.showFilters", "FILTERS")}
+                </span>
+                {hasActiveFilters && !showFilters ? (
+                  <span className="flex h-4 w-4 items-center justify-center border-2 border-background bg-accent text-[10px] text-accent-foreground">
+                    !
+                  </span>
+                ) : null}
               </button>
-              {semantic ? (
-                <p className="font-mono text-[10px] font-bold uppercase text-muted-foreground">
-                  {t("search.semanticHint", "의미 기반 유사도 우선으로 결과를 정렬합니다")}
-                </p>
-              ) : !hasActiveFilters ? (
-                <p className="font-mono text-[10px] font-bold uppercase text-muted-foreground">
-                  {t("search.semanticNeedsFilter", "검색어 또는 필터를 먼저 지정하세요")}
-                </p>
-              ) : null}
             </div>
+
+            {showFilters ? (
+              <div className="animate-fade-in-up flex flex-col gap-4 border-t-4 border-foreground pt-4">
+                <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-4">
+                  <div>
+                    <label htmlFor="search-state" className="mb-1 block font-mono text-[10px] font-bold uppercase text-muted-foreground">
+                      {t("search.allStates", "All states")}
+                    </label>
+                    <select
+                      id="search-state"
+                      value={state}
+                      onChange={(event) => setState(event.target.value)}
+                      className={controlClassName}
+                    >
+                      <option value="">{t("search.allStates", "All states")}</option>
+                      <option value="INBOX">{getStateLabel("INBOX", t)}</option>
+                      <option value="ACTIVE">{getStateLabel("ACTIVE", t)}</option>
+                      <option value="PINNED">{getStateLabel("PINNED", t)}</option>
+                      <option value="ARCHIVED">{getStateLabel("ARCHIVED", t)}</option>
+                      <option value="TRASHED">{getStateLabel("TRASHED", t)}</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="search-tag" className="mb-1 block font-mono text-[10px] font-bold uppercase text-muted-foreground">
+                      {t("search.allTags", "All tags")}
+                    </label>
+                    <select
+                      id="search-tag"
+                      value={tagId}
+                      onChange={(event) => setTagId(event.target.value)}
+                      className={controlClassName}
+                    >
+                      <option value="">{t("search.allTags", "All tags")}</option>
+                      {(tags.data?.data ?? []).map((tag) => (
+                        <option key={tag.id} value={tag.id}>#{tag.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="search-from-date" className="mb-1 block font-mono text-[10px] font-bold uppercase text-muted-foreground">
+                      {t("history.from", "From")}
+                    </label>
+                    <input
+                      id="search-from-date"
+                      type="date"
+                      value={fromDate}
+                      onChange={(event) => setFromDate(event.target.value)}
+                      className={controlClassName}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="search-to-date" className="mb-1 block font-mono text-[10px] font-bold uppercase text-muted-foreground">
+                      {t("history.to", "To")}
+                    </label>
+                    <input
+                      id="search-to-date"
+                      type="date"
+                      value={toDate}
+                      onChange={(event) => setToDate(event.target.value)}
+                      className={controlClassName}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 border-t-2 border-foreground pt-3">
+                  <button
+                    type="button"
+                    aria-pressed={semantic}
+                    onClick={() => {
+                      if (semanticButtonDisabled) {
+                        return
+                      }
+
+                      setSemantic((prev) => !prev)
+                    }}
+                    disabled={semanticButtonDisabled}
+                    className={`min-h-[44px] border-4 px-3 py-2 font-mono text-xs font-bold uppercase transition-transform active:translate-y-[2px] active:translate-x-[2px] shadow-brutal-sm disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:bg-background disabled:hover:text-foreground ${semantic
+                      ? "border-foreground bg-foreground text-background"
+                      : "border-foreground bg-background text-foreground hover:bg-foreground hover:text-background"
+                      }`}
+                  >
+                    {semantic ? t("search.semanticOn", "SEMANTIC ON") : t("search.semanticOff", "SEMANTIC OFF")}
+                  </button>
+                  {semantic ? (
+                    <p className="font-mono text-[10px] font-bold uppercase text-muted-foreground">
+                      {t("search.semanticHint", "의미 기반 유사도 우선으로 결과를 정렬합니다")}
+                    </p>
+                  ) : !hasActiveFilters ? (
+                    <p className="font-mono text-[10px] font-bold uppercase text-muted-foreground">
+                      {t("search.semanticNeedsFilter", "검색어 또는 필터를 먼저 지정하세요")}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
           </section>
 
           {queryString.length === 0 ? (
