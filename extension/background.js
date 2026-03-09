@@ -56,9 +56,44 @@ async function fetchWithRetry(url, options, { maxRetries = 2, signal, totalTimeo
   throw lastError
 }
 
+async function getAccessToken(rebarUrl) {
+  try {
+    const url = new URL(rebarUrl)
+    const cookies = await chrome.cookies.getAll({ domain: url.hostname })
+    const authCookies = cookies
+      .filter((c) => c.name.startsWith("sb-") && c.name.includes("-auth-token"))
+      .sort((a, b) => a.name.localeCompare(b.name))
+
+    if (authCookies.length === 0) return null
+
+    // Supabase SSR may chunk cookies: sb-<ref>-auth-token.0, .1, ...
+    // or store as a single sb-<ref>-auth-token cookie
+    const baseName = authCookies[0].name.replace(/\.\d+$/, "")
+    const chunked = authCookies.filter((c) => c.name === baseName || c.name.startsWith(baseName + "."))
+    const raw = chunked.length > 1
+      ? chunked.sort((a, b) => a.name.localeCompare(b.name)).map((c) => c.value).join("")
+      : authCookies[0].value
+
+    // Try decode as base64 first, then plain JSON
+    let json
+    try { json = JSON.parse(atob(raw)) } catch { json = JSON.parse(raw) }
+
+    return json?.access_token ?? null
+  } catch {
+    return null
+  }
+}
+
+function authHeaders(token) {
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
+
 async function checkAuth(rebarUrl) {
-  try { return (await fetch(`${rebarUrl}/api/auth/check`, { credentials: "include" })).ok }
-  catch { return false }
+  try {
+    const token = await getAccessToken(rebarUrl)
+    if (!token) return false
+    return (await fetch(`${rebarUrl}/api/auth/check`, { headers: authHeaders(token) })).ok
+  } catch { return false }
 }
 
 async function fetchAvailableTags(rebarUrl, signal) {
@@ -67,7 +102,10 @@ async function fetchAvailableTags(rebarUrl, signal) {
     return tagCache.names
   }
 
-  const res = await fetchWithRetry(`${rebarUrl}/api/tags`, { credentials: "include" }, { signal, maxRetries: 1 })
+  const token = await getAccessToken(rebarUrl)
+  if (!token) throw new Error(t("ext.status.authRequired"))
+
+  const res = await fetchWithRetry(`${rebarUrl}/api/tags`, { headers: authHeaders(token) }, { signal, maxRetries: 1 })
   if (!res.ok) {
     if (res.status === 401 || res.status === 403) throw new Error(t("ext.status.authRequired"))
     throw new Error(`${t("ext.saveFailed")}: ${res.status}`)
@@ -112,9 +150,12 @@ async function saveCapture(payload, signal, { mergeDefaultTags = true } = {}) {
     tags: tags.length > 0 ? tags : undefined
   }
 
+  const token = await getAccessToken(settings.rebarUrl)
+  if (!token) throw new Error(t("ext.status.authRequired"))
+
   const res = await fetchWithRetry(
     `${settings.rebarUrl}/api/capture/share`,
-    { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify(body) },
+    { method: "POST", headers: { "Content-Type": "application/json", ...authHeaders(token) }, body: JSON.stringify(body) },
     { signal }
   )
 

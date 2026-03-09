@@ -5,6 +5,7 @@
   "version": "0.3.0",
   "permissions": [
     "storage",
+    "cookies",
     "activeTab",
     "scripting",
     "tabs",
