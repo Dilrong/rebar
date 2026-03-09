@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useEffect, useRef, useState } from "react"
 import AuthGate from "@shared/auth/auth-gate"
-import AppNav from "@shared/layout/app-nav"
+import ProtectedPageShell from "@shared/layout/protected-page-shell"
 import { useI18n } from "@app-shared/i18n/i18n-provider"
 import { apiFetch } from "@/lib/client-http"
 import type { RecordRow } from "@/lib/types"
@@ -404,10 +404,9 @@ export default function ReviewPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4 font-sans md:p-6">
+    <>
       <AuthGate>
-        <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col animate-fade-in-up">
-          <AppNav />
+        <ProtectedPageShell rootClassName="md:p-6" mainClassName="flex max-w-5xl flex-1 flex-col">
 
           <ReviewHeader
             t={t}
@@ -458,7 +457,7 @@ export default function ReviewPage() {
           ) : null}
 
           <ReviewUpNext queue={nextQueue} reviewBackHref="/review" t={t} />
-        </main>
+        </ProtectedPageShell>
       </AuthGate>
       <ReviewUndoBar
         t={t}
@@ -471,6 +470,6 @@ export default function ReviewPage() {
         }}
         onClose={() => setUndoTargetId(null)}
       />
-    </div>
+    </>
   )
 }

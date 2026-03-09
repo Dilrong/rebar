@@ -3,11 +3,14 @@
 import Link from "next/link"
 import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { Clock3, Loader2 } from "lucide-react"
+import { Clock3 } from "lucide-react"
 import AuthGate from "@shared/auth/auth-gate"
-import AppNav from "@shared/layout/app-nav"
+import ProtectedPageShell from "@shared/layout/protected-page-shell"
 import { useI18n } from "@app-shared/i18n/i18n-provider"
 import { apiFetch } from "@/lib/client-http"
+import { EmptyState } from "@shared/ui/empty-state"
+import { ErrorState } from "@shared/ui/error-state"
+import { LoadingState } from "@shared/ui/loading-state"
 
 type ReviewHistoryItem = {
   id: string
@@ -110,10 +113,8 @@ export default function ReviewHistoryPage() {
   const maxPage = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   return (
-    <div className="min-h-screen bg-background p-4 font-sans selection:bg-accent selection:text-white md:p-6">
-      <AuthGate>
-        <main className="mx-auto w-full max-w-5xl animate-fade-in-up pb-24">
-          <AppNav />
+    <AuthGate>
+      <ProtectedPageShell rootClassName="selection:bg-accent selection:text-white md:p-6" mainClassName="max-w-5xl pb-24">
 
           <header className="mb-8 flex flex-col gap-3 border-b-4 border-foreground pb-4 sm:flex-row sm:items-end sm:justify-between">
             <h1 className="flex items-center gap-3 text-3xl font-black uppercase leading-none text-foreground md:text-5xl">
@@ -247,26 +248,9 @@ export default function ReviewHistoryPage() {
             </div>
           </section>
 
-          {history.isLoading ? (
-            <div className="flex items-center gap-2 font-mono text-sm font-bold uppercase text-foreground">
-              <Loader2 className="w-4 h-4 animate-spin" /> {t("history.loading", "Loading history...")}
-            </div>
-          ) : null}
+          {history.isLoading ? <LoadingState label={t("history.loading", "Loading history...")} /> : null}
 
-          {history.error ? (
-            <div className="space-y-2">
-              <div className="bg-destructive text-destructive-foreground p-4 font-mono text-xs font-bold uppercase border-4 border-foreground">
-                ERR: {history.error.message}
-              </div>
-              <button
-                type="button"
-                className="min-h-[44px] border-2 border-foreground px-3 py-2 font-mono text-xs font-bold uppercase hover:bg-foreground hover:text-background"
-                onClick={() => history.refetch()}
-              >
-                {t("review.retry", "다시 시도")}
-              </button>
-            </div>
-          ) : null}
+          {history.error ? <ErrorState message={history.error.message} onRetry={() => history.refetch()} /> : null}
 
           <div className="space-y-3">
             {(history.data?.data ?? []).map((item) => (
@@ -311,11 +295,7 @@ export default function ReviewHistoryPage() {
             ))}
           </div>
 
-          {history.isSuccess && history.data.data.length === 0 ? (
-            <div className="mt-8 border-4 border-dashed border-border p-8 text-center">
-              <p className="font-black text-2xl uppercase text-muted-foreground">{t("history.empty", "NO HISTORY")}</p>
-            </div>
-          ) : null}
+          {history.isSuccess && history.data.data.length === 0 ? <EmptyState title={t("history.empty", "NO HISTORY")} /> : null}
 
           <div className="mt-8 flex flex-col gap-3 border-2 border-foreground p-3 sm:flex-row sm:items-center sm:justify-between">
             <button
@@ -338,8 +318,7 @@ export default function ReviewHistoryPage() {
               {t("history.next", "Next")}
             </button>
           </div>
-        </main>
-      </AuthGate>
-    </div>
+      </ProtectedPageShell>
+    </AuthGate>
   )
 }
