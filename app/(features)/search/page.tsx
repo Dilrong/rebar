@@ -6,7 +6,7 @@ import { Fragment, useCallback, useEffect, useMemo, useState } from "react"
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Filter, Search } from "lucide-react"
 import AuthGate from "@shared/auth/auth-gate"
-import AppNav from "@shared/layout/app-nav"
+import ProtectedPageShell from "@shared/layout/protected-page-shell"
 import { useI18n } from "@app-shared/i18n/i18n-provider"
 import { apiFetch } from "@/lib/client-http"
 import { getStateLabel } from "@/lib/i18n/state-label"
@@ -228,10 +228,8 @@ export default function SearchPage() {
   }, [activeIndex, result.data?.data, router, toRecordHref])
 
   return (
-    <div className="min-h-screen bg-background p-4 font-sans selection:bg-accent selection:text-white md:p-6">
-      <AuthGate>
-        <main className="mx-auto w-full max-w-5xl animate-fade-in-up pb-24">
-          <AppNav />
+    <AuthGate>
+      <ProtectedPageShell rootClassName="selection:bg-accent selection:text-white md:p-6" mainClassName="max-w-5xl pb-24">
 
           <header className="mb-8 border-b-4 border-foreground pb-4">
             <h1 className="flex items-start gap-3 text-3xl font-black uppercase leading-none text-foreground sm:items-center sm:text-4xl md:text-5xl">
@@ -451,8 +449,7 @@ export default function SearchPage() {
               actionHref="/capture"
             />
           ) : null}
-        </main>
-      </AuthGate>
-    </div>
+      </ProtectedPageShell>
+    </AuthGate>
   )
 }

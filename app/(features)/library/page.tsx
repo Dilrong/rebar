@@ -4,7 +4,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react"
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import AuthGate from "@shared/auth/auth-gate"
-import AppNav from "@shared/layout/app-nav"
+import ProtectedPageShell from "@shared/layout/protected-page-shell"
 import { apiFetch } from "@/lib/client-http"
 import { getSupabaseBrowser } from "@/lib/supabase-browser"
 import { useI18n } from "@app-shared/i18n/i18n-provider"
@@ -660,10 +660,8 @@ export default function LibraryPage() {
   }, [kind, q, state, t, tagId])
 
   return (
-    <div className="min-h-screen bg-background p-4 font-sans selection:bg-accent selection:text-white md:p-6">
-      <AuthGate>
-        <main className="mx-auto w-full max-w-5xl animate-fade-in-up pb-24">
-          <AppNav />
+    <AuthGate>
+      <ProtectedPageShell rootClassName="selection:bg-accent selection:text-white md:p-6" mainClassName="max-w-5xl pb-24">
 
           <LibraryHeader
             t={t}
@@ -795,8 +793,7 @@ export default function LibraryPage() {
           {exportError ? (
             <ErrorState message={`${t("library.exportError", "EXPORT ERR")}: ${exportError}`} />
           ) : null}
-        </main>
-      </AuthGate>
-    </div>
+      </ProtectedPageShell>
+    </AuthGate>
   )
 }
