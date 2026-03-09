@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import AuthGate from "@shared/auth/auth-gate"
-import ProtectedPageShell from "./_components/protected-page-shell"
+import ProtectedPageShell from "@shared/layout/protected-page-shell"
 import { useI18n } from "@app-shared/i18n/i18n-provider"
 import { getSupabaseBrowser } from "@/lib/supabase-browser"
 import {
@@ -93,7 +93,7 @@ export default function SettingsPage() {
 
   return (
     <AuthGate>
-      <ProtectedPageShell mainClassName="max-w-5xl">
+      <ProtectedPageShell rootClassName="selection:bg-accent selection:text-white md:p-6" mainClassName="max-w-5xl pb-24">
         <header className="mb-8 border-b-4 border-foreground pb-4">
           <h1 className="font-black text-3xl uppercase text-foreground leading-none md:text-5xl">{t("settings.title", "SETTINGS")}</h1>
         </header>
