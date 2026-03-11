@@ -19,6 +19,9 @@ import { RecordManagePanel } from "../_components/record-manage-panel"
 import { RecordTagsPanel } from "../_components/record-tags-panel"
 import { RecordHistoryPanel } from "../_components/record-history-panel"
 import { ArticleReader } from "../_components/article-reader"
+import { RecordHighlightPopup } from "../_components/record-highlight-popup"
+import { useRecordPanels } from "../_hooks/use-record-panels"
+import { useSelectionPopup } from "../_hooks/use-selection-popup"
 
 type DetailResponse = {
   record: RecordRow
@@ -31,16 +34,7 @@ type TagsResponse = {
   data: TagRow[]
 }
 
-type SelectionPopup = {
-  x: number
-  y: number
-  text: string
-  anchor: string
-} | null
-
 const MAX_HIGHLIGHT_ANCHOR_CHARS = 500
-
-type RecordPanelKey = "manage" | "tags" | "history"
 
 function resolveFromPath(value: string | null): string | null {
   if (!value) {
@@ -72,14 +66,11 @@ export default function RecordDetailPage() {
   const [pendingTrashConfirm, setPendingTrashConfirm] = useState(false)
   const [lastStateBeforeDelete, setLastStateBeforeDelete] = useState<RecordRow["state"]>("INBOX")
   const [redirectTimer, setRedirectTimer] = useState<number | null>(null)
-  const [selectionPopup, setSelectionPopup] = useState<SelectionPopup>(null)
-  const [isDesktopViewport, setIsDesktopViewport] = useState(false)
-  const [desktopPanel, setDesktopPanel] = useState<RecordPanelKey | null>(null)
-  const [mobilePanel, setMobilePanel] = useState<RecordPanelKey | null>(null)
   const [editNote, setEditNote] = useState("")
   const [libraryContextIds, setLibraryContextIds] = useState<string[]>([])
   const [newTagName, setNewTagName] = useState("")
   const articleRef = useRef<HTMLDivElement>(null)
+  const { isDesktopViewport, desktopPanel, mobilePanel, togglePanel, closeMobilePanel } = useRecordPanels()
 
   const detail = useQuery({
     queryKey: ["record-detail", id],
@@ -124,55 +115,11 @@ export default function RecordDetailPage() {
 
     return record.kind === "link" && Boolean(record.url) && record.content.split(/\n{2,}/).filter((item) => item.trim().length > 0).length >= 2
   }, [detail.data?.record])
-
-  const handleTextSelect = useCallback(() => {
-    if (isArticleReader) {
-      return
-    }
-
-    const sel = window.getSelection()
-    if (!sel || sel.isCollapsed || sel.rangeCount === 0 || !articleRef.current) {
-      setSelectionPopup(null)
-      return
-    }
-
-    const text = sel.toString().trim()
-    if (text.length < 3 || text.length > MAX_HIGHLIGHT_ANCHOR_CHARS) {
-      setSelectionPopup(null)
-      return
-    }
-
-    // Only allow selection inside the article
-    let range: Range
-    try {
-      range = sel.getRangeAt(0)
-    } catch {
-      setSelectionPopup(null)
-      return
-    }
-
-    if (!articleRef.current.contains(range.commonAncestorContainer)) {
-      setSelectionPopup(null)
-      return
-    }
-
-    const rect = range.getBoundingClientRect()
-    setSelectionPopup({
-      x: rect.left + rect.width / 2,
-      y: rect.top - 8,
-      text,
-      anchor: text
-    })
-  }, [isArticleReader])
-
-  useEffect(() => {
-    document.addEventListener("mouseup", handleTextSelect)
-    document.addEventListener("touchend", handleTextSelect)
-    return () => {
-      document.removeEventListener("mouseup", handleTextSelect)
-      document.removeEventListener("touchend", handleTextSelect)
-    }
-  }, [handleTextSelect])
+  const { selectionPopup, setSelectionPopup } = useSelectionPopup({
+    articleRef,
+    disabled: isArticleReader,
+    maxChars: MAX_HIGHLIGHT_ANCHOR_CHARS
+  })
 
   const updateTags = useMutation({
     mutationFn: (tagIds: string[]) =>
@@ -415,21 +362,6 @@ export default function RecordDetailPage() {
   }, [detail.data])
 
   useEffect(() => {
-    const mediaQuery = window.matchMedia("(min-width: 1024px)")
-    setIsDesktopViewport(mediaQuery.matches)
-
-    const handleChange = (event: MediaQueryListEvent) => {
-      setIsDesktopViewport(event.matches)
-      if (event.matches) {
-        setMobilePanel(null)
-      }
-    }
-
-    mediaQuery.addEventListener("change", handleChange)
-    return () => mediaQuery.removeEventListener("change", handleChange)
-  }, [])
-
-  useEffect(() => {
     return () => {
       if (redirectTimer) {
         window.clearTimeout(redirectTimer)
@@ -509,15 +441,6 @@ export default function RecordDetailPage() {
 
     updateNote.mutate(nextNote)
   }, [detail.data, editNote, updateNote])
-
-  const togglePanel = (panel: RecordPanelKey) => {
-    if (isDesktopViewport) {
-      setDesktopPanel((current) => (current === panel ? null : panel))
-      return
-    }
-
-    setMobilePanel(panel)
-  }
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -877,34 +800,22 @@ export default function RecordDetailPage() {
           onClose={() => setShowDeleteToast(false)}
         />
       ) : null}
-      {selectionPopup ? (
-        <div
-          style={{
-            position: "fixed",
-            left: `clamp(1rem, ${selectionPopup.x}px, calc(100vw - 1rem))`,
-            top: `max(1rem, ${selectionPopup.y}px)`,
-            transform: "translate(-50%, -100%)",
-            zIndex: 60,
-            maxWidth: "calc(100vw - 2rem)"
-          }}
-        >
-          <button
-            type="button"
-            onClick={() => addHighlight.mutate({ body: selectionPopup.text, anchor: selectionPopup.anchor })}
-            disabled={addHighlight.isPending}
-            className="flex w-full items-center justify-center gap-2 border-4 border-foreground bg-accent px-4 py-2 text-center font-mono text-xs font-black uppercase text-white shadow-brutal-sm transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-none hover:bg-accent/80"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-              <path d="m9 11-6 6v3h9l3-3" /><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4" />
-            </svg>
-            {addHighlight.isPending ? "..." : t("record.highlight", "HIGHLIGHT")}
-          </button>
-        </div>
-      ) : null}
+      <RecordHighlightPopup
+        open={Boolean(selectionPopup)}
+        x={selectionPopup?.x ?? 0}
+        y={selectionPopup?.y ?? 0}
+        pending={addHighlight.isPending}
+        label={t("record.highlight", "HIGHLIGHT")}
+        onConfirm={() => {
+          if (selectionPopup) {
+            addHighlight.mutate({ body: selectionPopup.text, anchor: selectionPopup.anchor })
+          }
+        }}
+      />
       <BottomSheet
         open={Boolean(mobilePanel)}
         title={mobilePanel === "manage" ? "MANAGE" : mobilePanel === "tags" ? "TAGS" : "LOG HISTORY"}
-        onClose={() => setMobilePanel(null)}
+        onClose={closeMobilePanel}
       >
         {mobilePanel ? panelContent[mobilePanel] : null}
       </BottomSheet>
