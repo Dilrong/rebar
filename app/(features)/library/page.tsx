@@ -1,17 +1,14 @@
 "use client"
 
-import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react"
+import { useCallback, useEffect, useMemo, useState, type KeyboardEvent as ReactKeyboardEvent } from "react"
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query"
 import AuthGate from "@shared/auth/auth-gate"
 import ProtectedPageShell from "@shared/layout/protected-page-shell"
 import { apiFetch } from "@/lib/client-http"
-import { getSupabaseBrowser } from "@/lib/supabase-browser"
 import { useI18n } from "@app-shared/i18n/i18n-provider"
 import { EmptyState } from "@shared/ui/empty-state"
 import { ErrorState } from "@shared/ui/error-state"
-import { useDebouncedValue } from "@shared/hooks/use-debounced-value"
-import { EXPORT_FORMATS, buildExportFilename, type ExportFormat } from "@feature-lib/export/formats"
+import { EXPORT_FORMATS } from "@feature-lib/export/formats"
 import { getStateLabel } from "@/lib/i18n/state-label"
 import { LibraryHeader } from "./_components/library-header"
 import { LibraryFiltersToolbar } from "./_components/library-filters-toolbar"
@@ -20,7 +17,8 @@ import { LibraryTagManager } from "./_components/library-tag-manager"
 import { LibraryRecordGrid } from "./_components/library-record-grid"
 import { LibraryPagination } from "./_components/library-pagination"
 import { useLibraryActions } from "./_hooks/use-library-actions"
-import { useLibraryFilters, type StateFilter } from "./_hooks/use-library-filters"
+import { useLibraryFilters } from "./_hooks/use-library-filters"
+import { useLibraryWorkflow } from "./_hooks/use-library-workflow"
 
 import type { RecordRow, TagRow } from "@/lib/types"
 import type { RecordKind } from "@/lib/schemas"
@@ -40,29 +38,6 @@ type RecordCountsResponse = {
 
 type TagsResponse = {
   data: TagRow[]
-}
-
-function getFilenameFromDisposition(disposition: string | null) {
-  if (!disposition) {
-    return null
-  }
-
-  const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i)
-  if (utf8Match?.[1]) {
-    try {
-      return decodeURIComponent(utf8Match[1])
-    } catch {
-      return utf8Match[1]
-    }
-  }
-
-  const quotedMatch = disposition.match(/filename="([^"]+)"/i)
-  if (quotedMatch?.[1]) {
-    return quotedMatch[1]
-  }
-
-  const bareMatch = disposition.match(/filename=([^;]+)/i)
-  return bareMatch?.[1]?.trim() ?? null
 }
 
 function toDateInputValue(date: Date) {
@@ -88,26 +63,19 @@ function getExportKindLabel(kind: RecordKind, t: (key: string, fallback?: string
 
 export default function LibraryPage() {
   const { t } = useI18n()
-  const router = useRouter()
   const queryClient = useQueryClient()
   const { didInitFromUrl, state, setState, kind, setKind, q, setQ, debouncedQ, tagId, setTagId, sort, setSort, order, setOrder, queryString, clearAllFilters } = useLibraryFilters()
   const [newTagName, setNewTagName] = useState("")
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [bulkTagIds, setBulkTagIds] = useState<string[]>([])
   const [exportSince, setExportSince] = useState("")
-  const [exportMenuOpen, setExportMenuOpen] = useState(false)
-  const [exportMenuIndex, setExportMenuIndex] = useState(0)
-  const exportMenuWrapRef = useRef<HTMLDivElement | null>(null)
-  const exportTriggerRef = useRef<HTMLButtonElement | null>(null)
-  const exportItemRefs = useRef<Array<HTMLButtonElement | null>>([])
-  const [exportPending, setExportPending] = useState(false)
-  const [exportError, setExportError] = useState<string | null>(null)
-  const [cursor, setCursor] = useState<string | null>(null)
-  const [loadMorePending, setLoadMorePending] = useState(false)
-  const [allRecords, setAllRecords] = useState<RecordRow[]>([])
   const [editingTagId, setEditingTagId] = useState<string | null>(null)
   const [editingTagName, setEditingTagName] = useState("")
-  const restoredScrollRef = useRef(false)
+  const { exportMenuOpen, exportMenuIndex, exportMenuWrapRef, exportTriggerRef, exportItemRefs, exportPending, exportError, setExportError, cursor, setCursor, loadMorePending, allRecords, setAllRecords, libraryBackHref, navigationStorageKey, handleExport, loadMore, handleOpenRecord, closeExportMenu, handleExportMenuKeyDown: handleExportMenuKeyDownRaw, toggleExportMenu, openExportMenuFromKeyboard, restoreLibraryScroll } = useLibraryWorkflow({
+    queryString,
+    exportSince,
+    didInitFromUrl
+  })
 
   const prefetchRecord = useCallback((id: string) => {
     queryClient.prefetchQuery({
@@ -129,9 +97,6 @@ export default function LibraryPage() {
     placeholderData: keepPreviousData
   })
 
-  const libraryBackHref = queryString ? `/library?${queryString}` : "/library"
-  const scrollStorageKey = useMemo(() => `library:scroll:${libraryBackHref}`, [libraryBackHref])
-  const navigationStorageKey = useMemo(() => `library:navigation:${libraryBackHref}`, [libraryBackHref])
   const isTransitioning = records.isFetching && !records.isLoading && !loadMorePending
 
   const toRecordHref = useCallback((recordId: string) =>
@@ -196,98 +161,6 @@ export default function LibraryPage() {
     setBulkTagIds
   })
 
-  const buildExportHref = (format: ExportFormat) => {
-    const params = new URLSearchParams()
-    params.set("format", format)
-    if (state !== "ALL") {
-      params.set("state", state)
-    }
-    if (kind) {
-      params.set("kind", kind)
-    }
-    if (tagId) {
-      params.set("tag_id", tagId)
-    }
-    if (exportSince) {
-      params.set("since", exportSince)
-    }
-    return `/api/export?${params.toString()}`
-  }
-
-  const handleExport = async (format: ExportFormat) => {
-    setExportPending(true)
-    setExportError(null)
-
-    try {
-      const headers = new Headers()
-      const supabase = getSupabaseBrowser()
-      const {
-        data: { session }
-      } = await supabase.auth.getSession()
-
-      if (session?.access_token) {
-        headers.set("Authorization", `Bearer ${session.access_token}`)
-      }
-
-      const devUserId = process.env.NEXT_PUBLIC_DEV_USER_ID
-      if (devUserId && !headers.has("Authorization")) {
-        headers.set("x-user-id", devUserId)
-      }
-
-      const response = await fetch(buildExportHref(format), { headers })
-      if (!response.ok) {
-        let message = "Export failed"
-        try {
-          const data = (await response.json()) as { error?: string }
-          if (data.error) {
-            message = data.error
-          }
-        } catch { }
-        throw new Error(message)
-      }
-
-      const blob = await response.blob()
-      const downloadUrl = window.URL.createObjectURL(blob)
-      const anchor = document.createElement("a")
-      const today = new Date().toISOString().slice(0, 10)
-      const filename =
-        getFilenameFromDisposition(response.headers.get("Content-Disposition")) ??
-        buildExportFilename(format, today, exportSince || null)
-      anchor.href = downloadUrl
-      anchor.download = filename
-      document.body.appendChild(anchor)
-      anchor.click()
-      anchor.remove()
-      window.URL.revokeObjectURL(downloadUrl)
-    } catch (error) {
-      setExportError(error instanceof Error ? error.message : "Export failed")
-    } finally {
-      setExportPending(false)
-    }
-  }
-
-  const loadMore = useCallback(async () => {
-    if (!cursor || loadMorePending) {
-      return
-    }
-
-    const params = new URLSearchParams(queryString)
-    params.set("cursor", cursor)
-    setLoadMorePending(true)
-    try {
-      const data = await apiFetch<RecordsResponse>(`/api/records?${params.toString()}`)
-      setAllRecords((prev) => {
-        const seen = new Set(prev.map((record) => record.id))
-        const nextRows = data.data.filter((record) => !seen.has(record.id))
-        return [...prev, ...nextRows]
-      })
-      setCursor(data.next_cursor ?? null)
-    } catch { }
-    finally {
-      setLoadMorePending(false)
-    }
-  }, [cursor, loadMorePending, queryString])
-
   const handleRenameTag = (tag: TagRow) => {
     setEditingTagId(tag.id)
     setEditingTagName(tag.name)
@@ -299,18 +172,6 @@ export default function LibraryPage() {
     if (!trimmed) return
     renameTag.mutate({ id, name: trimmed })
   }
-
-  const handleOpenRecord = useCallback((recordId: string) => {
-    if (typeof window === "undefined") {
-      return
-    }
-
-    window.sessionStorage.setItem(scrollStorageKey, String(window.scrollY))
-    window.sessionStorage.setItem(
-      navigationStorageKey,
-      JSON.stringify({ ids: allRecords.map((record) => record.id), currentId: recordId })
-    )
-  }, [allRecords, navigationStorageKey, scrollStorageKey])
 
   const visibleIds = (records.data?.data ?? []).map((record) => record.id)
   const toggleSelect = useCallback((id: string) => {
@@ -326,106 +187,8 @@ export default function LibraryPage() {
   }
 
   useEffect(() => {
-    if (!exportMenuOpen) {
-      return
-    }
-
-    const handleOutside = (event: MouseEvent) => {
-      const wrap = exportMenuWrapRef.current
-      if (!wrap) {
-        return
-      }
-
-      if (!wrap.contains(event.target as Node)) {
-        setExportMenuOpen(false)
-        exportTriggerRef.current?.focus()
-      }
-    }
-
-    document.addEventListener("mousedown", handleOutside)
-    return () => document.removeEventListener("mousedown", handleOutside)
-  }, [exportMenuOpen])
-
-  useEffect(() => {
-    if (!exportMenuOpen) {
-      return
-    }
-
-    exportItemRefs.current[exportMenuIndex]?.focus()
-  }, [exportMenuIndex, exportMenuOpen])
-
-  const closeExportMenu = () => {
-    setExportMenuOpen(false)
-    setExportMenuIndex(0)
-    exportTriggerRef.current?.focus()
-  }
-
-  const handleExportMenuKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>) => {
-    if (!exportMenuOpen) {
-      return
-    }
-
-    const exportMenuLength = EXPORT_FORMATS.length
-
-    if (event.key === "Escape") {
-      event.preventDefault()
-      closeExportMenu()
-      return
-    }
-
-    if (event.key === "ArrowDown") {
-      event.preventDefault()
-      setExportMenuIndex((idx) => (idx + 1) % exportMenuLength)
-      return
-    }
-
-    if (event.key === "ArrowUp") {
-      event.preventDefault()
-      setExportMenuIndex((idx) => (idx <= 0 ? exportMenuLength - 1 : idx - 1))
-      return
-    }
-
-    if (event.key === "Tab") {
-      event.preventDefault()
-      setExportMenuIndex((idx) => (event.shiftKey ? (idx <= 0 ? exportMenuLength - 1 : idx - 1) : (idx + 1) % exportMenuLength))
-    }
-  }
-
-  const toggleExportMenu = () => {
-    setExportMenuOpen((value) => !value)
-    setExportMenuIndex(0)
-  }
-
-  const openExportMenuFromKeyboard = () => {
-    setExportMenuOpen(true)
-    setExportMenuIndex(0)
-  }
-
-  useEffect(() => {
-    restoredScrollRef.current = false
-  }, [scrollStorageKey])
-
-  useEffect(() => {
-    if (!didInitFromUrl || !records.isSuccess || restoredScrollRef.current) {
-      return
-    }
-
-    if (typeof window === "undefined") {
-      return
-    }
-
-    const raw = window.sessionStorage.getItem(scrollStorageKey)
-    restoredScrollRef.current = true
-    if (raw === null) {
-      return
-    }
-
-    const top = Number(raw)
-    window.requestAnimationFrame(() => {
-      window.scrollTo({ top: Number.isFinite(top) ? top : 0 })
-      window.sessionStorage.removeItem(scrollStorageKey)
-    })
-  }, [allRecords.length, didInitFromUrl, records.isSuccess, scrollStorageKey])
+    restoreLibraryScroll(records.isSuccess)
+  }, [records.isSuccess, restoreLibraryScroll, allRecords.length])
 
   const emptyState = useMemo(() => {
     if (q.trim()) {
@@ -461,6 +224,10 @@ export default function LibraryPage() {
       actionHref: "/capture"
     }
   }, [kind, q, state, t, tagId])
+
+  const handleExportMenuKeyDown = useCallback((event: ReactKeyboardEvent<HTMLButtonElement>) => {
+    handleExportMenuKeyDownRaw(event, EXPORT_FORMATS.length)
+  }, [handleExportMenuKeyDownRaw])
 
   return (
     <AuthGate>
