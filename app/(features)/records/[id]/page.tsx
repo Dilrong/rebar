@@ -18,6 +18,7 @@ import { MarkdownContent } from "@shared/ui/markdown-content"
 import { RecordManagePanel } from "../_components/record-manage-panel"
 import { RecordTagsPanel } from "../_components/record-tags-panel"
 import { RecordHistoryPanel } from "../_components/record-history-panel"
+import { ArticleReader } from "../_components/article-reader"
 
 type DetailResponse = {
   record: RecordRow
@@ -34,6 +35,7 @@ type SelectionPopup = {
   x: number
   y: number
   text: string
+  anchor: string
 } | null
 
 const MAX_HIGHLIGHT_ANCHOR_CHARS = 500
@@ -93,11 +95,11 @@ export default function RecordDetailPage() {
   })
 
   const addHighlight = useMutation({
-    mutationFn: (anchor: string) =>
+    mutationFn: ({ body, anchor }: { body: string; anchor: string }) =>
       apiFetch(`/api/records/${id}/annotations`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ kind: "highlight", body: anchor, anchor })
+        body: JSON.stringify({ kind: "highlight", body, anchor })
       }),
     onSuccess: () => {
       setSelectionPopup(null)
@@ -114,8 +116,20 @@ export default function RecordDetailPage() {
     }
   })
 
-  // Text selection handler for highlight toolbar
+  const isArticleReader = useMemo(() => {
+    const record = detail.data?.record
+    if (!record) {
+      return false
+    }
+
+    return record.kind === "link" && Boolean(record.url) && record.content.split(/\n{2,}/).filter((item) => item.trim().length > 0).length >= 2
+  }, [detail.data?.record])
+
   const handleTextSelect = useCallback(() => {
+    if (isArticleReader) {
+      return
+    }
+
     const sel = window.getSelection()
     if (!sel || sel.isCollapsed || sel.rangeCount === 0 || !articleRef.current) {
       setSelectionPopup(null)
@@ -146,9 +160,10 @@ export default function RecordDetailPage() {
     setSelectionPopup({
       x: rect.left + rect.width / 2,
       y: rect.top - 8,
-      text
+      text,
+      anchor: text
     })
-  }, [])
+  }, [isArticleReader])
 
   useEffect(() => {
     document.addEventListener("mouseup", handleTextSelect)
@@ -693,12 +708,21 @@ export default function RecordDetailPage() {
                   )}
 
                   <div ref={articleRef} className="relative">
-                    <MarkdownContent
-                      content={detail.data.record.content}
-                      className="text-lg leading-[1.6] sm:text-xl md:text-2xl"
-                      highlights={markdownHighlights}
-                      onHighlightClick={handleHighlightClick}
-                    />
+                    {isArticleReader ? (
+                      <ArticleReader
+                        content={detail.data.record.content}
+                        highlights={markdownHighlights}
+                        onHighlightClick={handleHighlightClick}
+                        onSelectionChange={setSelectionPopup}
+                      />
+                    ) : (
+                      <MarkdownContent
+                        content={detail.data.record.content}
+                        className="text-lg leading-[1.6] sm:text-xl md:text-2xl"
+                        highlights={markdownHighlights}
+                        onHighlightClick={handleHighlightClick}
+                      />
+                    )}
                   </div>
 
                   <div className="mt-8 border-t-4 border-border pt-6">
@@ -866,7 +890,7 @@ export default function RecordDetailPage() {
         >
           <button
             type="button"
-            onClick={() => addHighlight.mutate(selectionPopup.text)}
+            onClick={() => addHighlight.mutate({ body: selectionPopup.text, anchor: selectionPopup.anchor })}
             disabled={addHighlight.isPending}
             className="flex w-full items-center justify-center gap-2 border-4 border-foreground bg-accent px-4 py-2 text-center font-mono text-xs font-black uppercase text-white shadow-brutal-sm transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-none hover:bg-accent/80"
           >
