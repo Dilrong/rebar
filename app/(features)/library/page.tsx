@@ -19,6 +19,7 @@ import { LibrarySelectionToolbar } from "./_components/library-selection-toolbar
 import { LibraryTagManager } from "./_components/library-tag-manager"
 import { LibraryRecordGrid } from "./_components/library-record-grid"
 import { LibraryPagination } from "./_components/library-pagination"
+import { useLibraryFilters, type StateFilter } from "./_hooks/use-library-filters"
 
 import type { RecordRow, TagRow } from "@/lib/types"
 import type { RecordKind } from "@/lib/schemas"
@@ -46,9 +47,6 @@ type InboxDecisionPayload = {
   actionType?: "EXPERIMENT" | "SHARE" | "TODO"
   deferReason?: "NEED_INFO" | "LOW_CONFIDENCE" | "NO_TIME"
 }
-
-const STATE_TABS = ["INBOX", "ACTIVE", "PINNED", "ARCHIVED"] as const
-type StateFilter = "ALL" | (typeof STATE_TABS)[number]
 
 function getFilenameFromDisposition(disposition: string | null) {
   if (!disposition) {
@@ -97,17 +95,9 @@ function getExportKindLabel(kind: RecordKind, t: (key: string, fallback?: string
 export default function LibraryPage() {
   const { t } = useI18n()
   const router = useRouter()
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
   const queryClient = useQueryClient()
-  const [state, setState] = useState<StateFilter>("ALL")
-  const [kind, setKind] = useState("")
-  const [q, setQ] = useState("")
-  const debouncedQ = useDebouncedValue(q, 220)
-  const [tagId, setTagId] = useState("")
+  const { didInitFromUrl, state, setState, kind, setKind, q, setQ, debouncedQ, tagId, setTagId, sort, setSort, order, setOrder, queryString, clearAllFilters } = useLibraryFilters()
   const [newTagName, setNewTagName] = useState("")
-  const [sort, setSort] = useState<"created_at" | "review_count" | "due_at">("created_at")
-  const [order, setOrder] = useState<"asc" | "desc">("desc")
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [bulkTagIds, setBulkTagIds] = useState<string[]>([])
   const [exportSince, setExportSince] = useState("")
@@ -123,81 +113,7 @@ export default function LibraryPage() {
   const [allRecords, setAllRecords] = useState<RecordRow[]>([])
   const [editingTagId, setEditingTagId] = useState<string | null>(null)
   const [editingTagName, setEditingTagName] = useState("")
-  const [didInitFromUrl, setDidInitFromUrl] = useState(false)
   const restoredScrollRef = useRef(false)
-
-  useEffect(() => {
-    const queryState = searchParams.get("state")
-    const queryKind = searchParams.get("kind")
-    const queryText = searchParams.get("q")
-    const queryTag = searchParams.get("tag_id")
-    const querySort = searchParams.get("sort")
-    const queryOrder = searchParams.get("order")
-
-    setState(
-      queryState === "ALL" || queryState === "INBOX" || queryState === "ACTIVE" || queryState === "PINNED" || queryState === "ARCHIVED"
-        ? queryState
-        : "ALL"
-    )
-
-    setKind(queryKind === "quote" || queryKind === "note" || queryKind === "link" || queryKind === "ai" ? queryKind : "")
-    setQ(queryText ?? "")
-    setTagId(queryTag ?? "")
-    setSort(querySort === "created_at" || querySort === "review_count" || querySort === "due_at" ? querySort : "created_at")
-    setOrder(queryOrder === "asc" || queryOrder === "desc" ? queryOrder : "desc")
-    setDidInitFromUrl(true)
-  }, [searchParams])
-
-  const currentParams = searchParams.toString()
-
-  useEffect(() => {
-    if (!didInitFromUrl) {
-      return
-    }
-
-    const params = new URLSearchParams()
-    if (state !== "ALL") {
-      params.set("state", state)
-    }
-    if (kind) {
-      params.set("kind", kind)
-    }
-    if (debouncedQ) {
-      params.set("q", debouncedQ)
-    }
-    if (tagId) {
-      params.set("tag_id", tagId)
-    }
-    params.set("sort", sort)
-    params.set("order", order)
-
-    const nextParams = params.toString()
-    if (nextParams === currentParams) {
-      return
-    }
-
-    const nextHref = nextParams ? `${pathname}?${nextParams}` : pathname
-    router.replace(nextHref, { scroll: false })
-  }, [currentParams, debouncedQ, didInitFromUrl, kind, order, pathname, router, sort, state, tagId])
-
-  const queryString = useMemo(() => {
-    const params = new URLSearchParams()
-    if (state !== "ALL") {
-      params.set("state", state)
-    }
-    if (kind) {
-      params.set("kind", kind)
-    }
-    if (debouncedQ) {
-      params.set("q", debouncedQ)
-    }
-    if (tagId) {
-      params.set("tag_id", tagId)
-    }
-    params.set("sort", sort)
-    params.set("order", order)
-    return params.toString()
-  }, [debouncedQ, kind, order, sort, state, tagId])
 
   const prefetchRecord = useCallback((id: string) => {
     queryClient.prefetchQuery({
@@ -471,13 +387,6 @@ export default function LibraryPage() {
     setEditingTagId(null)
     if (!trimmed) return
     renameTag.mutate({ id, name: trimmed })
-  }
-
-  const clearAllFilters = () => {
-    setQ("")
-    setKind("")
-    setTagId("")
-    setState("ALL")
   }
 
   const handleActivate = useCallback((id: string) => activate.mutate(id), [activate])
