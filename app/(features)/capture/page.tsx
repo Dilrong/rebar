@@ -21,7 +21,9 @@ import { CaptureCsvSection } from "./_components/capture-csv-section"
 import { CaptureOcrSection } from "./_components/capture-ocr-section"
 import { CaptureManualForm } from "./_components/capture-manual-form"
 import { CaptureBatchSection } from "./_components/capture-batch-section"
+import { useCaptureIngestJobs } from "./_hooks/use-capture-ingest-jobs"
 import { useCaptureQueries } from "./_hooks/use-capture-queries"
+import { useCaptureToast } from "./_hooks/use-capture-toast"
 
 type ExtractResponse = {
   url: string
@@ -37,9 +39,6 @@ type IngestResponse = {
 
 
 type ImportMode = "manual" | "url" | "batch" | "csv" | "ocr"
-type CaptureToastKind = "ingested" | "ocrFilled" | "retryDone"
-
-const TOAST_DURATION_MS = 5000
 
 export default function CapturePage() {
   const { t } = useI18n()
@@ -64,9 +63,6 @@ export default function CapturePage() {
   const [csvPreview, setCsvPreview] = useState<CsvPreview>({ totalRows: 0, importableRows: 0, readwiseDetected: false })
   const [ocrFile, setOcrFile] = useState<File | null>(null)
   const [ocrFileName, setOcrFileName] = useState<string | null>(null)
-  const [showSavedToast, setShowSavedToast] = useState(false)
-  const [toastKind, setToastKind] = useState<CaptureToastKind>("ingested")
-  const [latestSavedRecordId, setLatestSavedRecordId] = useState<string | null>(null)
   const [savedCount, setSavedCount] = useState(0)
   const [lastSavedPreview, setLastSavedPreview] = useState<string | null>(null)
   const [pendingIngestCount, setPendingIngestCount] = useState<number | null>(null)
@@ -75,30 +71,7 @@ export default function CapturePage() {
   const [ingestError, setIngestError] = useState<string | null>(null)
   const [importMode, setImportMode] = useState<ImportMode>("manual")
   const [duplicateRecordId, setDuplicateRecordId] = useState<string | null>(null)
-  const toastTimerRef = useRef<number | null>(null)
-
-  const openToast = (kind: CaptureToastKind, recordId: string | null = null) => {
-    if (toastTimerRef.current) {
-      window.clearTimeout(toastTimerRef.current)
-    }
-
-    setToastKind(kind)
-    setLatestSavedRecordId(recordId)
-    setShowSavedToast(true)
-    toastTimerRef.current = window.setTimeout(() => {
-      setShowSavedToast(false)
-      setLatestSavedRecordId(null)
-      toastTimerRef.current = null
-    }, TOAST_DURATION_MS)
-  }
-
-  useEffect(() => {
-    return () => {
-      if (toastTimerRef.current) {
-        window.clearTimeout(toastTimerRef.current)
-      }
-    }
-  }, [])
+  const { showSavedToast, toastKind, latestSavedRecordId, openToast, closeToast } = useCaptureToast()
 
   const mutation = useMutation({
     mutationFn: async (payload: CreateRecordInput) =>
@@ -166,55 +139,12 @@ export default function CapturePage() {
     }
   })
 
-  const enqueueRetryMutation = useMutation({
-    mutationFn: (payload: { items: IngestItemInput[]; import_channel: "csv" | "json"; error?: string }) =>
-      apiFetch<{ id: string }>("/api/ingest-jobs", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ payload: { items: payload.items, import_channel: payload.import_channel }, error: payload.error })
-      }),
-    onSuccess: () => {
-      ingestJobs.refetch()
-    }
-  })
-
-  const clearRetryMutation = useMutation({
-    mutationFn: () =>
-      apiFetch<{ cleared: boolean }>("/api/ingest-jobs?status=PENDING", {
-        method: "DELETE"
-      }),
-    onSuccess: () => {
-      ingestJobs.refetch()
-    }
-  })
-
-  const clearFailedRetryMutation = useMutation({
-    mutationFn: () =>
-      apiFetch<{ cleared: boolean }>("/api/ingest-jobs?status=FAILED", {
-        method: "DELETE"
-      }),
-    onSuccess: () => {
-      ingestJobs.refetch()
-    }
-  })
-
-  const retryAllMutation = useMutation({
-    mutationFn: () =>
-      apiFetch<{ done: number; failed: number; pending: number }>("/api/ingest-jobs/retry?status=ALL", {
-        method: "POST"
-      }),
-    onSuccess: (data) => {
-      ingestJobs.refetch()
-      setIngestError(
-        data.failed > 0
-          ? t("capture.retryPartial", "일부 재시도만 성공했습니다.")
-          : t("capture.retryDone", "대기 중이던 인입이 모두 처리되었습니다.")
-      )
-
-      if (data.done > 0) {
-        openToast("retryDone")
-      }
-    }
+  const { enqueueRetryMutation, clearRetryMutation, clearFailedRetryMutation, retryAllMutation } = useCaptureIngestJobs({
+    ingestJobs,
+    onRetryMessage: (kind) => {
+      setIngestError(kind === "partial" ? t("capture.retryPartial", "일부 재시도만 성공했습니다.") : t("capture.retryDone", "대기 중이던 인입이 모두 처리되었습니다."))
+    },
+    onRetryToast: () => openToast("retryDone")
   })
 
   const ocrMutation = useMutation({
@@ -264,8 +194,8 @@ export default function CapturePage() {
 
   const handleIngestSubmit = () => {
     setIngestResult(null)
-    setIngestError(null)
-    setLatestSavedRecordId(null)
+      setIngestError(null)
+      closeToast()
 
     try {
       const items = parseExternalItems(externalJson)
@@ -295,8 +225,8 @@ export default function CapturePage() {
 
   const handleCsvSubmit = () => {
     setIngestResult(null)
-    setIngestError(null)
-    setLatestSavedRecordId(null)
+      setIngestError(null)
+      closeToast()
 
     try {
       const items = parseCsvItems(csvText)
@@ -349,7 +279,7 @@ export default function CapturePage() {
 
   const handleOcrSubmit = () => {
     setIngestError(null)
-    setLatestSavedRecordId(null)
+    closeToast()
     if (!ocrFile) {
       setIngestError(t("capture.ocrNoFile", "Select an image first"))
       return
@@ -478,14 +408,7 @@ export default function CapturePage() {
               : undefined
           }
           tone="success"
-          onClose={() => {
-            if (toastTimerRef.current) {
-              window.clearTimeout(toastTimerRef.current)
-              toastTimerRef.current = null
-            }
-            setShowSavedToast(false)
-            setLatestSavedRecordId(null)
-          }}
+          onClose={closeToast}
         />
       ) : null}
     </>
