@@ -20,6 +20,7 @@ import { RecordTagsPanel } from "../_components/record-tags-panel"
 import { RecordHistoryPanel } from "../_components/record-history-panel"
 import { ArticleReader } from "../_components/article-reader"
 import { RecordHighlightPopup } from "../_components/record-highlight-popup"
+import { useRecordDetailMutations } from "../_hooks/use-record-detail-mutations"
 import { useRecordPanels } from "../_hooks/use-record-panels"
 import { useSelectionPopup } from "../_hooks/use-selection-popup"
 
@@ -85,28 +86,6 @@ export default function RecordDetailPage() {
     staleTime: 1000 * 60 * 10 // 10 minutes
   })
 
-  const addHighlight = useMutation({
-    mutationFn: ({ body, anchor }: { body: string; anchor: string }) =>
-      apiFetch(`/api/records/${id}/annotations`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ kind: "highlight", body, anchor })
-      }),
-    onSuccess: () => {
-      setSelectionPopup(null)
-      window.getSelection()?.removeAllRanges()
-      queryClient.invalidateQueries({ queryKey: ["record-detail", id] })
-    }
-  })
-
-  const deleteAnnotation = useMutation({
-    mutationFn: (annotationId: string) =>
-      apiFetch(`/api/records/${id}/annotations/${annotationId}`, { method: "DELETE" }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["record-detail", id] })
-    }
-  })
-
   const isArticleReader = useMemo(() => {
     const record = detail.data?.record
     if (!record) {
@@ -121,207 +100,20 @@ export default function RecordDetailPage() {
     maxChars: MAX_HIGHLIGHT_ANCHOR_CHARS
   })
 
-  const updateTags = useMutation({
-    mutationFn: (tagIds: string[]) =>
-      apiFetch<{ record: RecordRow }>(`/api/records/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tag_ids: tagIds })
-      }),
-    onMutate: async (tagIds) => {
-      await queryClient.cancelQueries({ queryKey: ["record-detail", id] })
-
-      const previousDetail = queryClient.getQueryData<DetailResponse>(["record-detail", id])
-      const allTags = queryClient.getQueryData<TagsResponse>(["tags"])?.data ?? []
-
-      const nextTags = allTags
-        .filter((tag) => tagIds.includes(tag.id))
-        .map((tag) => ({ id: tag.id, name: tag.name }))
-
-      queryClient.setQueryData<DetailResponse>(["record-detail", id], (current) => {
-        if (!current) {
-          return current
-        }
-
-        return {
-          ...current,
-          tags: nextTags
-        }
-      })
-
-      return {
-        previousDetail
-      }
-    },
-    onError: (_error, _variables, context) => {
-      if (context?.previousDetail) {
-        queryClient.setQueryData(["record-detail", id], context.previousDetail)
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["record-detail", id] })
-      queryClient.invalidateQueries({ queryKey: ["records"] })
-      queryClient.invalidateQueries({ queryKey: ["search"] })
-    }
-  })
-
-  const createTag = useMutation({
-    mutationFn: (name: string) =>
-      apiFetch<{ tag: TagRow }>("/api/tags", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name })
-      }),
-    onSuccess: (res) => {
-      setNewTagName("")
-      queryClient.invalidateQueries({ queryKey: ["tags"] })
-      // Automatically toggle the new tag on
-      const nextTags = [...Array.from(selectedTagIds), res.tag.id]
-      updateTags.mutate(nextTags)
-    }
-  })
-
-  const updateRecord = useMutation({
-    mutationFn: (payload: { url: string; source_title: string; state: RecordRow["state"] }) =>
-      apiFetch<{ record: RecordRow }>(`/api/records/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      }),
-    onMutate: async (payload) => {
-      await queryClient.cancelQueries({ queryKey: ["record-detail", id] })
-
-      const previousDetail = queryClient.getQueryData<DetailResponse>(["record-detail", id])
-
-      queryClient.setQueryData<DetailResponse>(["record-detail", id], (current) => {
-        if (!current) {
-          return current
-        }
-
-        return {
-          ...current,
-          record: {
-            ...current.record,
-            url: payload.url || null,
-            source_title: payload.source_title || null,
-            state: payload.state,
-            updated_at: new Date().toISOString()
-          }
-        }
-      })
-
-      return {
-        previousDetail
-      }
-    },
-    onError: (_error, _variables, context) => {
-      if (context?.previousDetail) {
-        queryClient.setQueryData(["record-detail", id], context.previousDetail)
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["record-detail", id] })
-      queryClient.invalidateQueries({ queryKey: ["records"] })
-      queryClient.invalidateQueries({ queryKey: ["search"] })
-      queryClient.invalidateQueries({ queryKey: ["record-counts"] })
-      queryClient.invalidateQueries({ queryKey: ["review-today"] })
-      setShowUpdateToast(true)
-      window.setTimeout(() => setShowUpdateToast(false), 5000)
-    }
-  })
-
-  const updateNote = useMutation<
-    { record: RecordRow },
-    Error,
-    string | null,
-    { previousDetail?: DetailResponse }
-  >({
-    mutationFn: (currentNote) =>
-      apiFetch<{ record: RecordRow }>(`/api/records/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ current_note: currentNote })
-      }),
-    onMutate: async (currentNote) => {
-      await queryClient.cancelQueries({ queryKey: ["record-detail", id] })
-      const previousDetail = queryClient.getQueryData<DetailResponse>(["record-detail", id])
-
-      queryClient.setQueryData<DetailResponse>(["record-detail", id], (current) => {
-        if (!current) {
-          return current
-        }
-
-        return {
-          ...current,
-          record: {
-            ...current.record,
-            current_note: currentNote,
-            note_updated_at: currentNote ? new Date().toISOString() : null
-          }
-        }
-      })
-
-      return { previousDetail }
-    },
-    onError: (_error, _currentNote, context) => {
-      if (context?.previousDetail) {
-        queryClient.setQueryData(["record-detail", id], context.previousDetail)
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["record-detail", id] })
-      queryClient.invalidateQueries({ queryKey: ["records"] })
-      queryClient.invalidateQueries({ queryKey: ["search"] })
-    }
-  })
-
-  const deleteRecord = useMutation({
-    mutationFn: () =>
-      apiFetch<{ record: RecordRow }>(`/api/records/${id}`, {
-        method: "DELETE"
-      }),
-    onMutate: async () => {
-      await queryClient.cancelQueries({ queryKey: ["record-detail", id] })
-      const previousDetail = queryClient.getQueryData<DetailResponse>(["record-detail", id])
-
-      queryClient.setQueryData<DetailResponse>(["record-detail", id], (current) => {
-        if (!current) {
-          return current
-        }
-
-        return {
-          ...current,
-          record: {
-            ...current.record,
-            state: "TRASHED",
-            updated_at: new Date().toISOString()
-          }
-        }
-      })
-
-      return {
-        previousDetail
-      }
-    },
-    onError: (_error, _variables, context) => {
-      if (context?.previousDetail) {
-        queryClient.setQueryData(["record-detail", id], context.previousDetail)
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["records"] })
-      queryClient.invalidateQueries({ queryKey: ["search"] })
-      queryClient.invalidateQueries({ queryKey: ["record-counts"] })
-      queryClient.invalidateQueries({ queryKey: ["review-today"] })
-      setShowDeleteToast(true)
-      const timer = window.setTimeout(() => {
-        router.replace("/library")
-      }, 4000)
-      setRedirectTimer(timer)
-    }
-  })
-
   const selectedTagIds = new Set((detail.data?.tags ?? []).map((tag) => tag.id))
+  const { addHighlight, deleteAnnotation, updateTags, createTag, updateRecord, updateNote, deleteRecord } = useRecordDetailMutations({
+    id,
+    queryClient,
+    router,
+    setSelectionPopup,
+    setNewTagName,
+    selectedTagIds,
+    setShowUpdateToast,
+    setShowDeleteToast,
+    setRedirectTimer
+  })
+
+
   const markdownHighlights = useMemo(
     () =>
       (detail.data?.annotations ?? [])
