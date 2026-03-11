@@ -6,7 +6,7 @@ const { getAccessToken, authHeaders } = await import("../extension/shared.js")
 const storage: Record<string, unknown> = {}
 const cookieStore: Array<{ name: string; value: string; domain: string }> = []
 const createdTabs: Array<unknown> = []
-const sentMessages: Array<unknown> = []
+const sentMessages: Array<{ type: string; state?: string }> = []
 const badgeState = { text: "", color: "", title: "" }
 const contextMenusCreated: Array<unknown> = []
 let permissionsGranted = true
@@ -249,5 +249,33 @@ describe("extension/background — cookie chunking edge cases", () => {
     )
     const token = await getAccessToken("https://rebarops.com", chromeMock.cookies)
     expect(token).toBe("ordered")
+  })
+})
+
+describe("extension/background — click feedback flow", () => {
+  beforeEach(() => {
+    resetChromeState()
+    vi.clearAllMocks()
+  })
+
+  it("shows checking banner before auth redirect when toolbar save starts", async () => {
+    vi.resetModules()
+    const sendMessage = chromeMock.tabs.sendMessage as ReturnType<typeof vi.fn>
+    sendMessage.mockImplementation(async (_tabId: number, message: { type: string }) => {
+      sentMessages.push(message)
+      if (message.type === "GET_ARTICLE") {
+        return { ok: true, payload: { content: "Article body", title: "Example", url: "https://example.com", kind: "link", tags: ["web"] } }
+      }
+      return { ok: true }
+    })
+
+    await import("../extension/background.js")
+    const listener = chromeMock.action.onClicked.addListener.mock.calls[0]?.[0] as ((tab: { id: number; url: string; title: string }) => void) | undefined
+    expect(listener).toBeTruthy()
+
+    listener?.({ id: 1, url: "https://example.com", title: "Example" })
+    await vi.waitFor(() => {
+      expect(sentMessages.some((message) => message.type === "SHOW_BANNER" && message.state === "loading")).toBe(true)
+    })
   })
 })

@@ -154,6 +154,14 @@ function injectContentScript(tabId) {
   return chromeAsync((cb) => chrome.scripting.executeScript({ target: { tabId }, files: ["content.js"] }, cb))
 }
 
+async function ensureFeedbackChannel(tabId) {
+  try {
+    await injectContentScript(tabId)
+  } catch (error) {
+    console.warn("[REBAR] ensureFeedbackChannel:", errorMessage(error))
+  }
+}
+
 async function queryTabMessage(tabId, message) {
   try { return await sendToTab(tabId, message) }
   catch {
@@ -214,11 +222,14 @@ async function oneShotSave(tab, { mode = "quick-article" } = {}) {
   }
 
   const settings = await getSettings()
+  await ensureFeedbackChannel(tabId)
+  await sendBanner(tabId, "loading", t("ext.status.checking"))
   if (!(await ensureHostPermission(settings.rebarUrl))) {
     await sendBanner(tabId, "error", t("ext.opt.permDenied"))
     return
   }
   if (!(await checkAuth(settings.rebarUrl))) {
+    await sendBanner(tabId, "error", t("ext.status.authRequired"))
     chrome.tabs.create({ url: `${settings.rebarUrl}/signup`, active: true })
     return
   }
