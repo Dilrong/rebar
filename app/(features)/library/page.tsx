@@ -9,7 +9,6 @@ import { useI18n } from "@app-shared/i18n/i18n-provider"
 import { EmptyState } from "@shared/ui/empty-state"
 import { ErrorState } from "@shared/ui/error-state"
 import { EXPORT_FORMATS } from "@feature-lib/export/formats"
-import { getStateLabel } from "@/lib/i18n/state-label"
 import { LibraryHeader } from "./_components/library-header"
 import { LibraryFiltersToolbar } from "./_components/library-filters-toolbar"
 import { LibrarySelectionToolbar } from "./_components/library-selection-toolbar"
@@ -17,13 +16,12 @@ import { LibraryTagManager } from "./_components/library-tag-manager"
 import { LibraryRecordGrid } from "./_components/library-record-grid"
 import { LibraryPagination } from "./_components/library-pagination"
 import { useLibraryActions } from "./_hooks/use-library-actions"
+import { useLibraryDerivedState } from "./_hooks/use-library-derived-state"
 import { useLibraryFilters } from "./_hooks/use-library-filters"
 import { useLibrarySelection } from "./_hooks/use-library-selection"
 import { useLibraryWorkflow } from "./_hooks/use-library-workflow"
 
 import type { RecordRow, TagRow } from "@/lib/types"
-import type { RecordKind } from "@/lib/schemas"
-
 type RecordsResponse = {
   data: RecordRow[]
   total: number
@@ -39,27 +37,6 @@ type RecordCountsResponse = {
 
 type TagsResponse = {
   data: TagRow[]
-}
-
-function toDateInputValue(date: Date) {
-  const normalized = new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
-  return normalized.toISOString().slice(0, 10)
-}
-
-function getExportKindLabel(kind: RecordKind, t: (key: string, fallback?: string) => string) {
-  if (kind === "quote") {
-    return t("capture.kind.quote", "Quote / Highlight")
-  }
-
-  if (kind === "note") {
-    return t("capture.kind.note", "Note")
-  }
-
-  if (kind === "link") {
-    return t("capture.kind.link", "Web Link")
-  }
-
-  return t("capture.kind.ai", "AI Content")
 }
 
 export default function LibraryPage() {
@@ -113,43 +90,16 @@ export default function LibraryPage() {
     staleTime: 1000 * 60 * 2
   })
 
-  const selectedTagName = (tags.data?.data ?? []).find((tag) => tag.id === tagId)?.name ?? null
   const { selectedIds, setSelectedIds, bulkTagIds, setBulkTagIds, visibleIds, toggleSelect, selectVisible, clearSelection } = useLibrarySelection(records.data?.data ?? [])
-  const exportSincePresets = useMemo(() => {
-    const now = new Date()
-    const last7 = new Date(now)
-    last7.setDate(last7.getDate() - 7)
-    const last30 = new Date(now)
-    last30.setDate(last30.getDate() - 30)
-
-    return [
-      { key: "library.exportPresetToday", fallback: "TODAY", value: toDateInputValue(now) },
-      { key: "library.exportPreset7d", fallback: "LAST 7D", value: toDateInputValue(last7) },
-      { key: "library.exportPreset30d", fallback: "LAST 30D", value: toDateInputValue(last30) }
-    ]
-  }, [])
-
-  const exportScopeLabel = useMemo(() => {
-    const parts: string[] = []
-
-    if (state !== "ALL") {
-      parts.push(getStateLabel(state, t))
-    }
-
-    if (kind) {
-      parts.push(getExportKindLabel(kind as RecordKind, t))
-    }
-
-    if (selectedTagName) {
-      parts.push(`#${selectedTagName}`)
-    }
-
-    if (exportSince) {
-      parts.push(exportSince)
-    }
-
-    return parts.length > 0 ? parts.join(" · ") : t("library.exportScopeAll", "FULL LIBRARY (EXCLUDING TRASH)")
-  }, [exportSince, kind, selectedTagName, state, t])
+  const { selectedTagName, exportSincePresets, exportScopeLabel, emptyState } = useLibraryDerivedState({
+    tags: tags.data?.data ?? [],
+    tagId,
+    state,
+    kind,
+    exportSince,
+    q,
+    t
+  })
 
   const { activate, inboxDecision, bulkStateMutation, bulkTagMutation, createTag, renameTag, deleteTag, handleActivate, handleInboxTodo, handleInboxArchive, applyBulkState, applyBulkTags } = useLibraryActions({
     queryClient,
@@ -176,41 +126,6 @@ export default function LibraryPage() {
   useEffect(() => {
     restoreLibraryScroll(records.isSuccess)
   }, [records.isSuccess, restoreLibraryScroll, allRecords.length])
-
-  const emptyState = useMemo(() => {
-    if (q.trim()) {
-      return {
-        title: t("library.emptySearch", "NO SEARCH RESULTS"),
-        description: `'${q.trim()}'에 대한 결과가 없습니다`,
-        actionLabel: t("library.clearAll", "Clear all"),
-        actionHref: "/library"
-      }
-    }
-
-    if (state === "INBOX" && !kind && !tagId) {
-      return {
-        title: t("library.emptyInbox", "INBOX IS EMPTY"),
-        description: "수집함이 비었습니다 → 캡처로 새 항목 추가",
-        actionLabel: t("library.goCapture", "Go capture"),
-        actionHref: "/capture"
-      }
-    }
-
-    if (state === "ACTIVE" && !kind && !tagId) {
-      return {
-        title: t("library.emptyActive", "NO ACTIVE ITEMS"),
-        description: "활성 항목이 없습니다 → 리뷰에서 항목을 활성화하세요",
-        actionLabel: t("nav.review", "Review"),
-        actionHref: "/review"
-      }
-    }
-
-    return {
-      title: t("library.noResults", "0 RESULTS FOUND."),
-      actionLabel: t("library.goCapture", "Go capture"),
-      actionHref: "/capture"
-    }
-  }, [kind, q, state, t, tagId])
 
   const handleExportMenuKeyDown = useCallback((event: ReactKeyboardEvent<HTMLButtonElement>) => {
     handleExportMenuKeyDownRaw(event, EXPORT_FORMATS.length)
