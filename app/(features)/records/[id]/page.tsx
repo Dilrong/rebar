@@ -21,6 +21,7 @@ import { RecordHistoryPanel } from "../_components/record-history-panel"
 import { ArticleReader } from "../_components/article-reader"
 import { RecordHighlightPopup } from "../_components/record-highlight-popup"
 import { useRecordDetailMutations } from "../_hooks/use-record-detail-mutations"
+import { useRecordEditorState } from "../_hooks/use-record-editor-state"
 import { useRecordNavigation } from "../_hooks/use-record-navigation"
 import { useRecordPanels } from "../_hooks/use-record-panels"
 import { useSelectionPopup } from "../_hooks/use-selection-popup"
@@ -59,16 +60,12 @@ export default function RecordDetailPage() {
   const router = useRouter()
   const queryClient = useQueryClient()
   const backHref = resolveFromPath(searchParams.get("from"))
-  const [editUrl, setEditUrl] = useState("")
-  const [editSourceTitle, setEditSourceTitle] = useState("")
-  const [editState, setEditState] = useState<RecordRow["state"]>("INBOX")
   const [showUpdateToast, setShowUpdateToast] = useState(false)
   const [showDeleteToast, setShowDeleteToast] = useState(false)
   const [pendingDeleteConfirm, setPendingDeleteConfirm] = useState(false)
   const [pendingTrashConfirm, setPendingTrashConfirm] = useState(false)
   const [lastStateBeforeDelete, setLastStateBeforeDelete] = useState<RecordRow["state"]>("INBOX")
   const [redirectTimer, setRedirectTimer] = useState<number | null>(null)
-  const [editNote, setEditNote] = useState("")
   const [newTagName, setNewTagName] = useState("")
   const articleRef = useRef<HTMLDivElement>(null)
   const { isDesktopViewport, desktopPanel, mobilePanel, togglePanel, closeMobilePanel } = useRecordPanels()
@@ -113,6 +110,20 @@ export default function RecordDetailPage() {
     setShowDeleteToast,
     setRedirectTimer
   })
+  const { editUrl, setEditUrl, editSourceTitle, setEditSourceTitle, editState, setEditState, editNote, setEditNote, requestSaveRecord, quickArchive, requestSaveNote, undoDelete } = useRecordEditorState({
+    detail: detail.data,
+    updateRecord,
+    updateNote,
+    redirectTimer,
+    setRedirectTimer,
+    setShowDeleteToast
+  })
+  const requestSaveRecordWithConfirm = useCallback(() => {
+    requestSaveRecord(() => setPendingTrashConfirm(true))
+  }, [requestSaveRecord])
+  const handleUndoDelete = useCallback(() => {
+    undoDelete(lastStateBeforeDelete)
+  }, [lastStateBeforeDelete, undoDelete])
 
 
   const markdownHighlights = useMemo(
@@ -143,77 +154,9 @@ export default function RecordDetailPage() {
     updateTags.mutate(next)
   }, [detail.data?.tags, updateTags])
 
-  useEffect(() => {
-    if (!detail.data) {
-      return
-    }
-
-    setEditUrl(detail.data.record.url ?? "")
-    setEditSourceTitle(detail.data.record.source_title ?? "")
-    setEditState(detail.data.record.state)
-    setEditNote(detail.data.record.current_note ?? "")
-  }, [detail.data])
-
-  useEffect(() => {
-    return () => {
-      if (redirectTimer) {
-        window.clearTimeout(redirectTimer)
-      }
-    }
-  }, [redirectTimer])
-
-  const requestSaveRecord = useCallback(() => {
-    if (editState === "TRASHED" && detail.data?.record.state !== "TRASHED") {
-      setPendingTrashConfirm(true)
-      return
-    }
-
-    updateRecord.mutate({
-      source_title: editSourceTitle,
-      url: editUrl,
-      state: editState
-    })
-  }, [detail.data?.record.state, editSourceTitle, editState, editUrl, updateRecord])
-
-  const quickArchive = () => {
-    updateRecord.mutate({
-      source_title: detail.data?.record.source_title ?? "",
-      url: detail.data?.record.url ?? "",
-      state: "ARCHIVED"
-    })
-  }
-
   const requestDeleteRecord = useCallback(() => {
     setPendingDeleteConfirm(true)
   }, [])
-
-  const undoDelete = () => {
-    if (redirectTimer) {
-      window.clearTimeout(redirectTimer)
-      setRedirectTimer(null)
-    }
-
-    setShowDeleteToast(false)
-    updateRecord.mutate({
-      source_title: editSourceTitle,
-      url: editUrl,
-      state: lastStateBeforeDelete
-    })
-  }
-
-  const requestSaveNote = useCallback(() => {
-    if (!detail.data || updateNote.isPending) {
-      return
-    }
-
-    const nextNote = editNote.trim().length > 0 ? editNote : null
-    const currentNote = detail.data.record.current_note ?? null
-    if (nextNote === currentNote) {
-      return
-    }
-
-    updateNote.mutate(nextNote)
-  }, [detail.data, editNote, updateNote])
 
   const panelContent = useMemo(() => ({
     manage: (
@@ -228,7 +171,7 @@ export default function RecordDetailPage() {
         onEditSourceTitleChange={setEditSourceTitle}
         onEditUrlChange={setEditUrl}
         onEditStateChange={setEditState}
-        onRequestSave={requestSaveRecord}
+        onRequestSave={requestSaveRecordWithConfirm}
         onRequestDelete={requestDeleteRecord}
       />
     ),
@@ -268,7 +211,7 @@ export default function RecordDetailPage() {
     isTagMutating,
     newTagName,
     requestDeleteRecord,
-    requestSaveRecord,
+    requestSaveRecordWithConfirm,
     selectedTagIds,
     t,
     tags.data?.data,
@@ -512,9 +455,9 @@ export default function RecordDetailPage() {
       ) : null}
       {showDeleteToast ? (
         <Toast
-          message={t("toast.deleted", "Moved to trash")}
-          actionLabel={t("toast.undo", "Undo")}
-          onAction={undoDelete}
+      message={t("toast.deleted", "Moved to trash")}
+      actionLabel={t("toast.undo", "Undo")}
+      onAction={handleUndoDelete}
           onClose={() => setShowDeleteToast(false)}
         />
       ) : null}
