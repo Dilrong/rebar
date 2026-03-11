@@ -14,7 +14,9 @@ const {
   errorMessage,
   getAccessToken,
   authHeaders,
-  shouldSkipTagPicker
+  shouldSkipTagPicker,
+  hostPermissionOrigin,
+  ensureHostPermission
 } = await import("../extension/shared.js")
 
 describe("extension/shared", () => {
@@ -193,6 +195,11 @@ describe("extension/shared", () => {
       await expect(getAccessToken("not-a-url", cookiesApi)).resolves.toBeNull()
       await expect(getAccessToken("https://rebarops.com", cookiesApi)).resolves.toBeNull()
     })
+
+    it("finds auth cookies stored on the root domain when the app uses www", async () => {
+      cookieStore.push({ name: "sb-test-auth-token", value: JSON.stringify({ access_token: "tok_root" }), domain: ".rebarops.com" })
+      await expect(getAccessToken("https://www.rebarops.com", cookiesApi)).resolves.toBe("tok_root")
+    })
   })
 
   describe("shouldSkipTagPicker", () => {
@@ -202,6 +209,35 @@ describe("extension/shared", () => {
 
     it("keeps guided mode interactive", () => {
       expect(shouldSkipTagPicker("guided")).toBe(false)
+    })
+  })
+
+  describe("host permission helpers", () => {
+    it("builds a Chrome host permission origin pattern", () => {
+      expect(hostPermissionOrigin("https://rebarops.com/path")).toBe("https://rebarops.com/*")
+    })
+
+    it("reuses an existing granted permission without requesting again", async () => {
+      const permissionsApi = {
+        contains: async () => true,
+        request: async () => false
+      }
+
+      await expect(ensureHostPermission("https://rebarops.com", permissionsApi)).resolves.toBe(true)
+    })
+
+    it("requests permission when not already granted", async () => {
+      let requested = false
+      const permissionsApi = {
+        contains: async () => false,
+        request: async () => {
+          requested = true
+          return true
+        }
+      }
+
+      await expect(ensureHostPermission("https://rebarops.com", permissionsApi)).resolves.toBe(true)
+      expect(requested).toBe(true)
     })
   })
 })

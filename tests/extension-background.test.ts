@@ -62,7 +62,8 @@ const chromeMock = {
     onClicked: { addListener: vi.fn() }
   },
   permissions: {
-    request: vi.fn(async () => permissionsGranted)
+    request: vi.fn(async () => permissionsGranted),
+    contains: vi.fn(async () => permissionsGranted)
   }
 }
 
