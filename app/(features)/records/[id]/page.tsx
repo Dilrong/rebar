@@ -11,15 +11,12 @@ import { getStateLabel } from "@/lib/i18n/state-label"
 import type { RecordRow, TagRow } from "@/lib/types"
 import { Link as LinkIcon, Hash as HashIcon, ArrowLeftSquare, History, SlidersHorizontal } from "lucide-react"
 import { LoadingSpinner } from "@shared/ui/loading"
-import { Toast } from "@shared/ui/toast"
-import { BottomSheet } from "@shared/ui/bottom-sheet"
-import { ConfirmDialog } from "../_components/confirm-dialog"
 import { MarkdownContent } from "@shared/ui/markdown-content"
 import { RecordManagePanel } from "../_components/record-manage-panel"
 import { RecordTagsPanel } from "../_components/record-tags-panel"
 import { RecordHistoryPanel } from "../_components/record-history-panel"
 import { ArticleReader } from "../_components/article-reader"
-import { RecordHighlightPopup } from "../_components/record-highlight-popup"
+import { RecordDetailOverlays } from "../_components/record-detail-overlays"
 import { useRecordDerivedState } from "../_hooks/use-record-derived-state"
 import { useRecordDetailQueries } from "../_hooks/use-record-detail-queries"
 import { useRecordDetailMutations } from "../_hooks/use-record-detail-mutations"
@@ -370,69 +367,39 @@ export default function RecordDetailPage() {
           ) : null}
         </ProtectedPageShell>
       </AuthGate>
-      <ConfirmDialog
-        open={pendingDeleteConfirm}
-        title={t("confirm.deleteTitle", "Delete record?")}
-        description={t("confirm.deleteDesc", "The item will move to trash. You can undo for a short time.")}
-        confirmLabel={t("confirm.delete", "Delete")}
-        cancelLabel={t("confirm.cancel", "Cancel")}
-        onCancel={() => setPendingDeleteConfirm(false)}
-        onConfirm={() => {
+      <RecordDetailOverlays
+        t={t}
+        pendingDeleteConfirm={pendingDeleteConfirm}
+        onCancelDelete={() => setPendingDeleteConfirm(false)}
+        onConfirmDelete={() => {
           setPendingDeleteConfirm(false)
           setLastStateBeforeDelete(detail.data?.record.state ?? "INBOX")
           deleteRecord.mutate()
         }}
-      />
-      <ConfirmDialog
-        open={pendingTrashConfirm}
-        title={t("confirm.trashTitle", "Move to trash?")}
-        description={t("confirm.trashDesc", "This item will be hidden from normal lists.")}
-        confirmLabel={t("confirm.move", "Move")}
-        cancelLabel={t("confirm.cancel", "Cancel")}
-        onCancel={() => setPendingTrashConfirm(false)}
-        onConfirm={() => {
+        pendingTrashConfirm={pendingTrashConfirm}
+        onCancelTrash={() => setPendingTrashConfirm(false)}
+        onConfirmTrash={() => {
           setPendingTrashConfirm(false)
-          updateRecord.mutate({
-            source_title: editSourceTitle,
-            url: editUrl,
-            state: "TRASHED"
-          })
+          updateRecord.mutate({ source_title: editSourceTitle, url: editUrl, state: "TRASHED" })
         }}
-      />
-      {showUpdateToast ? (
-        <Toast
-          message={t("toast.updated", "Updated")}
-          tone="success"
-          onClose={() => setShowUpdateToast(false)}
-        />
-      ) : null}
-      {showDeleteToast ? (
-        <Toast
-      message={t("toast.deleted", "Moved to trash")}
-      actionLabel={t("toast.undo", "Undo")}
-      onAction={handleUndoDelete}
-          onClose={() => setShowDeleteToast(false)}
-        />
-      ) : null}
-      <RecordHighlightPopup
-        open={Boolean(selectionPopup)}
-        x={selectionPopup?.x ?? 0}
-        y={selectionPopup?.y ?? 0}
-        pending={addHighlight.isPending}
-        label={t("record.highlight", "HIGHLIGHT")}
-        onConfirm={() => {
+        showUpdateToast={showUpdateToast}
+        onCloseUpdateToast={() => setShowUpdateToast(false)}
+        showDeleteToast={showDeleteToast}
+        onUndoDelete={handleUndoDelete}
+        onCloseDeleteToast={() => setShowDeleteToast(false)}
+        highlightOpen={Boolean(selectionPopup)}
+        highlightX={selectionPopup?.x ?? 0}
+        highlightY={selectionPopup?.y ?? 0}
+        highlightPending={addHighlight.isPending}
+        onConfirmHighlight={() => {
           if (selectionPopup) {
             addHighlight.mutate({ body: selectionPopup.text, anchor: selectionPopup.anchor })
           }
         }}
+        mobilePanel={mobilePanel}
+        onCloseMobilePanel={closeMobilePanel}
+        panelContent={mobilePanel ? panelContent[mobilePanel] : null}
       />
-      <BottomSheet
-        open={Boolean(mobilePanel)}
-        title={mobilePanel === "manage" ? "MANAGE" : mobilePanel === "tags" ? "TAGS" : "LOG HISTORY"}
-        onClose={closeMobilePanel}
-      >
-        {mobilePanel ? panelContent[mobilePanel] : null}
-      </BottomSheet>
     </>
   )
 }
