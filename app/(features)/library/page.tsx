@@ -19,6 +19,7 @@ import { useLibraryActions } from "./_hooks/use-library-actions"
 import { useLibraryDerivedState } from "./_hooks/use-library-derived-state"
 import { useLibraryFilters } from "./_hooks/use-library-filters"
 import { useLibrarySelection } from "./_hooks/use-library-selection"
+import { useLibraryTagEditor } from "./_hooks/use-library-tag-editor"
 import { useLibraryWorkflow } from "./_hooks/use-library-workflow"
 
 import type { RecordRow, TagRow } from "@/lib/types"
@@ -43,15 +44,7 @@ export default function LibraryPage() {
   const { t } = useI18n()
   const queryClient = useQueryClient()
   const { didInitFromUrl, state, setState, kind, setKind, q, setQ, debouncedQ, tagId, setTagId, sort, setSort, order, setOrder, queryString, clearAllFilters } = useLibraryFilters()
-  const [newTagName, setNewTagName] = useState("")
-  const [exportSince, setExportSince] = useState("")
-  const [editingTagId, setEditingTagId] = useState<string | null>(null)
-  const [editingTagName, setEditingTagName] = useState("")
-  const { exportMenuOpen, exportMenuIndex, exportMenuWrapRef, exportTriggerRef, exportItemRefs, exportPending, exportError, setExportError, cursor, setCursor, loadMorePending, allRecords, setAllRecords, libraryBackHref, navigationStorageKey, handleExport, loadMore, handleOpenRecord, closeExportMenu, handleExportMenuKeyDown: handleExportMenuKeyDownRaw, toggleExportMenu, openExportMenuFromKeyboard, restoreLibraryScroll } = useLibraryWorkflow({
-    queryString,
-    exportSince,
-    didInitFromUrl
-  })
+  const { exportSince, setExportSince, exportMenuOpen, exportMenuIndex, exportMenuWrapRef, exportTriggerRef, exportItemRefs, exportPending, exportError, setExportError, cursor, setCursor, loadMorePending, allRecords, setAllRecords, libraryBackHref, navigationStorageKey, handleExport, loadMore, handleOpenRecord, closeExportMenu, handleExportMenuKeyDown: handleExportMenuKeyDownRaw, toggleExportMenu, openExportMenuFromKeyboard, restoreLibraryScroll } = useLibraryWorkflow({ queryString, didInitFromUrl })
 
   const prefetchRecord = useCallback((id: string) => {
     queryClient.prefetchQuery({
@@ -110,18 +103,7 @@ export default function LibraryPage() {
     bulkTagIds,
     setBulkTagIds
   })
-
-  const handleRenameTag = (tag: TagRow) => {
-    setEditingTagId(tag.id)
-    setEditingTagName(tag.name)
-  }
-
-  const submitRenameTag = (id: string) => {
-    const trimmed = editingTagName.trim()
-    setEditingTagId(null)
-    if (!trimmed) return
-    renameTag.mutate({ id, name: trimmed })
-  }
+  const { newTagName, setNewTagName, editingTagId, editingTagName, setEditingTagName, handleRenameTag, submitRenameTag, cancelRenameTag } = useLibraryTagEditor(renameTag)
 
   useEffect(() => {
     restoreLibraryScroll(records.isSuccess)
@@ -215,7 +197,7 @@ export default function LibraryPage() {
             onStartRenameTag={handleRenameTag}
             onEditingTagNameChange={setEditingTagName}
             onSubmitRenameTag={submitRenameTag}
-            onCancelRenameTag={() => setEditingTagId(null)}
+            onCancelRenameTag={cancelRenameTag}
             onDeleteTag={(id) => deleteTag.mutate(id)}
           />
 
