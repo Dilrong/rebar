@@ -13,6 +13,7 @@ import { Skeleton } from "@shared/ui/skeleton"
 import { SearchControls } from "./_components/search-controls"
 import { SearchResultCard } from "./_components/search-result-card"
 import { useSearchFilters } from "./_hooks/use-search-filters"
+import { useSearchKeyboardNavigation } from "./_hooks/use-search-keyboard-navigation"
 import { useSearchQueries } from "./_hooks/use-search-queries"
 
 export default function SearchPage() {
@@ -20,7 +21,6 @@ export default function SearchPage() {
   const router = useRouter()
   const inputRef = useRef<HTMLInputElement | null>(null)
   const { q, setQ, debouncedQ, state, setState, tagId, setTagId, fromDate, setFromDate, toDate, setToDate, semantic, setSemantic, hasActiveFilters, hasCommittedFilters, semanticButtonDisabled, queryString } = useSearchFilters()
-  const [activeIndex, setActiveIndex] = useState(-1)
   const [showFilters, setShowFilters] = useState(false)
   const controlClassName = "min-h-[44px] w-full min-w-0 rounded-none border-4 border-foreground bg-background p-3 font-mono text-xs text-foreground shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] focus:outline-none focus:ring-0 dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)]"
   const queryClient = useQueryClient()
@@ -32,66 +32,13 @@ export default function SearchPage() {
     (recordId: string) => `/records/${recordId}?from=${encodeURIComponent(searchBackHref)}`,
     [searchBackHref]
   )
-
-  useEffect(() => {
-    const resultLength = result.data?.data.length ?? 0
-    if (resultLength === 0) {
-      setActiveIndex(-1)
-      return
-    }
-
-    setActiveIndex((current) => {
-      if (current < 0) {
-        return 0
-      }
-
-      return Math.min(current, resultLength - 1)
-    })
-  }, [result.data?.data.length])
-
-  useEffect(() => {
-    if (showFilters) {
-      inputRef.current?.focus()
-    }
-  }, [showFilters])
-
-  useEffect(() => {
-    const rows = result.data?.data ?? []
-    if (rows.length === 0) {
-      return
-    }
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement | null
-      if (target && target.tagName === "SELECT") {
-        return
-      }
-
-      if (target && target.tagName === "INPUT" && target.id !== "search-query") {
-        return
-      }
-
-      if (event.key === "ArrowDown") {
-        event.preventDefault()
-        setActiveIndex((current) => (current + 1) % rows.length)
-        return
-      }
-
-      if (event.key === "ArrowUp") {
-        event.preventDefault()
-        setActiveIndex((current) => (current <= 0 ? rows.length - 1 : current - 1))
-        return
-      }
-
-      if (event.key === "Enter" && activeIndex >= 0) {
-        event.preventDefault()
-        router.push(toRecordHref(rows[activeIndex]!.id))
-      }
-    }
-
-    window.addEventListener("keydown", onKeyDown)
-    return () => window.removeEventListener("keydown", onKeyDown)
-  }, [activeIndex, result.data?.data, router, toRecordHref])
+  const { activeIndex, setActiveIndex } = useSearchKeyboardNavigation({
+    rows: result.data?.data ?? [],
+    inputRef,
+    showFilters,
+    router,
+    toRecordHref
+  })
 
   return (
     <AuthGate>
