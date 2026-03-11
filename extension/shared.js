@@ -37,7 +37,27 @@ export function errorMessage(error) {
   return error instanceof Error ? error.message : String(error || "Unknown error")
 }
 
-export async function getAccessToken(rebarUrl, cookiesApi = chrome.cookies) {
+const BASE64URL_PREFIX = "base64-"
+
+export function decodeSupabaseCookie(raw) {
+  try {
+    // @supabase/ssr 0.8+ encodes cookies as "base64-<base64url_data>"
+    if (raw.startsWith(BASE64URL_PREFIX)) {
+      const b64url = raw.slice(BASE64URL_PREFIX.length)
+      // Convert base64url to standard base64
+      const b64 = b64url.replace(/-/g, "+").replace(/_/g, "/")
+      return JSON.parse(atob(b64))
+    }
+    // Legacy: plain base64
+    try { return JSON.parse(atob(raw)) } catch { /* not base64 */ }
+    // Legacy: plain JSON
+    return JSON.parse(raw)
+  } catch {
+    return null
+  }
+}
+
+export async function getAuthSession(rebarUrl, cookiesApi = chrome.cookies) {
   try {
     const url = new URL(rebarUrl)
     const hostname = url.hostname
@@ -60,9 +80,34 @@ export async function getAccessToken(rebarUrl, cookiesApi = chrome.cookies) {
       ? chunked.sort((a, b) => a.name.localeCompare(b.name)).map((c) => c.value).join("")
       : authCookies[0].value
 
-    let json
-    try { json = JSON.parse(atob(raw)) } catch { json = JSON.parse(raw) }
-    return json?.access_token ?? null
+    const decoded = decodeSupabaseCookie(raw)
+    if (!decoded?.access_token) return null
+    return { access_token: decoded.access_token, refresh_token: decoded.refresh_token ?? null }
+  } catch {
+    return null
+  }
+}
+
+export async function getAccessToken(rebarUrl, cookiesApi = chrome.cookies) {
+  const session = await getAuthSession(rebarUrl, cookiesApi)
+  return session?.access_token ?? null
+}
+
+export async function refreshAccessToken(rebarUrl, cookiesApi = chrome.cookies) {
+  try {
+    const session = await getAuthSession(rebarUrl, cookiesApi)
+    if (!session?.refresh_token) return null
+
+    const res = await fetch(`${rebarUrl}/api/auth/refresh`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh_token: session.refresh_token })
+    })
+
+    if (!res.ok) return null
+
+    const data = await res.json()
+    return data?.access_token ?? null
   } catch {
     return null
   }

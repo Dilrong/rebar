@@ -1,4 +1,4 @@
-import { DEFAULT_SETTINGS, MSG, parseTags, normalizeTagList, isValidUrl, normalizeUrl, errorMessage, CONTENT_LIMIT, getAccessToken, authHeaders, shouldSkipTagPicker, ensureHostPermission } from "./shared.js"
+import { DEFAULT_SETTINGS, MSG, parseTags, normalizeTagList, isValidUrl, normalizeUrl, errorMessage, CONTENT_LIMIT, getAccessToken, authHeaders, shouldSkipTagPicker, ensureHostPermission, refreshAccessToken } from "./shared.js"
 import { t } from "./i18n.js"
 
 const tagCache = {
@@ -58,9 +58,18 @@ async function fetchWithRetry(url, options, { maxRetries = 2, signal, totalTimeo
 
 async function checkAuth(rebarUrl) {
   try {
-    const token = await getAccessToken(rebarUrl)
+    let token = await getAccessToken(rebarUrl)
     if (!token) return false
-    return (await fetch(`${rebarUrl}/api/auth/check`, { headers: authHeaders(token) })).ok
+    const res = await fetch(`${rebarUrl}/api/auth/check`, { headers: authHeaders(token) })
+    if (res.ok) return true
+
+    // Access token expired — attempt refresh
+    if (res.status === 401) {
+      token = await refreshAccessToken(rebarUrl)
+      if (!token) return false
+      return (await fetch(`${rebarUrl}/api/auth/check`, { headers: authHeaders(token) })).ok
+    }
+    return false
   } catch { return false }
 }
 
@@ -128,7 +137,11 @@ async function saveCapture(payload, signal, { mergeDefaultTags = true } = {}) {
   )
 
   if (!res.ok) {
-    if (res.status === 401 || res.status === 403) throw new Error(t("ext.status.authRequired"))
+    if (res.status === 401) throw new Error(t("ext.status.authRequired"))
+    if (res.status === 403) {
+      const body = await res.json().catch(() => ({}))
+      throw new Error(body?.error === "Forbidden" ? t("ext.originBlocked") : t("ext.status.authRequired"))
+    }
     throw new Error(`${t("ext.saveFailed")}: ${res.status}`)
   }
 

@@ -12,6 +12,8 @@ const {
   isValidUrl,
   normalizeUrl,
   errorMessage,
+  decodeSupabaseCookie,
+  getAuthSession,
   getAccessToken,
   authHeaders,
   shouldSkipTagPicker,
@@ -156,6 +158,38 @@ describe("extension/shared", () => {
     })
   })
 
+  describe("decodeSupabaseCookie", () => {
+    it("decodes base64url-prefixed cookie (supabase/ssr 0.8+)", () => {
+      const payload = { access_token: "tok_b64url", refresh_token: "rt_1" }
+      const json = JSON.stringify(payload)
+      // Encode as base64url: replace +→-, /→_, strip =
+      const b64url = btoa(json).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "")
+      const cookieValue = `base64-${b64url}`
+      expect(decodeSupabaseCookie(cookieValue)).toEqual(payload)
+    })
+
+    it("decodes plain base64 cookie (legacy)", () => {
+      const payload = { access_token: "tok_b64" }
+      expect(decodeSupabaseCookie(btoa(JSON.stringify(payload)))).toEqual(payload)
+    })
+
+    it("decodes plain JSON cookie (legacy)", () => {
+      const payload = { access_token: "tok_json" }
+      expect(decodeSupabaseCookie(JSON.stringify(payload))).toEqual(payload)
+    })
+
+    it("decodes base64url with JWT-like access_token containing special chars", () => {
+      const payload = { access_token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U", refresh_token: "rt_real", expires_at: 1741700000 }
+      const json = JSON.stringify(payload)
+      const b64url = btoa(json).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "")
+      expect(decodeSupabaseCookie(`base64-${b64url}`)).toEqual(payload)
+    })
+
+    it("returns null for malformed data", () => {
+      expect(decodeSupabaseCookie("not-valid-anything")).toBeNull()
+    })
+  })
+
   describe("authHeaders", () => {
     it("returns Authorization header when token exists", () => {
       expect(authHeaders("abc123")).toEqual({ Authorization: "Bearer abc123" })
@@ -163,6 +197,62 @@ describe("extension/shared", () => {
 
     it("returns empty object when token is missing", () => {
       expect(authHeaders(null)).toEqual({})
+    })
+  })
+
+  describe("getAuthSession", () => {
+    const cookieStore: TestCookie[] = []
+    const cookiesApi = {
+      getAll: async ({ domain }: { domain: string }) => cookieStore.filter((cookie) => cookie.domain === domain || domain.endsWith(cookie.domain))
+    }
+
+    beforeEach(() => {
+      cookieStore.length = 0
+    })
+
+    it("returns access_token and refresh_token from cookie", async () => {
+      cookieStore.push({ name: "sb-test-auth-token", value: JSON.stringify({ access_token: "at_1", refresh_token: "rt_1" }), domain: "rebarops.com" })
+      const session = await getAuthSession("https://rebarops.com", cookiesApi)
+      expect(session).toEqual({ access_token: "at_1", refresh_token: "rt_1" })
+    })
+
+    it("returns null refresh_token when cookie has no refresh_token", async () => {
+      cookieStore.push({ name: "sb-test-auth-token", value: JSON.stringify({ access_token: "at_2" }), domain: "rebarops.com" })
+      const session = await getAuthSession("https://rebarops.com", cookiesApi)
+      expect(session).toEqual({ access_token: "at_2", refresh_token: null })
+    })
+
+    it("returns null when no cookies exist", async () => {
+      await expect(getAuthSession("https://rebarops.com", cookiesApi)).resolves.toBeNull()
+    })
+
+    it("returns null when access_token is missing", async () => {
+      cookieStore.push({ name: "sb-test-auth-token", value: JSON.stringify({ refresh_token: "rt_only" }), domain: "rebarops.com" })
+      await expect(getAuthSession("https://rebarops.com", cookiesApi)).resolves.toBeNull()
+    })
+
+    it("decodes base64url-prefixed cookie from supabase/ssr 0.8+", async () => {
+      const payload = { access_token: "at_b64url", refresh_token: "rt_b64url" }
+      const json = JSON.stringify(payload)
+      const b64url = btoa(json).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "")
+      cookieStore.push({ name: "sb-test-auth-token", value: `base64-${b64url}`, domain: "rebarops.com" })
+      const session = await getAuthSession("https://rebarops.com", cookiesApi)
+      expect(session).toEqual({ access_token: "at_b64url", refresh_token: "rt_b64url" })
+    })
+
+    it("decodes chunked base64url cookies (large session)", async () => {
+      const payload = { access_token: "at_chunked_b64", refresh_token: "rt_chunked_b64", user: { data: "x".repeat(3000) } }
+      const json = JSON.stringify(payload)
+      const b64url = btoa(json).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "")
+      const encoded = `base64-${b64url}`
+      const mid = Math.floor(encoded.length / 2)
+      cookieStore.push(
+        { name: "sb-test-auth-token.0", value: encoded.slice(0, mid), domain: "rebarops.com" },
+        { name: "sb-test-auth-token.1", value: encoded.slice(mid), domain: "rebarops.com" }
+      )
+      const session = await getAuthSession("https://rebarops.com", cookiesApi)
+      expect(session?.access_token).toBe("at_chunked_b64")
+      expect(session?.refresh_token).toBe("rt_chunked_b64")
     })
   })
 

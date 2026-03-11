@@ -95,6 +95,16 @@ function setBase64AuthCookie(domain: string, accessToken: string) {
   })
 }
 
+function setBase64UrlAuthCookie(domain: string, accessToken: string) {
+  const payload = JSON.stringify({ access_token: accessToken, refresh_token: "rt_b64url" })
+  const b64url = btoa(payload).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "")
+  cookieStore.push({
+    name: "sb-testref-auth-token",
+    value: `base64-${b64url}`,
+    domain
+  })
+}
+
 function setChunkedAuthCookies(domain: string, accessToken: string) {
   const payload = JSON.stringify({ access_token: accessToken, refresh_token: "rt_456" })
   const mid = Math.floor(payload.length / 2)
@@ -127,6 +137,12 @@ describe("extension/background — getAccessToken logic", () => {
     setBase64AuthCookie("rebarops.com", "token_b64")
     const token = await getAccessToken("https://rebarops.com", chromeMock.cookies)
     expect(token).toBe("token_b64")
+  })
+
+  it("extracts access_token from base64url-prefixed cookie (supabase/ssr 0.8+)", async () => {
+    setBase64UrlAuthCookie("rebarops.com", "token_b64url")
+    const token = await getAccessToken("https://rebarops.com", chromeMock.cookies)
+    expect(token).toBe("token_b64url")
   })
 
   it("extracts access_token from chunked cookies", async () => {
