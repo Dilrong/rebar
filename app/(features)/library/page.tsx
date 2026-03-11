@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState, type KeyboardEvent as ReactKeyboardEvent } from "react"
-import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useQueryClient } from "@tanstack/react-query"
 import AuthGate from "@shared/auth/auth-gate"
 import ProtectedPageShell from "@shared/layout/protected-page-shell"
 import { apiFetch } from "@/lib/client-http"
@@ -18,70 +18,30 @@ import { LibraryPagination } from "./_components/library-pagination"
 import { useLibraryActions } from "./_hooks/use-library-actions"
 import { useLibraryDerivedState } from "./_hooks/use-library-derived-state"
 import { useLibraryFilters } from "./_hooks/use-library-filters"
+import { useLibraryQueries } from "./_hooks/use-library-queries"
 import { useLibrarySelection } from "./_hooks/use-library-selection"
 import { useLibraryTagEditor } from "./_hooks/use-library-tag-editor"
 import { useLibraryWorkflow } from "./_hooks/use-library-workflow"
 
 import type { RecordRow, TagRow } from "@/lib/types"
-type RecordsResponse = {
-  data: RecordRow[]
-  total: number
-  next_cursor?: string | null
-}
-
-type RecordCountsResponse = {
-  inbox: number
-  active: number
-  pinned: number
-  archived: number
-}
-
-type TagsResponse = {
-  data: TagRow[]
-}
 
 export default function LibraryPage() {
   const { t } = useI18n()
   const queryClient = useQueryClient()
   const { didInitFromUrl, state, setState, kind, setKind, q, setQ, debouncedQ, tagId, setTagId, sort, setSort, order, setOrder, queryString, clearAllFilters } = useLibraryFilters()
   const { exportSince, setExportSince, exportMenuOpen, exportMenuIndex, exportMenuWrapRef, exportTriggerRef, exportItemRefs, exportPending, exportError, setExportError, cursor, setCursor, loadMorePending, allRecords, setAllRecords, libraryBackHref, navigationStorageKey, handleExport, loadMore, handleOpenRecord, closeExportMenu, handleExportMenuKeyDown: handleExportMenuKeyDownRaw, toggleExportMenu, openExportMenuFromKeyboard, restoreLibraryScroll } = useLibraryWorkflow({ queryString, didInitFromUrl })
-
-  const prefetchRecord = useCallback((id: string) => {
-    queryClient.prefetchQuery({
-      queryKey: ["record-detail", id],
-      queryFn: () => apiFetch<{ record: RecordRow }>(`/api/records/${id}`),
-      staleTime: 1000 * 60 * 5
-    })
-  }, [queryClient])
-
-  const records = useQuery({
-    queryKey: ["records", queryString, sort, order],
-    queryFn: async () => {
-      const data = await apiFetch<RecordsResponse>(`/api/records?${queryString}`)
-      setAllRecords(data.data)
-      setCursor(data.next_cursor ?? null)
-      return data
-    },
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    placeholderData: keepPreviousData
+  const { prefetchRecord, records, tags, recordCounts } = useLibraryQueries({
+    queryClient,
+    queryString,
+    sort,
+    order,
+    setAllRecords,
+    setCursor
   })
 
   const isTransitioning = records.isFetching && !records.isLoading && !loadMorePending
 
-  const toRecordHref = useCallback((recordId: string) =>
-    `/records/${recordId}?from=${encodeURIComponent(libraryBackHref)}`, [libraryBackHref])
-
-  const tags = useQuery({
-    queryKey: ["tags"],
-    queryFn: () => apiFetch<TagsResponse>("/api/tags"),
-    staleTime: 1000 * 60 * 10 // 10 minutes
-  })
-
-  const recordCounts = useQuery({
-    queryKey: ["record-counts"],
-    queryFn: () => apiFetch<RecordCountsResponse>("/api/records/counts"),
-    staleTime: 1000 * 60 * 2
-  })
+  const toRecordHref = useCallback((recordId: string) => `/records/${recordId}?from=${encodeURIComponent(libraryBackHref)}`, [libraryBackHref])
 
   const { selectedIds, setSelectedIds, bulkTagIds, setBulkTagIds, visibleIds, toggleSelect, selectVisible, clearSelection } = useLibrarySelection(records.data?.data ?? [])
   const { selectedTagName, exportSincePresets, exportScopeLabel, emptyState } = useLibraryDerivedState({
