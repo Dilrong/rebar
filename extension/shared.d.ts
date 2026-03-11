@@ -32,3 +32,5 @@ export function getAccessToken(
 ): Promise<string | null>
 
 export function authHeaders(token: string | null): { Authorization?: string }
+
+export function shouldSkipTagPicker(mode: string): boolean

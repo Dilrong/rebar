@@ -1,4 +1,4 @@
-import { DEFAULT_SETTINGS, MSG, parseTags, normalizeTagList, isValidUrl, normalizeUrl, errorMessage, CONTENT_LIMIT, getAccessToken, authHeaders } from "./shared.js"
+import { DEFAULT_SETTINGS, MSG, parseTags, normalizeTagList, isValidUrl, normalizeUrl, errorMessage, CONTENT_LIMIT, getAccessToken, authHeaders, shouldSkipTagPicker } from "./shared.js"
 import { t } from "./i18n.js"
 
 const tagCache = {
@@ -165,10 +165,15 @@ async function queryTabMessage(tabId, message) {
   }
 }
 
-async function promptForQuickTags(tabId, payload, signal) {
+async function promptForQuickTags(tabId, payload, signal, { mode = "guided" } = {}) {
   const settings = await getSettings()
   const defaultTags = parseTags(settings.defaultTags)
   const selectedTags = normalizeTagList([...(payload.tags || []), ...defaultTags])
+
+  if (shouldSkipTagPicker(mode)) {
+    return { ...payload, tags: selectedTags }
+  }
+
   let availableTags = []
   let tagLoadFailed = false
 
@@ -199,7 +204,7 @@ const isBlockedPage = (url) => typeof url !== "string" || BLOCKED_PREFIXES.some(
 
 const saveControllers = new Map()
 
-async function oneShotSave(tab) {
+async function oneShotSave(tab, { mode = "quick-article" } = {}) {
   const tabId = tab?.id
   if (!tab || typeof tabId !== "number" || saveControllers.has(tabId)) return
 
@@ -222,7 +227,7 @@ async function oneShotSave(tab) {
     if (!payload?.content) throw new Error(t("ext.noArticle"))
     if (controller.signal.aborted) return
 
-    const taggedPayload = await promptForQuickTags(tabId, payload, controller.signal)
+    const taggedPayload = await promptForQuickTags(tabId, payload, controller.signal, { mode })
     if (controller.signal.aborted || !taggedPayload) {
       await hideBanner(tabId)
       return
@@ -302,7 +307,7 @@ const menuHandlers = {
       }
     }
 
-    const taggedPayload = await promptForQuickTags(tabId, payload, null)
+    const taggedPayload = await promptForQuickTags(tabId, payload, null, { mode: "guided" })
     if (!taggedPayload) return
 
     saveCapture(taggedPayload, null, { mergeDefaultTags: false })
@@ -310,7 +315,7 @@ const menuHandlers = {
       .catch((e) => flashBadge("ERR", "#991b1b", errorMessage(e)))
   },
   [MENU_CLIP_ARTICLE](_info, tab) {
-    oneShotSave(tab).catch((e) => console.warn("[REBAR] clip article:", e.message))
+    oneShotSave(tab, { mode: "quick-article" }).catch((e) => console.warn("[REBAR] clip article:", e.message))
   }
 }
 
@@ -332,7 +337,7 @@ const messageHandlers = {
 }
 
 chrome.action.onClicked.addListener((tab) => {
-  oneShotSave(tab).catch((e) => console.warn("[REBAR] oneShotSave:", e.message))
+  oneShotSave(tab, { mode: "quick-article" }).catch((e) => console.warn("[REBAR] oneShotSave:", e.message))
 })
 
 chrome.runtime.onInstalled.addListener(() => ensureContextMenus().catch(() => {}))

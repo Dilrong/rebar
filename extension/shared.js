@@ -64,3 +64,7 @@ export async function getAccessToken(rebarUrl, cookiesApi = chrome.cookies) {
 export function authHeaders(token) {
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
+
+export function shouldSkipTagPicker(mode) {
+  return mode === "quick-article"
+}
