@@ -124,7 +124,7 @@ CREATE INDEX record_tags_tag_record ON record_tags (tag_id, record_id);
 CREATE TABLE ingest_jobs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users ON DELETE CASCADE,
-  status TEXT NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'DONE', 'FAILED')),
+  status TEXT NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'PROCESSING', 'DONE', 'FAILED')),
   payload JSONB NOT NULL,
   attempts INTEGER NOT NULL DEFAULT 0 CHECK (attempts >= 0),
   last_error TEXT,

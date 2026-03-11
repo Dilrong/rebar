@@ -30,7 +30,7 @@ User/Agent -> Capture APIs/UI -> SSOT DB -> Review Loop -> User
 - `review_log`: append-only review events
 - `tags`: user tags
 - `record_tags`: many-to-many mapping
-- `ingest_jobs`: failed ingest retry queue
+- `ingest_jobs`: ingest retry/status queue (`PENDING`, `PROCESSING`, `DONE`, `FAILED`)
 - `user_preferences`: persisted per-user UI preferences (e.g. start page)
 
 ### Import Model

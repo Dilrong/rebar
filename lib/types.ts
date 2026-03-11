@@ -109,7 +109,7 @@ export type ReviewLogRow = {
 export type IngestJobRow = {
   id: string
   user_id: string
-  status: "PENDING" | "DONE" | "FAILED"
+  status: "PENDING" | "PROCESSING" | "DONE" | "FAILED"
   payload: unknown
   attempts: number
   last_error: string | null
