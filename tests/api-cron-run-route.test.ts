@@ -37,7 +37,12 @@ vi.mock("@/lib/supabase-admin", () => {
           }
         },
         update: () => ({
-          eq: async () => ({ error: null })
+          eq: () => ({
+            eq: () => ({
+              select: async () => ({ data: [{ id: "job-1" }], error: null })
+            }),
+            then: undefined
+          })
         })
       }
     }

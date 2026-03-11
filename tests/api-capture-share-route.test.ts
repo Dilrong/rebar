@@ -19,13 +19,18 @@ vi.mock("@/lib/rate-limit", () => ({
   resolveClientKey: () => "test-client"
 }))
 
-vi.mock("@feature-lib/capture/ingest", () => ({
-  processIngest: (
-    userId: string,
-    payload: { items: Array<Record<string, unknown>>; default_kind?: string; default_tags?: string[] },
-    options?: Record<string, unknown>
-  ) => processIngestMock(userId, payload, options)
-}))
+vi.mock("@feature-lib/capture/ingest", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@feature-lib/capture/ingest")>()
+
+  return {
+    ...actual,
+    processIngest: (
+      userId: string,
+      payload: { items: Array<Record<string, unknown>>; default_kind?: string; default_tags?: string[] },
+      options?: Record<string, unknown>
+    ) => processIngestMock(userId, payload, options)
+  }
+})
 
 import { routePostCaptureShare as POST } from "./helpers/routes"
 
