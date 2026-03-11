@@ -15,6 +15,7 @@ import { Toast } from "@shared/ui/toast"
 import type { IngestItemInput } from "./_lib/external-import"
 import type { CsvPreview } from "./_lib/csv-import"
 import { CaptureImportModeTabs } from "./_components/capture-import-mode-tabs"
+import { CapturePageSections } from "./_components/capture-page-sections"
 import { CaptureUrlSection } from "./_components/capture-url-section"
 import { CaptureCsvSection } from "./_components/capture-csv-section"
 import { CaptureOcrSection } from "./_components/capture-ocr-section"
@@ -216,15 +217,7 @@ export default function CapturePage() {
       <AuthGate>
         <ProtectedPageShell rootClassName="flex flex-col selection:bg-accent selection:text-white md:p-6" mainClassName="max-w-5xl pb-24">
 
-          <div className="border-[3px] md:border-4 border-foreground bg-card p-4 md:p-10 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.1)] md:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] md:dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.1)]">
-            <header className="mb-6 md:mb-10 flex flex-col md:flex-row md:items-end justify-between border-b-[3px] md:border-b-4 border-foreground pb-4 md:pb-6 gap-4">
-              <h1 className="font-black text-3xl md:text-5xl uppercase text-foreground leading-none">
-                {t("capture.title", "CAPTURE")}
-              </h1>
-              <span className="font-mono text-[10px] md:text-xs font-bold bg-foreground text-background px-2 py-1 uppercase w-fit">
-                {t("capture.ready", "READY TO ADD")}
-              </span>
-            </header>
+          <CapturePageSections t={t}>
 
             <CaptureImportModeTabs importMode={importMode} setImportMode={setImportMode} t={t} />
 
@@ -310,7 +303,7 @@ export default function CapturePage() {
                 onMergeDuplicate={handleMergeDuplicate}
               />
             ) : null}
-          </div>
+          </CapturePageSections>
         </ProtectedPageShell>
       </AuthGate>
       {showSavedToast ? (
