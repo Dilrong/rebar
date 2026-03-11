@@ -4,6 +4,7 @@ import type { Json } from "@/lib/database.types"
 import { getUserId } from "@/lib/auth"
 import { fail, internalError, ok, rateLimited } from "@/lib/http"
 import { IngestPayloadSchema } from "@feature-lib/capture/ingest"
+import { IngestJobScopeSchema, IngestJobStatusSchema, toIngestJobListItem } from "@feature-lib/capture/ingest-jobs"
 import { checkRateLimitDistributed, resolveClientKey } from "@/lib/rate-limit"
 import { getSupabaseAdmin } from "@/lib/supabase-admin"
 
@@ -28,7 +29,7 @@ export async function GET(request: NextRequest) {
     return fail("Unauthorized", 401)
   }
 
-  const parsedStatus = StatusSchema.safeParse(request.nextUrl.searchParams.get("status") ?? "PENDING")
+  const parsedStatus = IngestJobScopeSchema.safeParse(request.nextUrl.searchParams.get("status") ?? "PENDING")
   if (!parsedStatus.success) {
     return fail("Invalid status", 400)
   }
@@ -36,19 +37,47 @@ export async function GET(request: NextRequest) {
   const status = parsedStatus.data
   const supabase = getSupabaseAdmin()
 
-  const query = await supabase
+  let queryBuilder = supabase
     .from("ingest_jobs")
-    .select("id,status,attempts,last_error,created_at", { count: "exact" })
+    .select("id,status,attempts,last_error,created_at,payload", { count: "exact" })
     .eq("user_id", userId)
-    .eq("status", status)
-    .order("created_at", { ascending: false })
-    .limit(20)
+
+  if (status !== "ALL") {
+    queryBuilder = queryBuilder.eq("status", status)
+  }
+
+  const query = await queryBuilder.order("created_at", { ascending: false }).limit(20)
 
   if (query.error) {
     return internalError("ingest-jobs", query.error)
   }
 
-  return ok({ data: query.data, total: query.count ?? 0 })
+  const countJobs = async (jobStatus: z.infer<typeof IngestJobStatusSchema>) => {
+    const result = await supabase
+      .from("ingest_jobs")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("status", jobStatus)
+
+    if (result.error) {
+      throw result.error
+    }
+
+    return result.count ?? 0
+  }
+
+  try {
+    const [pending, done, failed] = await Promise.all([countJobs("PENDING"), countJobs("DONE"), countJobs("FAILED")])
+    const processing = await countJobs("PROCESSING")
+
+    return ok({
+      data: (query.data ?? []).map(toIngestJobListItem),
+      total: query.count ?? 0,
+      counts: { pending, processing, done, failed }
+    })
+  } catch (error) {
+    return internalError("ingest-jobs.counts", error)
+  }
 }
 
 export async function POST(request: NextRequest) {

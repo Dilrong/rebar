@@ -17,4 +17,6 @@ export { GET as routeGetTags, POST as routePostTags } from "@/app/api/(tags)/tag
 export { POST as routePostCaptureExtract } from "@/app/api/(capture)/capture/extract/route"
 export { POST as routePostCaptureShare } from "@/app/api/(capture)/capture/share/route"
 export { POST as routePostCaptureTelegram } from "@/app/api/(capture)/capture/telegram/route"
+export { GET as routeGetIngestJobs, POST as routePostIngestJobs, DELETE as routeDeleteIngestJobs } from "@/app/api/(jobs)/ingest-jobs/route"
+export { POST as routePostIngestJobsRetry } from "@/app/api/(jobs)/ingest-jobs/retry/route"
 export { GET as routeGetSettingsPreferences, PATCH as routePatchSettingsPreferences } from "@/app/api/(settings)/settings/preferences/route"
