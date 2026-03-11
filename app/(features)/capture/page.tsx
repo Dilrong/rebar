@@ -1,7 +1,7 @@
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useMutation, useQuery } from "@tanstack/react-query"
+import { useMutation } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 import AuthGate from "@shared/auth/auth-gate"
 import ProtectedPageShell from "@shared/layout/protected-page-shell"
@@ -21,10 +21,7 @@ import { CaptureCsvSection } from "./_components/capture-csv-section"
 import { CaptureOcrSection } from "./_components/capture-ocr-section"
 import { CaptureManualForm } from "./_components/capture-manual-form"
 import { CaptureBatchSection } from "./_components/capture-batch-section"
-
-type TagsResponse = {
-  data: TagRow[]
-}
+import { useCaptureQueries } from "./_hooks/use-capture-queries"
 
 type ExtractResponse = {
   url: string
@@ -38,27 +35,6 @@ type IngestResponse = {
   ids: string[]
 }
 
-type IngestJobRow = {
-  id: string
-  status: "PENDING" | "PROCESSING" | "DONE" | "FAILED"
-  attempts: number
-  last_error: string | null
-  created_at: string
-  item_count: number
-  import_channel: "manual" | "csv" | "json" | "api" | "share" | "extension" | "url" | "ocr" | "unknown"
-  preview: string | null
-}
-
-type IngestJobsResponse = {
-  data: IngestJobRow[]
-  total: number
-  counts: {
-    pending: number
-    processing: number
-    done: number
-    failed: number
-  }
-}
 
 type ImportMode = "manual" | "url" | "batch" | "csv" | "ocr"
 type CaptureToastKind = "ingested" | "ocrFilled" | "retryDone"
@@ -78,11 +54,7 @@ export default function CapturePage() {
     }
   })
 
-  const tags = useQuery({
-    queryKey: ["tags"],
-    queryFn: () => apiFetch<TagsResponse>("/api/tags"),
-    staleTime: 1000 * 60 * 10 // 10 minutes
-  })
+  const { tags, ingestJobs } = useCaptureQueries()
 
   const selectedTagIds = form.watch("tag_ids") ?? []
   const [externalUrl, setExternalUrl] = useState("")
@@ -192,12 +164,6 @@ export default function CapturePage() {
     onError: () => {
       setPendingIngestCount(null)
     }
-  })
-
-  const ingestJobs = useQuery({
-    queryKey: ["ingest-jobs", "all"],
-    queryFn: () => apiFetch<IngestJobsResponse>("/api/ingest-jobs?status=ALL"),
-    staleTime: 1000 * 30 // 30 seconds
   })
 
   const enqueueRetryMutation = useMutation({
