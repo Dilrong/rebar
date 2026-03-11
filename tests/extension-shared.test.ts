@@ -13,7 +13,8 @@ const {
   normalizeUrl,
   errorMessage,
   getAccessToken,
-  authHeaders
+  authHeaders,
+  shouldSkipTagPicker
 } = await import("../extension/shared.js")
 
 describe("extension/shared", () => {
@@ -191,6 +192,16 @@ describe("extension/shared", () => {
     it("returns null for invalid url or missing cookies", async () => {
       await expect(getAccessToken("not-a-url", cookiesApi)).resolves.toBeNull()
       await expect(getAccessToken("https://rebarops.com", cookiesApi)).resolves.toBeNull()
+    })
+  })
+
+  describe("shouldSkipTagPicker", () => {
+    it("skips tag picker for quick article mode", () => {
+      expect(shouldSkipTagPicker("quick-article")).toBe(true)
+    })
+
+    it("keeps guided mode interactive", () => {
+      expect(shouldSkipTagPicker("guided")).toBe(false)
     })
   })
 })
