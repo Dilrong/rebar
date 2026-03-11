@@ -1,5 +1,16 @@
 import Link from "next/link"
 
+type IngestJobListItem = {
+  id: string
+  status: "PENDING" | "PROCESSING" | "DONE" | "FAILED"
+  attempts: number
+  last_error: string | null
+  created_at: string
+  item_count: number
+  import_channel: string
+  preview: string | null
+}
+
 type CaptureBatchSectionProps = {
   t: (key: string, fallback?: string) => string
   externalJson: string
@@ -11,10 +22,16 @@ type CaptureBatchSectionProps = {
   ingestMutationError: string | null
   ingestResultCreated: number | null
   pendingJobsTotal: number
+  processingJobsTotal: number
+  failedJobsTotal: number
+  doneJobsTotal: number
+  recentJobs: IngestJobListItem[]
   retryAllPending: boolean
-  clearRetryPending: boolean
+  clearPendingPending: boolean
+  clearFailedPending: boolean
   onRetryAll: () => void
-  onClearRetry: () => void
+  onClearPending: () => void
+  onClearFailed: () => void
 }
 
 export function CaptureBatchSection({
@@ -28,11 +45,19 @@ export function CaptureBatchSection({
   ingestMutationError,
   ingestResultCreated,
   pendingJobsTotal,
+  processingJobsTotal,
+  failedJobsTotal,
+  doneJobsTotal,
+  recentJobs,
   retryAllPending,
-  clearRetryPending,
+  clearPendingPending,
+  clearFailedPending,
   onRetryAll,
-  onClearRetry
+  onClearPending,
+  onClearFailed
 }: CaptureBatchSectionProps) {
+  const retriableJobsTotal = pendingJobsTotal + failedJobsTotal
+
   return (
     <section className="mb-8 border-2 border-foreground p-4 bg-background/60">
       <div className="mb-3 flex items-center justify-between gap-2">
@@ -53,6 +78,20 @@ export function CaptureBatchSection({
             {t("capture.guide", "GUIDE")}
           </Link>
         </div>
+      </div>
+      <div className="mb-3 flex flex-wrap gap-2">
+        <span className="border-2 border-foreground bg-background px-2 py-1 font-mono text-[10px] font-bold uppercase">
+          {t("capture.pipelinePending", "Pending")}: {pendingJobsTotal}
+        </span>
+        <span className="border-2 border-foreground bg-background px-2 py-1 font-mono text-[10px] font-bold uppercase">
+          {t("capture.pipelineProcessing", "Processing")}: {processingJobsTotal}
+        </span>
+        <span className="border-2 border-foreground bg-background px-2 py-1 font-mono text-[10px] font-bold uppercase">
+          {t("capture.pipelineFailed", "Failed")}: {failedJobsTotal}
+        </span>
+        <span className="border-2 border-foreground bg-background px-2 py-1 font-mono text-[10px] font-bold uppercase">
+          {t("capture.pipelineDone", "Done")}: {doneJobsTotal}
+        </span>
       </div>
       <label htmlFor="capture-batch-json" className="sr-only">
         {t("capture.ingestTitle", "READWISE STYLE BATCH IMPORT")}
@@ -121,26 +160,56 @@ content-type: application/json
         </div>
         <div className="mt-3 border-2 border-foreground bg-background p-3">
           <p className="mb-2 font-mono text-[10px] font-bold uppercase">
-            {t("capture.retryTitle", "INGEST RETRY QUEUE")}: {pendingJobsTotal}
+            {t("capture.retryTitle", "INGEST PIPELINE STATUS")}
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={onRetryAll}
-              disabled={pendingJobsTotal === 0 || retryAllPending}
+              disabled={retriableJobsTotal === 0 || retryAllPending}
               className="min-h-[44px] flex items-center justify-center border-4 border-foreground bg-foreground px-4 py-2 font-mono text-[10px] font-bold uppercase text-background disabled:opacity-60 transition-all duration-200 active:translate-y-1 active:translate-x-1 shadow-brutal-sm hover:shadow-none hover:translate-x-1 hover:translate-y-1 hover:bg-background hover:text-foreground"
             >
-              {t("capture.retryRun", "RETRY ALL")}
+              {t("capture.retryRun", "RETRY ALL RETRIABLE")}
             </button>
             <button
               type="button"
-              onClick={onClearRetry}
-              disabled={pendingJobsTotal === 0 || clearRetryPending}
+              onClick={onClearPending}
+              disabled={pendingJobsTotal === 0 || clearPendingPending}
               className="min-h-[44px] flex items-center justify-center border-4 border-foreground bg-background px-4 py-2 font-mono text-[10px] font-bold uppercase disabled:opacity-60 hover:bg-foreground hover:text-background transition-all duration-200 active:translate-y-1 active:translate-x-1 shadow-brutal-sm hover:shadow-none hover:translate-x-1 hover:translate-y-1"
             >
-              {t("capture.retryClear", "CLEAR")}
+              {t("capture.retryClearPending", "CLEAR PENDING")}
+            </button>
+            <button
+              type="button"
+              onClick={onClearFailed}
+              disabled={failedJobsTotal === 0 || clearFailedPending}
+              className="min-h-[44px] flex items-center justify-center border-4 border-foreground bg-background px-4 py-2 font-mono text-[10px] font-bold uppercase disabled:opacity-60 hover:bg-foreground hover:text-background transition-all duration-200 active:translate-y-1 active:translate-x-1 shadow-brutal-sm hover:shadow-none hover:translate-x-1 hover:translate-y-1"
+            >
+              {t("capture.retryClearFailed", "CLEAR FAILED")}
             </button>
           </div>
+          {recentJobs.length > 0 ? (
+            <div className="mt-3 space-y-2 border-t-2 border-foreground pt-3">
+              {recentJobs.map((job) => (
+                <div key={job.id} className="border-2 border-foreground bg-background p-2">
+                  <div className="flex flex-wrap items-center gap-2 font-mono text-[10px] font-bold uppercase">
+                    <span className="border border-foreground px-2 py-1">{job.status}</span>
+                    <span>{job.import_channel}</span>
+                    <span>{t("capture.pipelineItems", "Items")}: {job.item_count}</span>
+                    <span>{t("capture.pipelineAttempts", "Attempts")}: {job.attempts}</span>
+                  </div>
+                  <p className="mt-2 font-mono text-[10px] text-muted-foreground">
+                    {job.preview ?? t("capture.pipelineNoPreview", "No preview available")}
+                  </p>
+                  {job.last_error ? <p className="mt-2 font-mono text-[10px] text-destructive">{job.last_error}</p> : null}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-3 font-mono text-[10px] text-muted-foreground">
+              {t("capture.pipelineEmpty", "No recent pipeline jobs.")}
+            </p>
+          )}
         </div>
       </details>
       {ingestError ? <p className="mt-2 font-mono text-xs text-destructive">{ingestError}</p> : null}

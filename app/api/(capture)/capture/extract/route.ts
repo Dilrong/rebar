@@ -270,12 +270,12 @@ function decodeEntities(input: string): string {
 
 function normalizeText(input: string): string {
   return decodeEntities(input)
-    .replace(/\s+/g, " ")
+    .replace(/[ \t]+/g, " ")
     .replace(/\n{3,}/g, "\n\n")
     .trim()
 }
 
-function stripHtml(input: string): string {
+function htmlToReaderText(input: string): string {
   return normalizeText(
     input
       .replace(/<script[\s\S]*?<\/script>/gi, " ")
@@ -289,9 +289,14 @@ function stripHtml(input: string): string {
       .replace(/<form[\s\S]*?<\/form>/gi, " ")
       .replace(/<button[\s\S]*?<\/button>/gi, " ")
       .replace(/<br\s*\/?\s*>/gi, "\n")
-      .replace(/<\/p>/gi, "\n")
+      .replace(/<\/(p|section|article|main|blockquote|ul|ol|li)>/gi, "\n\n")
+      .replace(/<h([1-6])[^>]*>([\s\S]*?)<\/h\1>/gi, (_match, _level, heading) => `\n\n## ${stripTags(heading)}\n\n`)
       .replace(/<[^>]+>/g, " ")
   )
+}
+
+function stripTags(input: string) {
+  return normalizeText(input.replace(/<[^>]+>/g, " "))
 }
 
 function extractMainHtml(html: string): string {
@@ -398,11 +403,14 @@ export async function POST(request: NextRequest) {
   }
 
   const mainHtml = extractMainHtml(html)
-  const mainText = stripHtml(mainHtml)
-  const fallbackText = stripHtml(html)
+  const mainText = htmlToReaderText(mainHtml)
+  const fallbackText = htmlToReaderText(html)
 
   const bodyContent = mainText.length >= 120 ? mainText : fallbackText
-  const content = (description && description.length > 80 ? description : bodyContent).slice(0, 1800)
+  const extractedStructuredBody = mainHtml.trim() !== html.trim()
+  const bodyLooksReaderReady = bodyContent.includes("\n\n") || bodyContent.includes("## ")
+  const shouldPreferDescription = Boolean(description && description.length > 80 && !bodyLooksReaderReady)
+  const content = (extractedStructuredBody && !shouldPreferDescription ? bodyContent : description ?? bodyContent).slice(0, 1800)
 
   return ok({
     url: parsed.data.url,

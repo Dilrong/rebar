@@ -39,15 +39,24 @@ type IngestResponse = {
 
 type IngestJobRow = {
   id: string
-  status: "PENDING" | "DONE" | "FAILED"
+  status: "PENDING" | "PROCESSING" | "DONE" | "FAILED"
   attempts: number
   last_error: string | null
   created_at: string
+  item_count: number
+  import_channel: "manual" | "csv" | "json" | "api" | "share" | "extension" | "url" | "ocr" | "unknown"
+  preview: string | null
 }
 
 type IngestJobsResponse = {
   data: IngestJobRow[]
   total: number
+  counts: {
+    pending: number
+    processing: number
+    done: number
+    failed: number
+  }
 }
 
 type CsvPreview = {
@@ -318,7 +327,7 @@ export default function CapturePage() {
       form.setValue("kind", "link")
       form.setValue("url", data.url)
       form.setValue("source_title", data.title ?? "")
-      form.setValue("content", data.description ?? data.content)
+      form.setValue("content", data.content)
     }
   })
 
@@ -345,17 +354,17 @@ export default function CapturePage() {
   })
 
   const ingestJobs = useQuery({
-    queryKey: ["ingest-jobs", "pending"],
-    queryFn: () => apiFetch<IngestJobsResponse>("/api/ingest-jobs?status=PENDING"),
+    queryKey: ["ingest-jobs", "all"],
+    queryFn: () => apiFetch<IngestJobsResponse>("/api/ingest-jobs?status=ALL"),
     staleTime: 1000 * 30 // 30 seconds
   })
 
   const enqueueRetryMutation = useMutation({
-    mutationFn: (payload: { items: IngestItemInput[]; error?: string }) =>
+    mutationFn: (payload: { items: IngestItemInput[]; import_channel: "csv" | "json"; error?: string }) =>
       apiFetch<{ id: string }>("/api/ingest-jobs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ payload: { items: payload.items }, error: payload.error })
+        body: JSON.stringify({ payload: { items: payload.items, import_channel: payload.import_channel }, error: payload.error })
       }),
     onSuccess: () => {
       ingestJobs.refetch()
@@ -372,9 +381,19 @@ export default function CapturePage() {
     }
   })
 
+  const clearFailedRetryMutation = useMutation({
+    mutationFn: () =>
+      apiFetch<{ cleared: boolean }>("/api/ingest-jobs?status=FAILED", {
+        method: "DELETE"
+      }),
+    onSuccess: () => {
+      ingestJobs.refetch()
+    }
+  })
+
   const retryAllMutation = useMutation({
     mutationFn: () =>
-      apiFetch<{ done: number; failed: number; pending: number }>("/api/ingest-jobs/retry", {
+      apiFetch<{ done: number; failed: number; pending: number }>("/api/ingest-jobs/retry?status=ALL", {
         method: "POST"
       }),
     onSuccess: (data) => {
@@ -455,6 +474,7 @@ export default function CapturePage() {
           onError: (error) =>
             enqueueRetryMutation.mutate({
               items,
+              import_channel: "json",
               error: error instanceof Error ? error.message : "Ingest failed"
             })
         }
@@ -485,6 +505,7 @@ export default function CapturePage() {
           onError: (error) =>
             enqueueRetryMutation.mutate({
               items,
+              import_channel: "csv",
               error: error instanceof Error ? error.message : "Ingest failed"
             })
         }
@@ -570,11 +591,17 @@ export default function CapturePage() {
                 ingestError={ingestError}
                 ingestMutationError={ingestMutation.error?.message ?? null}
                 ingestResultCreated={ingestResult?.created ?? null}
-                pendingJobsTotal={ingestJobs.data?.total ?? 0}
+                pendingJobsTotal={ingestJobs.data?.counts.pending ?? 0}
+                processingJobsTotal={ingestJobs.data?.counts.processing ?? 0}
+                failedJobsTotal={ingestJobs.data?.counts.failed ?? 0}
+                doneJobsTotal={ingestJobs.data?.counts.done ?? 0}
+                recentJobs={ingestJobs.data?.data ?? []}
                 retryAllPending={retryAllMutation.isPending}
-                clearRetryPending={clearRetryMutation.isPending}
+                clearPendingPending={clearRetryMutation.isPending}
+                clearFailedPending={clearFailedRetryMutation.isPending}
                 onRetryAll={() => retryAllMutation.mutate()}
-                onClearRetry={() => clearRetryMutation.mutate()}
+                onClearPending={() => clearRetryMutation.mutate()}
+                onClearFailed={() => clearFailedRetryMutation.mutate()}
               />
             ) : null}
 
