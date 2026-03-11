@@ -20,6 +20,7 @@ import { RecordTagsPanel } from "../_components/record-tags-panel"
 import { RecordHistoryPanel } from "../_components/record-history-panel"
 import { ArticleReader } from "../_components/article-reader"
 import { RecordHighlightPopup } from "../_components/record-highlight-popup"
+import { useRecordDerivedState } from "../_hooks/use-record-derived-state"
 import { useRecordDetailMutations } from "../_hooks/use-record-detail-mutations"
 import { useRecordEditorState } from "../_hooks/use-record-editor-state"
 import { useRecordNavigation } from "../_hooks/use-record-navigation"
@@ -84,21 +85,16 @@ export default function RecordDetailPage() {
     staleTime: 1000 * 60 * 10 // 10 minutes
   })
 
-  const isArticleReader = useMemo(() => {
-    const record = detail.data?.record
-    if (!record) {
-      return false
-    }
-
-    return record.kind === "link" && Boolean(record.url) && record.content.split(/\n{2,}/).filter((item) => item.trim().length > 0).length >= 2
-  }, [detail.data?.record])
+  const { isArticleReader, selectedTagIds, markdownHighlights } = useRecordDerivedState({
+    record: detail.data?.record,
+    annotations: detail.data?.annotations,
+    tags: detail.data?.tags
+  })
   const { selectionPopup, setSelectionPopup } = useSelectionPopup({
     articleRef,
     disabled: isArticleReader,
     maxChars: MAX_HIGHLIGHT_ANCHOR_CHARS
   })
-
-  const selectedTagIds = new Set((detail.data?.tags ?? []).map((tag) => tag.id))
   const { addHighlight, deleteAnnotation, updateTags, createTag, updateRecord, updateNote, deleteRecord } = useRecordDetailMutations({
     id,
     queryClient,
@@ -125,14 +121,6 @@ export default function RecordDetailPage() {
     undoDelete(lastStateBeforeDelete)
   }, [lastStateBeforeDelete, undoDelete])
 
-
-  const markdownHighlights = useMemo(
-    () =>
-      (detail.data?.annotations ?? [])
-        .filter((annotation) => annotation.kind === "highlight" && annotation.anchor)
-        .map((annotation) => ({ id: annotation.id, anchor: annotation.anchor! })),
-    [detail.data?.annotations]
-  )
   const isRecordMutating = updateRecord.isPending || deleteRecord.isPending
   const isTagMutating = updateTags.isPending || createTag.isPending
 
