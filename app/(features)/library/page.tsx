@@ -9,10 +9,7 @@ import { useI18n } from "@app-shared/i18n/i18n-provider"
 import { EmptyState } from "@shared/ui/empty-state"
 import { ErrorState } from "@shared/ui/error-state"
 import { EXPORT_FORMATS } from "@feature-lib/export/formats"
-import { LibraryHeader } from "./_components/library-header"
-import { LibraryFiltersToolbar } from "./_components/library-filters-toolbar"
-import { LibrarySelectionToolbar } from "./_components/library-selection-toolbar"
-import { LibraryTagManager } from "./_components/library-tag-manager"
+import { LibraryControls } from "./_components/library-controls"
 import { LibraryRecordGrid } from "./_components/library-record-grid"
 import { LibraryPagination } from "./_components/library-pagination"
 import { useLibraryActions } from "./_hooks/use-library-actions"
@@ -77,7 +74,7 @@ export default function LibraryPage() {
     <AuthGate>
       <ProtectedPageShell rootClassName="selection:bg-accent selection:text-white md:p-6" mainClassName="max-w-5xl pb-24">
 
-          <LibraryHeader
+          <LibraryControls
             t={t}
             totalRows={records.data?.total || 0}
             exportSince={exportSince}
@@ -101,10 +98,6 @@ export default function LibraryPage() {
             onCloseMenu={closeExportMenu}
             onExport={handleExport}
             onMenuItemKeyDown={handleExportMenuKeyDown}
-          />
-
-          <LibraryFiltersToolbar
-            t={t}
             state={state}
             stateCounts={{
               INBOX: recordCounts.data?.inbox ?? 0,
@@ -128,23 +121,13 @@ export default function LibraryPage() {
               setOrder(nextOrder)
             }}
             onClearAllFilters={clearAllFilters}
-          />
-
-          <LibrarySelectionToolbar
-            t={t}
             selectedCount={selectedIds.length}
-            tags={tags.data?.data ?? []}
             bulkTagId={bulkTagIds[0] ?? ""}
             onSelectVisible={selectVisible}
             onClearSelection={clearSelection}
             onApplyBulkState={applyBulkState}
             onBulkTagIdChange={(tagIdValue) => setBulkTagIds(tagIdValue ? [tagIdValue] : [])}
             onApplyBulkTags={applyBulkTags}
-          />
-
-          <LibraryTagManager
-            t={t}
-            tags={tags.data?.data ?? []}
             newTagName={newTagName}
             editingTagId={editingTagId}
             editingTagName={editingTagName}
