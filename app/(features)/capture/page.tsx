@@ -8,19 +8,19 @@ import ProtectedPageShell from "@shared/layout/protected-page-shell"
 import { apiFetch } from "@/lib/client-http"
 import { CreateRecordSchema, type CreateRecordInput } from "@/lib/schemas"
 import type { RecordRow, TagRow } from "@/lib/types"
-import { useEffect, useRef, useState } from "react"
-import type { ChangeEvent } from "react"
+import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { useI18n } from "@app-shared/i18n/i18n-provider"
 import { Toast } from "@shared/ui/toast"
-import { parseExternalItems, type IngestItemInput } from "./_lib/external-import"
-import { parseCsvItems, parseCsvPreview, type CsvPreview } from "./_lib/csv-import"
+import type { IngestItemInput } from "./_lib/external-import"
+import type { CsvPreview } from "./_lib/csv-import"
 import { CaptureImportModeTabs } from "./_components/capture-import-mode-tabs"
 import { CaptureUrlSection } from "./_components/capture-url-section"
 import { CaptureCsvSection } from "./_components/capture-csv-section"
 import { CaptureOcrSection } from "./_components/capture-ocr-section"
 import { CaptureManualForm } from "./_components/capture-manual-form"
 import { CaptureBatchSection } from "./_components/capture-batch-section"
+import { useCaptureHandlers } from "./_hooks/use-capture-handlers"
 import { useCaptureIngestJobs } from "./_hooks/use-capture-ingest-jobs"
 import { useCaptureQueries } from "./_hooks/use-capture-queries"
 import { useCaptureToast } from "./_hooks/use-capture-toast"
@@ -192,101 +192,24 @@ export default function CapturePage() {
     mutation.mutate({ ...values, on_duplicate: "merge" })
   }
 
-  const handleIngestSubmit = () => {
-    setIngestResult(null)
-      setIngestError(null)
-      closeToast()
-
-    try {
-      const items = parseExternalItems(externalJson)
-      if (items.length === 0) {
-        throw new Error(t("capture.ingestEmpty", "No importable items found."))
-      }
-
-      setPendingIngestCount(items.length)
-
-      ingestMutation.mutate(
-        { items, import_channel: "json" },
-        {
-          onError: (error) =>
-            enqueueRetryMutation.mutate({
-              items,
-              import_channel: "json",
-              error: error instanceof Error ? error.message : "Ingest failed"
-            })
-        }
-      )
-    } catch (error) {
-      const message = error instanceof Error ? error.message : t("capture.ingestParseError", "Invalid JSON")
-      setIngestError(message)
-      setPendingIngestCount(null)
-    }
-  }
-
-  const handleCsvSubmit = () => {
-    setIngestResult(null)
-      setIngestError(null)
-      closeToast()
-
-    try {
-      const items = parseCsvItems(csvText)
-      if (items.length === 0) {
-        throw new Error(t("capture.csvEmpty", "No importable rows found."))
-      }
-
-      setPendingIngestCount(items.length)
-
-      ingestMutation.mutate(
-        { items, import_channel: "csv" },
-        {
-          onError: (error) =>
-            enqueueRetryMutation.mutate({
-              items,
-              import_channel: "csv",
-              error: error instanceof Error ? error.message : "Ingest failed"
-            })
-        }
-      )
-    } catch (error) {
-      const message = error instanceof Error ? error.message : t("capture.csvParseError", "Invalid CSV")
-      setIngestError(message)
-      setPendingIngestCount(null)
-    }
-  }
-
-  const handleCsvFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) {
-      return
-    }
-
-    setCsvFileName(file.name)
-    const text = await file.text()
-    setCsvText(text)
-    setCsvPreview(parseCsvPreview(text))
-  }
-
-  const handleOcrFileChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) {
-      return
-    }
-
-    setOcrFile(file)
-    setOcrFileName(file.name)
-    setIngestError(null)
-  }
-
-  const handleOcrSubmit = () => {
-    setIngestError(null)
-    closeToast()
-    if (!ocrFile) {
-      setIngestError(t("capture.ocrNoFile", "Select an image first"))
-      return
-    }
-
-    ocrMutation.mutate(ocrFile)
-  }
+  const { handleIngestSubmit, handleCsvSubmit, handleCsvFileChange, handleOcrFileChange, handleOcrSubmit } = useCaptureHandlers({
+    t,
+    externalJson,
+    csvText,
+    ocrFile,
+    ingestMutation,
+    enqueueRetryMutation,
+    ocrMutation,
+    setIngestResult,
+    setIngestError,
+    setPendingIngestCount,
+    closeToast,
+    setCsvFileName,
+    setCsvText,
+    setCsvPreview,
+    setOcrFile,
+    setOcrFileName
+  })
 
   return (
     <>
