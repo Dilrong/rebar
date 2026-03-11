@@ -21,6 +21,7 @@ import { RecordHistoryPanel } from "../_components/record-history-panel"
 import { ArticleReader } from "../_components/article-reader"
 import { RecordHighlightPopup } from "../_components/record-highlight-popup"
 import { useRecordDetailMutations } from "../_hooks/use-record-detail-mutations"
+import { useRecordNavigation } from "../_hooks/use-record-navigation"
 import { useRecordPanels } from "../_hooks/use-record-panels"
 import { useSelectionPopup } from "../_hooks/use-selection-popup"
 
@@ -68,10 +69,10 @@ export default function RecordDetailPage() {
   const [lastStateBeforeDelete, setLastStateBeforeDelete] = useState<RecordRow["state"]>("INBOX")
   const [redirectTimer, setRedirectTimer] = useState<number | null>(null)
   const [editNote, setEditNote] = useState("")
-  const [libraryContextIds, setLibraryContextIds] = useState<string[]>([])
   const [newTagName, setNewTagName] = useState("")
   const articleRef = useRef<HTMLDivElement>(null)
   const { isDesktopViewport, desktopPanel, mobilePanel, togglePanel, closeMobilePanel } = useRecordPanels()
+  const { goBack } = useRecordNavigation({ id, backHref, router })
 
   const detail = useQuery({
     queryKey: ["record-detail", id],
@@ -161,26 +162,6 @@ export default function RecordDetailPage() {
     }
   }, [redirectTimer])
 
-  useEffect(() => {
-    if (typeof window === "undefined" || !backHref?.startsWith("/library")) {
-      setLibraryContextIds([])
-      return
-    }
-
-    const raw = window.sessionStorage.getItem(`library:navigation:${backHref}`)
-    if (!raw) {
-      setLibraryContextIds([])
-      return
-    }
-
-    try {
-      const parsed = JSON.parse(raw) as { ids?: string[] }
-      setLibraryContextIds(Array.isArray(parsed.ids) ? parsed.ids : [])
-    } catch {
-      setLibraryContextIds([])
-    }
-  }, [backHref])
-
   const requestSaveRecord = useCallback(() => {
     if (editState === "TRASHED" && detail.data?.record.state !== "TRASHED") {
       setPendingTrashConfirm(true)
@@ -233,54 +214,6 @@ export default function RecordDetailPage() {
 
     updateNote.mutate(nextNote)
   }, [detail.data, editNote, updateNote])
-
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.metaKey || event.ctrlKey || event.altKey) {
-        return
-      }
-
-      const target = event.target as HTMLElement | null
-      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) {
-        return
-      }
-
-      const key = event.key.toLowerCase()
-
-      if (key === "escape") {
-        event.preventDefault()
-        if (backHref) {
-          router.push(backHref)
-          return
-        }
-
-        router.back()
-        return
-      }
-
-      if (!backHref?.startsWith("/library")) {
-        return
-      }
-
-      const currentIndex = libraryContextIds.indexOf(id)
-      if (currentIndex < 0) {
-        return
-      }
-
-      if (key === "j" && currentIndex < libraryContextIds.length - 1) {
-        event.preventDefault()
-        router.push(`/records/${libraryContextIds[currentIndex + 1]}?from=${encodeURIComponent(backHref)}`)
-      }
-
-      if (key === "k" && currentIndex > 0) {
-        event.preventDefault()
-        router.push(`/records/${libraryContextIds[currentIndex - 1]}?from=${encodeURIComponent(backHref)}`)
-      }
-    }
-
-    window.addEventListener("keydown", onKeyDown)
-    return () => window.removeEventListener("keydown", onKeyDown)
-  }, [backHref, id, libraryContextIds, router])
 
   const panelContent = useMemo(() => ({
     manage: (
@@ -355,14 +288,7 @@ export default function RecordDetailPage() {
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <button
                 type="button"
-                onClick={() => {
-                  if (backHref) {
-                    router.push(backHref)
-                    return
-                  }
-
-                  router.back()
-                }}
+                onClick={goBack}
                 className="inline-flex min-h-[44px] w-full items-center justify-center border-2 border-transparent px-2 py-1 text-sm font-black uppercase text-foreground transition-colors hover:border-foreground hover:bg-foreground hover:text-background sm:w-auto sm:justify-start"
               >
                 <ArrowLeftSquare className="w-5 h-5 mr-2" strokeWidth={2.5} /> {t("record.back", "BACK")}
