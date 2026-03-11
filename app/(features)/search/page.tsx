@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react"
+import { Fragment, useCallback, useEffect, useRef, useState } from "react"
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Filter, Search } from "lucide-react"
 import AuthGate from "@shared/auth/auth-gate"
@@ -15,7 +15,7 @@ import { EmptyState } from "@shared/ui/empty-state"
 import { ErrorState } from "@shared/ui/error-state"
 import { Skeleton } from "@shared/ui/skeleton"
 import { stripMarkdown } from "@feature-lib/content/strip-markdown"
-import { useDebouncedValue } from "@shared/hooks/use-debounced-value"
+import { useSearchFilters } from "./_hooks/use-search-filters"
 
 type SearchResultRow = RecordRow & {
   semantic_score?: number
@@ -67,87 +67,17 @@ function highlightText(text: string, query: string) {
 export default function SearchPage() {
   const { t } = useI18n()
   const router = useRouter()
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
-  const [q, setQ] = useState("")
-  const debouncedQ = useDebouncedValue(q, 220)
-  const [state, setState] = useState("")
-  const [tagId, setTagId] = useState("")
-  const [fromDate, setFromDate] = useState("")
-  const [toDate, setToDate] = useState("")
-  const [semantic, setSemantic] = useState(false)
-  const [didInitFromUrl, setDidInitFromUrl] = useState(false)
+  const inputRef = useRef<HTMLInputElement | null>(null)
+  const { q, setQ, debouncedQ, state, setState, tagId, setTagId, fromDate, setFromDate, toDate, setToDate, semantic, setSemantic, hasActiveFilters, hasCommittedFilters, semanticButtonDisabled, queryString } = useSearchFilters()
   const [activeIndex, setActiveIndex] = useState(-1)
   const [showFilters, setShowFilters] = useState(false)
   const controlClassName = "min-h-[44px] w-full min-w-0 rounded-none border-4 border-foreground bg-background p-3 font-mono text-xs text-foreground shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] focus:outline-none focus:ring-0 dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)]"
-
-  useEffect(() => {
-    const queryQ = searchParams.get("q") ?? ""
-    const queryState = searchParams.get("state") ?? ""
-    const queryTag = searchParams.get("tag_id") ?? ""
-    const queryFrom = searchParams.get("from") ?? ""
-    const queryTo = searchParams.get("to") ?? ""
-    const querySemantic = searchParams.get("semantic")
-
-    setQ(queryQ)
-    setState(queryState)
-    setTagId(queryTag)
-    setFromDate(queryFrom)
-    setToDate(queryTo)
-    setSemantic(querySemantic === "1" || querySemantic?.toLowerCase() === "true")
-    setDidInitFromUrl(true)
-  }, [searchParams])
-
-  const hasActiveFilters = Boolean(q.trim() || state || tagId || fromDate || toDate)
-  const hasCommittedFilters = Boolean(debouncedQ.trim() || state || tagId || fromDate || toDate)
-  const semanticButtonDisabled = !hasActiveFilters && !semantic
-
-  useEffect(() => {
-    if (!hasActiveFilters && semantic) {
-      setSemantic(false)
-    }
-  }, [hasActiveFilters, semantic])
-
-  const currentParams = searchParams.toString()
-
-  useEffect(() => {
-    if (!didInitFromUrl) {
-      return
-    }
-
-    const params = new URLSearchParams()
-    if (debouncedQ.trim()) params.set("q", debouncedQ.trim())
-    if (state) params.set("state", state)
-    if (tagId) params.set("tag_id", tagId)
-    if (fromDate) params.set("from", fromDate)
-    if (toDate) params.set("to", toDate)
-    if (semantic && hasCommittedFilters) params.set("semantic", "1")
-
-    const nextParams = params.toString()
-    if (nextParams === currentParams) {
-      return
-    }
-
-    const nextHref = nextParams ? `${pathname}?${nextParams}` : pathname
-    router.replace(nextHref, { scroll: false })
-  }, [currentParams, debouncedQ, didInitFromUrl, fromDate, hasCommittedFilters, pathname, router, semantic, state, tagId, toDate])
 
   const tags = useQuery({
     queryKey: ["tags"],
     queryFn: () => apiFetch<TagsResponse>("/api/tags"),
     staleTime: 1000 * 60 * 10 // 10 minutes
   })
-
-  const queryString = useMemo(() => {
-    const params = new URLSearchParams()
-    if (debouncedQ.trim()) params.set("q", debouncedQ.trim())
-    if (state) params.set("state", state)
-    if (tagId) params.set("tag_id", tagId)
-    if (fromDate) params.set("from", fromDate)
-    if (toDate) params.set("to", toDate)
-    if (semantic && hasCommittedFilters) params.set("semantic", "1")
-    return params.toString()
-  }, [debouncedQ, fromDate, hasCommittedFilters, semantic, state, tagId, toDate])
 
   const result = useQuery({
     queryKey: ["search", queryString],
@@ -188,6 +118,12 @@ export default function SearchPage() {
       return Math.min(current, resultLength - 1)
     })
   }, [result.data?.data.length])
+
+  useEffect(() => {
+    if (showFilters) {
+      inputRef.current?.focus()
+    }
+  }, [showFilters])
 
   useEffect(() => {
     const rows = result.data?.data ?? []
@@ -244,6 +180,7 @@ export default function SearchPage() {
               </label>
               <input
                 id="search-query"
+                ref={inputRef}
                 value={q}
                 autoFocus
                 onChange={(event) => setQ(event.target.value)}
