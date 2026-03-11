@@ -1,14 +1,14 @@
 "use client"
 
 import { useParams, useRouter, useSearchParams } from "next/navigation"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useState, useCallback, useMemo } from "react"
 import AuthGate from "@shared/auth/auth-gate"
 import ProtectedPageShell from "@shared/layout/protected-page-shell"
 import { useI18n } from "@app-shared/i18n/i18n-provider"
 import { apiFetch } from "@/lib/client-http"
 import { getStateLabel } from "@/lib/i18n/state-label"
-import type { AnnotationRow, RecordNoteVersionRow, RecordRow, TagRow } from "@/lib/types"
+import type { RecordRow, TagRow } from "@/lib/types"
 import { Link as LinkIcon, Hash as HashIcon, ArrowLeftSquare, History, SlidersHorizontal } from "lucide-react"
 import { LoadingSpinner } from "@shared/ui/loading"
 import { Toast } from "@shared/ui/toast"
@@ -21,23 +21,13 @@ import { RecordHistoryPanel } from "../_components/record-history-panel"
 import { ArticleReader } from "../_components/article-reader"
 import { RecordHighlightPopup } from "../_components/record-highlight-popup"
 import { useRecordDerivedState } from "../_hooks/use-record-derived-state"
+import { useRecordDetailQueries } from "../_hooks/use-record-detail-queries"
 import { useRecordDetailMutations } from "../_hooks/use-record-detail-mutations"
 import { useRecordEditorState } from "../_hooks/use-record-editor-state"
 import { useRecordFeedbackState } from "../_hooks/use-record-feedback-state"
 import { useRecordNavigation } from "../_hooks/use-record-navigation"
 import { useRecordPanels } from "../_hooks/use-record-panels"
 import { useSelectionPopup } from "../_hooks/use-selection-popup"
-
-type DetailResponse = {
-  record: RecordRow
-  annotations: AnnotationRow[]
-  note_versions: RecordNoteVersionRow[]
-  tags: Pick<TagRow, "id" | "name">[]
-}
-
-type TagsResponse = {
-  data: TagRow[]
-}
 
 const MAX_HIGHLIGHT_ANCHOR_CHARS = 500
 
@@ -67,18 +57,7 @@ export default function RecordDetailPage() {
   const { goBack } = useRecordNavigation({ id, backHref, router })
   const { showUpdateToast, setShowUpdateToast, showDeleteToast, setShowDeleteToast, pendingDeleteConfirm, setPendingDeleteConfirm, pendingTrashConfirm, setPendingTrashConfirm, lastStateBeforeDelete, setLastStateBeforeDelete, requestDeleteRecord, requestTrashConfirm } = useRecordFeedbackState()
 
-  const detail = useQuery({
-    queryKey: ["record-detail", id],
-    queryFn: () => apiFetch<DetailResponse>(`/api/records/${id}`),
-    enabled: Boolean(id),
-    staleTime: 1000 * 60 * 5 // 5 minutes
-  })
-
-  const tags = useQuery({
-    queryKey: ["tags"],
-    queryFn: () => apiFetch<TagsResponse>("/api/tags"),
-    staleTime: 1000 * 60 * 10 // 10 minutes
-  })
+  const { detail, tags } = useRecordDetailQueries(id)
 
   const { isArticleReader, selectedTagIds, markdownHighlights } = useRecordDerivedState({
     record: detail.data?.record,
