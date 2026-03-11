@@ -18,6 +18,7 @@ import { LibraryRecordGrid } from "./_components/library-record-grid"
 import { LibraryPagination } from "./_components/library-pagination"
 import { useLibraryActions } from "./_hooks/use-library-actions"
 import { useLibraryFilters } from "./_hooks/use-library-filters"
+import { useLibrarySelection } from "./_hooks/use-library-selection"
 import { useLibraryWorkflow } from "./_hooks/use-library-workflow"
 
 import type { RecordRow, TagRow } from "@/lib/types"
@@ -66,8 +67,6 @@ export default function LibraryPage() {
   const queryClient = useQueryClient()
   const { didInitFromUrl, state, setState, kind, setKind, q, setQ, debouncedQ, tagId, setTagId, sort, setSort, order, setOrder, queryString, clearAllFilters } = useLibraryFilters()
   const [newTagName, setNewTagName] = useState("")
-  const [selectedIds, setSelectedIds] = useState<string[]>([])
-  const [bulkTagIds, setBulkTagIds] = useState<string[]>([])
   const [exportSince, setExportSince] = useState("")
   const [editingTagId, setEditingTagId] = useState<string | null>(null)
   const [editingTagName, setEditingTagName] = useState("")
@@ -115,6 +114,7 @@ export default function LibraryPage() {
   })
 
   const selectedTagName = (tags.data?.data ?? []).find((tag) => tag.id === tagId)?.name ?? null
+  const { selectedIds, setSelectedIds, bulkTagIds, setBulkTagIds, visibleIds, toggleSelect, selectVisible, clearSelection } = useLibrarySelection(records.data?.data ?? [])
   const exportSincePresets = useMemo(() => {
     const now = new Date()
     const last7 = new Date(now)
@@ -171,19 +171,6 @@ export default function LibraryPage() {
     setEditingTagId(null)
     if (!trimmed) return
     renameTag.mutate({ id, name: trimmed })
-  }
-
-  const visibleIds = (records.data?.data ?? []).map((record) => record.id)
-  const toggleSelect = useCallback((id: string) => {
-    setSelectedIds((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]))
-  }, [])
-
-  const selectVisible = () => {
-    setSelectedIds(visibleIds)
-  }
-
-  const clearSelection = () => {
-    setSelectedIds([])
   }
 
   useEffect(() => {
