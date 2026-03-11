@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest"
 
+type TestCookie = { name: string; value: string; domain: string }
+
 // extension/shared.js is plain JS — import directly
 const {
   DEFAULT_SETTINGS,
@@ -9,7 +11,9 @@ const {
   parseTags,
   isValidUrl,
   normalizeUrl,
-  errorMessage
+  errorMessage,
+  getAccessToken,
+  authHeaders
 } = await import("../extension/shared.js")
 
 describe("extension/shared", () => {
@@ -146,6 +150,47 @@ describe("extension/shared", () => {
       expect(errorMessage(null)).toBe("Unknown error")
       expect(errorMessage(undefined)).toBe("Unknown error")
       expect(errorMessage("")).toBe("Unknown error")
+    })
+  })
+
+  describe("authHeaders", () => {
+    it("returns Authorization header when token exists", () => {
+      expect(authHeaders("abc123")).toEqual({ Authorization: "Bearer abc123" })
+    })
+
+    it("returns empty object when token is missing", () => {
+      expect(authHeaders(null)).toEqual({})
+    })
+  })
+
+  describe("getAccessToken", () => {
+    const cookieStore: TestCookie[] = []
+    const cookiesApi = {
+      getAll: async ({ domain }: { domain: string }) => cookieStore.filter((cookie) => cookie.domain === domain || domain.endsWith(cookie.domain))
+    }
+
+    beforeEach(() => {
+      cookieStore.length = 0
+    })
+
+    it("extracts access token from plain json cookie", async () => {
+      cookieStore.push({ name: "sb-test-auth-token", value: JSON.stringify({ access_token: "tok_plain" }), domain: "rebarops.com" })
+      await expect(getAccessToken("https://rebarops.com", cookiesApi)).resolves.toBe("tok_plain")
+    })
+
+    it("extracts access token from chunked cookies", async () => {
+      const payload = JSON.stringify({ access_token: "tok_chunked" })
+      const mid = Math.floor(payload.length / 2)
+      cookieStore.push(
+        { name: "sb-test-auth-token.0", value: payload.slice(0, mid), domain: "rebarops.com" },
+        { name: "sb-test-auth-token.1", value: payload.slice(mid), domain: "rebarops.com" }
+      )
+      await expect(getAccessToken("https://rebarops.com", cookiesApi)).resolves.toBe("tok_chunked")
+    })
+
+    it("returns null for invalid url or missing cookies", async () => {
+      await expect(getAccessToken("not-a-url", cookiesApi)).resolves.toBeNull()
+      await expect(getAccessToken("https://rebarops.com", cookiesApi)).resolves.toBeNull()
     })
   })
 })

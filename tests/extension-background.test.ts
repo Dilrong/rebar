@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
+const { getAccessToken, authHeaders } = await import("../extension/shared.js")
 
 // ── Chrome API mock ──
 
@@ -102,39 +103,6 @@ function setChunkedAuthCookies(domain: string, accessToken: string) {
   )
 }
 
-// ── Dynamic import of background module internals ──
-// Since background.js registers chrome listeners on import, we test the
-// exported-style functions by re-implementing the token extraction logic
-// that matches background.js's getAccessToken.
-
-async function getAccessToken(rebarUrl: string): Promise<string | null> {
-  try {
-    const url = new URL(rebarUrl)
-    const cookies = await chromeMock.cookies.getAll({ domain: url.hostname })
-    const authCookies = cookies
-      .filter((c: { name: string }) => c.name.startsWith("sb-") && c.name.includes("-auth-token"))
-      .sort((a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name))
-
-    if (authCookies.length === 0) return null
-
-    const baseName = authCookies[0].name.replace(/\.\d+$/, "")
-    const chunked = authCookies.filter((c: { name: string }) => c.name === baseName || c.name.startsWith(baseName + "."))
-    const raw = chunked.length > 1
-      ? chunked.sort((a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name)).map((c: { value: string }) => c.value).join("")
-      : authCookies[0].value
-
-    let json: { access_token?: string }
-    try { json = JSON.parse(atob(raw)) } catch { json = JSON.parse(raw) }
-    return json?.access_token ?? null
-  } catch {
-    return null
-  }
-}
-
-function authHeaders(token: string | null) {
-  return token ? { Authorization: `Bearer ${token}` } : {}
-}
-
 // ── Tests ──
 
 describe("extension/background — getAccessToken logic", () => {
@@ -144,37 +112,37 @@ describe("extension/background — getAccessToken logic", () => {
   })
 
   it("returns null when no cookies exist", async () => {
-    const token = await getAccessToken("https://rebarops.com")
+    const token = await getAccessToken("https://rebarops.com", chromeMock.cookies)
     expect(token).toBeNull()
   })
 
   it("extracts access_token from plain JSON cookie", async () => {
     setAuthCookie("rebarops.com", "token_abc")
-    const token = await getAccessToken("https://rebarops.com")
+    const token = await getAccessToken("https://rebarops.com", chromeMock.cookies)
     expect(token).toBe("token_abc")
   })
 
   it("extracts access_token from base64-encoded cookie", async () => {
     setBase64AuthCookie("rebarops.com", "token_b64")
-    const token = await getAccessToken("https://rebarops.com")
+    const token = await getAccessToken("https://rebarops.com", chromeMock.cookies)
     expect(token).toBe("token_b64")
   })
 
   it("extracts access_token from chunked cookies", async () => {
     setChunkedAuthCookies("rebarops.com", "token_chunked")
-    const token = await getAccessToken("https://rebarops.com")
+    const token = await getAccessToken("https://rebarops.com", chromeMock.cookies)
     expect(token).toBe("token_chunked")
   })
 
   it("returns null for non-auth cookies", async () => {
     cookieStore.push({ name: "session_id", value: "xyz", domain: "rebarops.com" })
-    const token = await getAccessToken("https://rebarops.com")
+    const token = await getAccessToken("https://rebarops.com", chromeMock.cookies)
     expect(token).toBeNull()
   })
 
   it("returns null for malformed cookie value", async () => {
     cookieStore.push({ name: "sb-ref-auth-token", value: "not-json", domain: "rebarops.com" })
-    const token = await getAccessToken("https://rebarops.com")
+    const token = await getAccessToken("https://rebarops.com", chromeMock.cookies)
     expect(token).toBeNull()
   })
 
@@ -184,24 +152,24 @@ describe("extension/background — getAccessToken logic", () => {
       value: JSON.stringify({ refresh_token: "rt" }),
       domain: "rebarops.com"
     })
-    const token = await getAccessToken("https://rebarops.com")
+    const token = await getAccessToken("https://rebarops.com", chromeMock.cookies)
     expect(token).toBeNull()
   })
 
   it("returns null for invalid URL", async () => {
-    const token = await getAccessToken("not-a-url")
+    const token = await getAccessToken("not-a-url", chromeMock.cookies)
     expect(token).toBeNull()
   })
 
   it("scopes cookies by hostname", async () => {
     setAuthCookie("other-domain.com", "wrong_token")
-    const token = await getAccessToken("https://rebarops.com")
+    const token = await getAccessToken("https://rebarops.com", chromeMock.cookies)
     expect(token).toBeNull()
   })
 
   it("handles localhost URLs", async () => {
     setAuthCookie("localhost", "local_token")
-    const token = await getAccessToken("http://localhost:3000")
+    const token = await getAccessToken("http://localhost:3000", chromeMock.cookies)
     expect(token).toBe("local_token")
   })
 })
@@ -254,7 +222,7 @@ describe("extension/background — cookie chunking edge cases", () => {
       { name: "sb-ref-auth-token", value: JSON.stringify({ access_token: "real" }), domain: "rebarops.com" },
       { name: "sb-ref-other-data", value: "irrelevant", domain: "rebarops.com" }
     )
-    const token = await getAccessToken("https://rebarops.com")
+    const token = await getAccessToken("https://rebarops.com", chromeMock.cookies)
     expect(token).toBe("real")
   })
 
@@ -266,7 +234,7 @@ describe("extension/background — cookie chunking edge cases", () => {
       { name: "sb-ref-auth-token.1", value: payload.slice(third, third * 2), domain: "rebarops.com" },
       { name: "sb-ref-auth-token.2", value: payload.slice(third * 2), domain: "rebarops.com" }
     )
-    const token = await getAccessToken("https://rebarops.com")
+    const token = await getAccessToken("https://rebarops.com", chromeMock.cookies)
     expect(token).toBe("three_chunks")
   })
 
@@ -278,7 +246,7 @@ describe("extension/background — cookie chunking edge cases", () => {
       { name: "sb-ref-auth-token.1", value: payload.slice(mid), domain: "rebarops.com" },
       { name: "sb-ref-auth-token.0", value: payload.slice(0, mid), domain: "rebarops.com" }
     )
-    const token = await getAccessToken("https://rebarops.com")
+    const token = await getAccessToken("https://rebarops.com", chromeMock.cookies)
     expect(token).toBe("ordered")
   })
 })
