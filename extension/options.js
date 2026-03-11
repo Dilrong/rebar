@@ -1,4 +1,4 @@
-import { DEFAULT_SETTINGS, isValidUrl, normalizeUrl, errorMessage, getAccessToken, authHeaders } from "./shared.js"
+import { DEFAULT_SETTINGS, isValidUrl, normalizeUrl, errorMessage, getAccessToken, authHeaders, ensureHostPermission } from "./shared.js"
 import { initI18n, t } from "./i18n.js"
 
 const form = {
@@ -29,23 +29,13 @@ async function load() {
   form.defaultTags.value = data.defaultTags || DEFAULT_SETTINGS.defaultTags
 }
 
-async function requestHostPermission(urlStr) {
-  try {
-    const origin = new URL(urlStr).origin + "/*"
-    const granted = await chrome.permissions.request({ origins: [origin] })
-    return granted
-  } catch {
-    return false
-  }
-}
-
 async function save() {
   const urlStr = getFormUrl()
   if (!urlStr) return
 
   saveButton.disabled = true
   try {
-    const granted = await requestHostPermission(urlStr)
+    const granted = await ensureHostPermission(urlStr)
     if (!granted) {
       setStatus(t("ext.opt.permDenied"), "error")
       return

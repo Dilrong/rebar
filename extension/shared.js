@@ -40,7 +40,14 @@ export function errorMessage(error) {
 export async function getAccessToken(rebarUrl, cookiesApi = chrome.cookies) {
   try {
     const url = new URL(rebarUrl)
-    const cookies = await cookiesApi.getAll({ domain: url.hostname })
+    const hostname = url.hostname
+    const rootDomain = hostname.startsWith("www.") ? hostname.slice(4) : hostname
+    const cookieGroups = await Promise.all([
+      cookiesApi.getAll({ domain: hostname }),
+      rootDomain !== hostname ? cookiesApi.getAll({ domain: rootDomain }) : Promise.resolve([]),
+      rootDomain.includes(".") ? cookiesApi.getAll({ domain: `.${rootDomain}` }) : Promise.resolve([])
+    ])
+    const cookies = Array.from(new Map(cookieGroups.flat().map((cookie) => [`${cookie.name}:${cookie.domain ?? ""}:${cookie.value}`, cookie])).values())
     const authCookies = cookies
       .filter((c) => c.name.startsWith("sb-") && c.name.includes("-auth-token"))
       .sort((a, b) => a.name.localeCompare(b.name))
@@ -67,4 +74,23 @@ export function authHeaders(token) {
 
 export function shouldSkipTagPicker(mode) {
   return mode === "quick-article"
+}
+
+export function hostPermissionOrigin(urlStr) {
+  return new URL(urlStr).origin + "/*"
+}
+
+export async function ensureHostPermission(urlStr, permissionsApi = chrome.permissions) {
+  try {
+    const origin = hostPermissionOrigin(urlStr)
+    if (typeof permissionsApi.contains === "function") {
+      const alreadyGranted = await permissionsApi.contains({ origins: [origin] })
+      if (alreadyGranted) {
+        return true
+      }
+    }
+    return await permissionsApi.request({ origins: [origin] })
+  } catch {
+    return false
+  }
 }

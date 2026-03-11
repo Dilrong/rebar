@@ -1,4 +1,4 @@
-import { DEFAULT_SETTINGS, MSG, parseTags, normalizeTagList, isValidUrl, normalizeUrl, errorMessage, CONTENT_LIMIT, getAccessToken, authHeaders, shouldSkipTagPicker } from "./shared.js"
+import { DEFAULT_SETTINGS, MSG, parseTags, normalizeTagList, isValidUrl, normalizeUrl, errorMessage, CONTENT_LIMIT, getAccessToken, authHeaders, shouldSkipTagPicker, ensureHostPermission } from "./shared.js"
 import { t } from "./i18n.js"
 
 const tagCache = {
@@ -214,6 +214,10 @@ async function oneShotSave(tab, { mode = "quick-article" } = {}) {
   }
 
   const settings = await getSettings()
+  if (!(await ensureHostPermission(settings.rebarUrl))) {
+    await sendBanner(tabId, "error", t("ext.opt.permDenied"))
+    return
+  }
   if (!(await checkAuth(settings.rebarUrl))) {
     chrome.tabs.create({ url: `${settings.rebarUrl}/signup`, active: true })
     return
@@ -277,6 +281,10 @@ const menuHandlers = {
     if (typeof tabId !== "number") return
 
     const settings = await getSettings()
+    if (!(await ensureHostPermission(settings.rebarUrl))) {
+      flashBadge("ERR", "#991b1b", t("ext.opt.permDenied"))
+      return
+    }
     if (!(await checkAuth(settings.rebarUrl))) {
       chrome.tabs.create({ url: `${settings.rebarUrl}/signup`, active: true })
       return

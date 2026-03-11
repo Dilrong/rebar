@@ -34,3 +34,13 @@ export function getAccessToken(
 export function authHeaders(token: string | null): { Authorization?: string }
 
 export function shouldSkipTagPicker(mode: string): boolean
+
+export function hostPermissionOrigin(urlStr: string): string
+
+export function ensureHostPermission(
+  urlStr: string,
+  permissionsApi?: {
+    request(details: { origins: string[] }): Promise<boolean>
+    contains?(details: { origins: string[] }): Promise<boolean>
+  }
+): Promise<boolean>
