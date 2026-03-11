@@ -12,7 +12,6 @@ type RecordsResponse = {
 
 type UseLibraryWorkflowOptions = {
   queryString: string
-  exportSince: string
   didInitFromUrl: boolean
 }
 
@@ -39,7 +38,8 @@ function getFilenameFromDisposition(disposition: string | null) {
   return bareMatch?.[1]?.trim() ?? null
 }
 
-export function useLibraryWorkflow({ queryString, exportSince, didInitFromUrl }: UseLibraryWorkflowOptions) {
+export function useLibraryWorkflow({ queryString, didInitFromUrl }: UseLibraryWorkflowOptions) {
+  const [exportSince, setExportSince] = useState("")
   const [exportMenuOpen, setExportMenuOpen] = useState(false)
   const [exportMenuIndex, setExportMenuIndex] = useState(0)
   const exportMenuWrapRef = useRef<HTMLDivElement | null>(null)
@@ -250,6 +250,8 @@ export function useLibraryWorkflow({ queryString, exportSince, didInitFromUrl }:
   }, [didInitFromUrl, scrollStorageKey])
 
   return {
+    exportSince,
+    setExportSince,
     exportMenuOpen,
     exportMenuIndex,
     exportMenuWrapRef,

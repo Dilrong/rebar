@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type RefObject } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 
 export type SelectionPopup = {
   x: number
@@ -8,14 +8,14 @@ export type SelectionPopup = {
 } | null
 
 type UseSelectionPopupOptions = {
-  articleRef: RefObject<HTMLDivElement | null>
   disabled?: boolean
   maxChars?: number
 }
 
 const DEFAULT_MAX_CHARS = 500
 
-export function useSelectionPopup({ articleRef, disabled = false, maxChars = DEFAULT_MAX_CHARS }: UseSelectionPopupOptions) {
+export function useSelectionPopup({ disabled = false, maxChars = DEFAULT_MAX_CHARS }: UseSelectionPopupOptions) {
+  const articleRef = useRef<HTMLDivElement>(null)
   const [selectionPopup, setSelectionPopup] = useState<SelectionPopup>(null)
 
   const handleTextSelect = useCallback(() => {
@@ -67,6 +67,7 @@ export function useSelectionPopup({ articleRef, disabled = false, maxChars = DEF
   }, [handleTextSelect])
 
   return {
+    articleRef,
     selectionPopup,
     setSelectionPopup,
     clearSelectionPopup: () => setSelectionPopup(null)

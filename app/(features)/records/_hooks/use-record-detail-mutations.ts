@@ -1,4 +1,5 @@
 import { useMutation, type QueryClient } from "@tanstack/react-query"
+import { useState } from "react"
 import { apiFetch } from "@/lib/client-http"
 import type { AnnotationRow, RecordNoteVersionRow, RecordRow, TagRow } from "@/lib/types"
 
@@ -18,14 +19,14 @@ type UseRecordDetailMutationsOptions = {
   queryClient: QueryClient
   router: { replace: (href: string) => void }
   setSelectionPopup: (value: null) => void
-  setNewTagName: (value: string) => void
   selectedTagIds: Set<string>
   setShowUpdateToast: (value: boolean) => void
   setShowDeleteToast: (value: boolean) => void
   setRedirectTimer: (value: number | null) => void
 }
 
-export function useRecordDetailMutations({ id, queryClient, router, setSelectionPopup, setNewTagName, selectedTagIds, setShowUpdateToast, setShowDeleteToast, setRedirectTimer }: UseRecordDetailMutationsOptions) {
+export function useRecordDetailMutations({ id, queryClient, router, setSelectionPopup, selectedTagIds, setShowUpdateToast, setShowDeleteToast, setRedirectTimer }: UseRecordDetailMutationsOptions) {
+  const [newTagName, setNewTagName] = useState("")
   const addHighlight = useMutation({
     mutationFn: ({ body, anchor }: { body: string; anchor: string }) =>
       apiFetch(`/api/records/${id}/annotations`, {
@@ -228,6 +229,8 @@ export function useRecordDetailMutations({ id, queryClient, router, setSelection
   })
 
   return {
+    newTagName,
+    setNewTagName,
     addHighlight,
     deleteAnnotation,
     updateTags,
