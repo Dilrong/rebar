@@ -25,3 +25,10 @@ export function isValidUrl(value: string): boolean
 export function normalizeUrl(value: string | null | undefined): string
 
 export function errorMessage(error: unknown): string
+
+export function getAccessToken(
+  rebarUrl: string,
+  cookiesApi?: { getAll(details: { domain: string }): Promise<Array<{ name: string; value: string; domain?: string }>> }
+): Promise<string | null>
+
+export function authHeaders(token: string | null): { Authorization?: string }

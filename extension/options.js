@@ -1,4 +1,4 @@
-import { DEFAULT_SETTINGS, isValidUrl, normalizeUrl, errorMessage } from "./shared.js"
+import { DEFAULT_SETTINGS, isValidUrl, normalizeUrl, errorMessage, getAccessToken, authHeaders } from "./shared.js"
 import { initI18n, t } from "./i18n.js"
 
 const form = {
@@ -60,30 +60,6 @@ async function save() {
   }
 }
 
-async function getAccessToken(urlStr) {
-  try {
-    const url = new URL(urlStr)
-    const cookies = await chrome.cookies.getAll({ domain: url.hostname })
-    const authCookies = cookies
-      .filter((c) => c.name.startsWith("sb-") && c.name.includes("-auth-token"))
-      .sort((a, b) => a.name.localeCompare(b.name))
-
-    if (authCookies.length === 0) return null
-
-    const baseName = authCookies[0].name.replace(/\.\d+$/, "")
-    const chunked = authCookies.filter((c) => c.name === baseName || c.name.startsWith(baseName + "."))
-    const raw = chunked.length > 1
-      ? chunked.sort((a, b) => a.name.localeCompare(b.name)).map((c) => c.value).join("")
-      : authCookies[0].value
-
-    let json
-    try { json = JSON.parse(atob(raw)) } catch { json = JSON.parse(raw) }
-    return json?.access_token ?? null
-  } catch {
-    return null
-  }
-}
-
 async function testConnection() {
   const urlStr = getFormUrl()
   if (!urlStr) return
@@ -97,7 +73,7 @@ async function testConnection() {
       setStatus(t("ext.opt.connNoAuth"), "error")
       return
     }
-    const res = await fetch(`${urlStr}/api/auth/check`, { headers: { Authorization: `Bearer ${token}` } })
+    const res = await fetch(`${urlStr}/api/auth/check`, { headers: authHeaders(token) })
     if (res.ok) setStatus(t("ext.opt.connOk"), "success")
     else if (res.status === 401) setStatus(t("ext.opt.connNoAuth"), "error")
     else setStatus(t("ext.opt.connFail"), "error")

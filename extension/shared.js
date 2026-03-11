@@ -36,3 +36,31 @@ export function normalizeUrl(value) {
 export function errorMessage(error) {
   return error instanceof Error ? error.message : String(error || "Unknown error")
 }
+
+export async function getAccessToken(rebarUrl, cookiesApi = chrome.cookies) {
+  try {
+    const url = new URL(rebarUrl)
+    const cookies = await cookiesApi.getAll({ domain: url.hostname })
+    const authCookies = cookies
+      .filter((c) => c.name.startsWith("sb-") && c.name.includes("-auth-token"))
+      .sort((a, b) => a.name.localeCompare(b.name))
+
+    if (authCookies.length === 0) return null
+
+    const baseName = authCookies[0].name.replace(/\.\d+$/, "")
+    const chunked = authCookies.filter((c) => c.name === baseName || c.name.startsWith(baseName + "."))
+    const raw = chunked.length > 1
+      ? chunked.sort((a, b) => a.name.localeCompare(b.name)).map((c) => c.value).join("")
+      : authCookies[0].value
+
+    let json
+    try { json = JSON.parse(atob(raw)) } catch { json = JSON.parse(raw) }
+    return json?.access_token ?? null
+  } catch {
+    return null
+  }
+}
+
+export function authHeaders(token) {
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}

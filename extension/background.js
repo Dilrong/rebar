@@ -1,4 +1,4 @@
-import { DEFAULT_SETTINGS, MSG, parseTags, normalizeTagList, isValidUrl, normalizeUrl, errorMessage, CONTENT_LIMIT } from "./shared.js"
+import { DEFAULT_SETTINGS, MSG, parseTags, normalizeTagList, isValidUrl, normalizeUrl, errorMessage, CONTENT_LIMIT, getAccessToken, authHeaders } from "./shared.js"
 import { t } from "./i18n.js"
 
 const tagCache = {
@@ -56,38 +56,6 @@ async function fetchWithRetry(url, options, { maxRetries = 2, signal, totalTimeo
   throw lastError
 }
 
-async function getAccessToken(rebarUrl) {
-  try {
-    const url = new URL(rebarUrl)
-    const cookies = await chrome.cookies.getAll({ domain: url.hostname })
-    const authCookies = cookies
-      .filter((c) => c.name.startsWith("sb-") && c.name.includes("-auth-token"))
-      .sort((a, b) => a.name.localeCompare(b.name))
-
-    if (authCookies.length === 0) return null
-
-    // Supabase SSR may chunk cookies: sb-<ref>-auth-token.0, .1, ...
-    // or store as a single sb-<ref>-auth-token cookie
-    const baseName = authCookies[0].name.replace(/\.\d+$/, "")
-    const chunked = authCookies.filter((c) => c.name === baseName || c.name.startsWith(baseName + "."))
-    const raw = chunked.length > 1
-      ? chunked.sort((a, b) => a.name.localeCompare(b.name)).map((c) => c.value).join("")
-      : authCookies[0].value
-
-    // Try decode as base64 first, then plain JSON
-    let json
-    try { json = JSON.parse(atob(raw)) } catch { json = JSON.parse(raw) }
-
-    return json?.access_token ?? null
-  } catch {
-    return null
-  }
-}
-
-function authHeaders(token) {
-  return token ? { Authorization: `Bearer ${token}` } : {}
-}
-
 async function checkAuth(rebarUrl) {
   try {
     const token = await getAccessToken(rebarUrl)
@@ -117,7 +85,7 @@ async function fetchAvailableTags(rebarUrl, signal) {
     : []
 
   tagCache.rebarUrl = rebarUrl
-  tagCache.expiresAt = now + 30_000
+  tagCache.expiresAt = now + 300_000
   tagCache.names = names
   return names
 }
@@ -131,7 +99,7 @@ function rememberAvailableTags(rebarUrl, tags) {
   ]).sort((a, b) => a.localeCompare(b))
 
   tagCache.rebarUrl = rebarUrl
-  tagCache.expiresAt = Date.now() + 30_000
+  tagCache.expiresAt = Date.now() + 300_000
   tagCache.names = nextNames
 }
 
