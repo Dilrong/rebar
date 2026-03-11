@@ -7,12 +7,7 @@ import ProtectedPageShell from "@shared/layout/protected-page-shell"
 import { useI18n } from "@app-shared/i18n/i18n-provider"
 import { apiFetch } from "@/lib/client-http"
 import type { RecordRow } from "@/lib/types"
-import { LoadingState } from "@shared/ui/loading-state"
-import { ReviewStatsPanel } from "./_components/review-stats-panel"
-import { ReviewUpNext } from "./_components/review-up-next"
-import { ReviewHeader } from "./_components/review-header"
-import { ReviewCurrentCard } from "./_components/review-current-card"
-import { ReviewCompleteScreen } from "./_components/review-complete-screen"
+import { ReviewMainContent } from "./_components/review-main-content"
 import { ReviewUndoBar } from "./_components/review-undo-bar"
 import { useReviewCardFlow, type DecisionPayload } from "./_hooks/use-review-card-flow"
 
@@ -249,55 +244,37 @@ export default function ReviewPage() {
       <AuthGate>
         <ProtectedPageShell rootClassName="md:p-6" mainClassName="flex max-w-5xl flex-1 flex-col">
 
-          <ReviewHeader
+          <ReviewMainContent
             t={t}
-            reviewed={stats.data?.today_reviewed ?? 0}
-            remaining={stats.data?.today_remaining ?? 0}
-          />
-
-          <ReviewStatsPanel
             reviewed={stats.data?.today_reviewed ?? 0}
             remaining={stats.data?.today_remaining ?? 0}
             streakDays={stats.data?.streak_days ?? 0}
             totalRecords={stats.data?.total_records ?? 0}
+            totalActive={stats.data?.total_active ?? 0}
+            isLoading={today.isLoading}
+            first={first}
+            nextQueue={nextQueue}
+            mutationPending={mutation.isPending || cardTransition.phase !== "idle"}
+            archivePending={mutation.isPending && mutation.variables?.decisionType === "ARCHIVE"}
+            transitionPhase={cardTransition.recordId === first?.id ? cardTransition.phase : "idle"}
+            stampLabel={cardTransition.recordId === first?.id ? cardTransition.stampLabel : null}
+            actExpanded={actExpanded}
+            deferExpanded={deferExpanded}
+            errorMessage={mutation.error?.message ?? null}
+            onArchive={() => first ? triggerDecision({ id: first.id, decisionType: "ARCHIVE" }, "ARCHIVED") : undefined}
+            onToggleAct={toggleActPanel}
+            onToggleDefer={toggleDeferPanel}
+            onSelectAct={(actionType) => first ? triggerDecision({ id: first.id, decisionType: "ACT", actionType }, actionType === "TODO" ? "TODO" : actionType === "SHARE" ? "SHARED" : "EXPERIMENT") : undefined}
+            onSelectDefer={(deferReason) => first ? triggerDecision({ id: first.id, decisionType: "DEFER", deferReason }, "DEFERRED") : undefined}
+            onRetry={() => {
+              if (!first) {
+                return
+              }
+              mutation.reset()
+              resetCardTransition(first.id)
+              today.refetch()
+            }}
           />
-
-          {today.isLoading ? <LoadingState label={t("review.fetching", "Fetching blocks...")} /> : null}
-
-          {today.isSuccess && !first ? (
-            <ReviewCompleteScreen
-              t={t}
-              reviewed={stats.data?.today_reviewed ?? 0}
-              streakDays={stats.data?.streak_days ?? 0}
-              totalActive={stats.data?.total_active ?? 0}
-            />
-          ) : null}
-
-          {first ? (
-            <ReviewCurrentCard
-              t={t}
-              record={first}
-              mutationPending={mutation.isPending || cardTransition.phase !== "idle"}
-              archivePending={mutation.isPending && mutation.variables?.decisionType === "ARCHIVE"}
-              transitionPhase={cardTransition.recordId === first.id ? cardTransition.phase : "idle"}
-              stampLabel={cardTransition.recordId === first.id ? cardTransition.stampLabel : null}
-              actExpanded={actExpanded}
-              deferExpanded={deferExpanded}
-              errorMessage={mutation.error?.message ?? null}
-              onArchive={() => triggerDecision({ id: first.id, decisionType: "ARCHIVE" }, "ARCHIVED")}
-              onToggleAct={toggleActPanel}
-              onToggleDefer={toggleDeferPanel}
-              onSelectAct={(actionType) => triggerDecision({ id: first.id, decisionType: "ACT", actionType }, actionType === "TODO" ? "TODO" : actionType === "SHARE" ? "SHARED" : "EXPERIMENT")}
-              onSelectDefer={(deferReason) => triggerDecision({ id: first.id, decisionType: "DEFER", deferReason }, "DEFERRED")}
-              onRetry={() => {
-                mutation.reset()
-                resetCardTransition(first.id)
-                today.refetch()
-              }}
-            />
-          ) : null}
-
-          <ReviewUpNext queue={nextQueue} reviewBackHref="/review" t={t} />
         </ProtectedPageShell>
       </AuthGate>
       <ReviewUndoBar
