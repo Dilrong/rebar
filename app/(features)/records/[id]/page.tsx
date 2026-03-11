@@ -2,7 +2,7 @@
 
 import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useEffect, useRef, useState, useCallback, useMemo } from "react"
+import { useState, useCallback, useMemo } from "react"
 import AuthGate from "@shared/auth/auth-gate"
 import ProtectedPageShell from "@shared/layout/protected-page-shell"
 import { useI18n } from "@app-shared/i18n/i18n-provider"
@@ -23,6 +23,7 @@ import { RecordHighlightPopup } from "../_components/record-highlight-popup"
 import { useRecordDerivedState } from "../_hooks/use-record-derived-state"
 import { useRecordDetailMutations } from "../_hooks/use-record-detail-mutations"
 import { useRecordEditorState } from "../_hooks/use-record-editor-state"
+import { useRecordFeedbackState } from "../_hooks/use-record-feedback-state"
 import { useRecordNavigation } from "../_hooks/use-record-navigation"
 import { useRecordPanels } from "../_hooks/use-record-panels"
 import { useSelectionPopup } from "../_hooks/use-selection-popup"
@@ -61,16 +62,10 @@ export default function RecordDetailPage() {
   const router = useRouter()
   const queryClient = useQueryClient()
   const backHref = resolveFromPath(searchParams.get("from"))
-  const [showUpdateToast, setShowUpdateToast] = useState(false)
-  const [showDeleteToast, setShowDeleteToast] = useState(false)
-  const [pendingDeleteConfirm, setPendingDeleteConfirm] = useState(false)
-  const [pendingTrashConfirm, setPendingTrashConfirm] = useState(false)
-  const [lastStateBeforeDelete, setLastStateBeforeDelete] = useState<RecordRow["state"]>("INBOX")
   const [redirectTimer, setRedirectTimer] = useState<number | null>(null)
-  const [newTagName, setNewTagName] = useState("")
-  const articleRef = useRef<HTMLDivElement>(null)
   const { isDesktopViewport, desktopPanel, mobilePanel, togglePanel, closeMobilePanel } = useRecordPanels()
   const { goBack } = useRecordNavigation({ id, backHref, router })
+  const { showUpdateToast, setShowUpdateToast, showDeleteToast, setShowDeleteToast, pendingDeleteConfirm, setPendingDeleteConfirm, pendingTrashConfirm, setPendingTrashConfirm, lastStateBeforeDelete, setLastStateBeforeDelete, requestDeleteRecord, requestTrashConfirm } = useRecordFeedbackState()
 
   const detail = useQuery({
     queryKey: ["record-detail", id],
@@ -90,17 +85,12 @@ export default function RecordDetailPage() {
     annotations: detail.data?.annotations,
     tags: detail.data?.tags
   })
-  const { selectionPopup, setSelectionPopup } = useSelectionPopup({
-    articleRef,
-    disabled: isArticleReader,
-    maxChars: MAX_HIGHLIGHT_ANCHOR_CHARS
-  })
-  const { addHighlight, deleteAnnotation, updateTags, createTag, updateRecord, updateNote, deleteRecord } = useRecordDetailMutations({
+  const { articleRef, selectionPopup, setSelectionPopup } = useSelectionPopup({ disabled: isArticleReader, maxChars: MAX_HIGHLIGHT_ANCHOR_CHARS })
+  const { newTagName, setNewTagName, addHighlight, deleteAnnotation, updateTags, createTag, updateRecord, updateNote, deleteRecord } = useRecordDetailMutations({
     id,
     queryClient,
     router,
     setSelectionPopup,
-    setNewTagName,
     selectedTagIds,
     setShowUpdateToast,
     setShowDeleteToast,
@@ -115,8 +105,8 @@ export default function RecordDetailPage() {
     setShowDeleteToast
   })
   const requestSaveRecordWithConfirm = useCallback(() => {
-    requestSaveRecord(() => setPendingTrashConfirm(true))
-  }, [requestSaveRecord])
+    requestSaveRecord(requestTrashConfirm)
+  }, [requestSaveRecord, requestTrashConfirm])
   const handleUndoDelete = useCallback(() => {
     undoDelete(lastStateBeforeDelete)
   }, [lastStateBeforeDelete, undoDelete])
@@ -141,10 +131,6 @@ export default function RecordDetailPage() {
 
     updateTags.mutate(next)
   }, [detail.data?.tags, updateTags])
-
-  const requestDeleteRecord = useCallback(() => {
-    setPendingDeleteConfirm(true)
-  }, [])
 
   const panelContent = useMemo(() => ({
     manage: (
