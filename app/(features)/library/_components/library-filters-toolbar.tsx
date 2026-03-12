@@ -49,10 +49,29 @@ export function LibraryFiltersToolbar({
   const [showFilters, setShowFilters] = useState(false)
 
   const isDefaultSort = sort === "created_at" && order === "desc"
-  const hasActiveFilters = Boolean(state !== "ALL" || kind || tagId || !isDefaultSort)
+  const hasQuery = q.trim().length > 0
+  const activeFilterCount = [state !== "ALL", hasQuery, Boolean(kind), Boolean(tagId), !isDefaultSort].filter(Boolean).length
+  const hasActiveFilters = activeFilterCount > 0
 
   return (
-    <section className="mb-8 border-[3px] md:border-4 border-foreground bg-card p-3 md:p-4 shadow-brutal-sm md:shadow-brutal flex flex-col gap-4">
+    <section className="mb-8 flex flex-col gap-4 border-[3px] border-foreground bg-card p-4 shadow-brutal-sm md:border-4 md:p-5 md:shadow-brutal">
+      <div className="flex flex-col gap-4 border-b-4 border-foreground pb-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground md:text-xs">03 / FILTER MATRIX</p>
+          <p className="mt-3 max-w-none font-sans text-sm font-bold leading-relaxed text-foreground/80">
+            {t("library.filtersDesc", "Search, segment, and reorder records without leaving the current vault context.")}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2 lg:justify-end">
+          <span className="border-2 border-foreground bg-background px-3 py-1 font-mono text-[10px] font-bold uppercase shadow-brutal-sm md:text-xs">
+            {activeFilterCount} {t("library.activeFilters", "ACTIVE FILTERS")}
+          </span>
+          <span className="border-2 border-foreground bg-accent px-3 py-1 font-mono text-[10px] font-bold uppercase text-accent-foreground shadow-brutal-sm md:text-xs">
+            {showFilters ? t("search.hideFilters", "HIDE FILTERS") : t("search.showFilters", "FILTERS")}
+          </span>
+        </div>
+      </div>
+
       <div className="flex gap-2 w-full">
         <label htmlFor="library-query" className="sr-only">
           {t("library.searchPlaceholder", "Search content/title")}
@@ -63,7 +82,7 @@ export function LibraryFiltersToolbar({
           value={q}
           onChange={(event) => onQueryChange(event.target.value)}
           placeholder={t("library.searchPlaceholder", "Search content/title")}
-          className="min-h-[44px] bg-background border-4 border-foreground text-foreground px-4 py-3 font-mono text-sm w-full md:w-auto focus:outline-none focus:ring-0 flex-1 rounded-none shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] transition-all duration-200"
+          className="min-h-[48px] bg-background border-4 border-foreground text-foreground px-4 py-3 font-mono text-sm w-full md:w-auto focus:outline-none focus:ring-0 flex-1 rounded-none shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[inset_4px_4px_0px_0px_rgba(255,255,255,0.1)] transition-all duration-200 focus:translate-x-1 focus:translate-y-1 focus:shadow-none"
         />
         <button
           type="button"
@@ -105,7 +124,7 @@ export function LibraryFiltersToolbar({
                 className={`min-h-[44px] shrink-0 px-4 py-2 border-4 border-foreground font-mono text-xs font-bold uppercase flex items-center justify-center transition-transform active:translate-y-[2px] active:translate-x-[2px] ${state === tab ? "bg-foreground text-background shadow-brutal" : "bg-background text-foreground hover:bg-foreground/10"}`}
               >
                 {getStateLabel(tab, t)}
-                <span className="ml-2 inline-flex min-w-[1.5rem] items-center justify-center rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-bold text-white">
+                <span className="ml-2 inline-flex min-w-[1.5rem] items-center justify-center border-2 border-foreground bg-accent px-1.5 py-0.5 text-[10px] font-bold text-white">
                   {stateCounts[tab] ?? 0}
                 </span>
               </button>
@@ -169,8 +188,8 @@ export function LibraryFiltersToolbar({
             </div>
           </div>
 
-          {(q || kind || tagId || state !== "ALL") ? (
-            <div className="mt-2 flex flex-wrap items-center gap-2 border-t-2 border-foreground pt-4">
+          {(hasQuery || kind || tagId || state !== "ALL") ? (
+            <div className="mt-2 flex flex-wrap items-center gap-2 border-t-4 border-foreground pt-4">
               <span className="font-mono text-[10px] font-bold uppercase text-muted-foreground mr-2">{t("library.activeFilters", "Active filters")}</span>
 
               {state !== "ALL" ? (
@@ -182,7 +201,7 @@ export function LibraryFiltersToolbar({
                   {t("library.state", "State")}: {getStateLabel(state, t)} x
                 </button>
               ) : null}
-              {q ? (
+              {hasQuery ? (
                 <button
                   type="button"
                   onClick={() => onQueryChange("")}

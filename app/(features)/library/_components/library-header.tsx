@@ -51,17 +51,28 @@ export function LibraryHeader({
   const [showExportOptions, setShowExportOptions] = useState(false)
 
   return (
-    <header className="mb-6 md:mb-8 flex flex-col gap-4 border-[3px] md:border-4 border-foreground p-4 md:p-6 bg-noise relative overflow-hidden shadow-brutal-sm md:shadow-brutal bg-card transition-all duration-300">
-      <div className="absolute top-0 right-0 w-16 h-16 md:w-24 md:h-24 bg-accent opacity-20 pointer-events-none" style={{ clipPath: 'polygon(100% 0, 0 0, 100% 100%)' }} />
-      <div className="relative z-10 flex items-center justify-between">
-        <h1 className="flex items-start gap-3 text-3xl font-black uppercase leading-none text-foreground sm:items-center sm:text-4xl md:text-5xl">
-          <Database className="w-8 h-8 md:w-10 md:h-10 text-accent" strokeWidth={3} />
-          <span className="text-glitch transition-all">{t("library.title", "LIBRARY")}</span>
-        </h1>
-        <div className="flex items-center gap-2">
-          <span className="font-mono text-xs font-bold uppercase text-muted-foreground hidden sm:block">
-            {totalRows} {t("library.rows", "ROWS")}
-          </span>
+    <header className="relative mb-6 flex flex-col gap-5 overflow-hidden border-[3px] border-foreground bg-card bg-noise p-5 shadow-brutal-sm transition-all duration-300 md:mb-8 md:border-4 md:p-6 md:shadow-brutal">
+      <div className="absolute top-0 right-0 h-16 w-16 bg-accent opacity-20 pointer-events-none md:h-24 md:w-24" style={{ clipPath: 'polygon(100% 0, 0 0, 100% 100%)' }} />
+      <div className="relative z-10 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+        <div className="max-w-3xl">
+          <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground md:text-xs">02 / VAULT SURFACE</p>
+          <h1 className="mt-3 flex items-start gap-3 text-3xl font-black uppercase leading-none text-foreground sm:items-center sm:text-4xl md:text-5xl">
+            <Database className="h-8 w-8 text-accent md:h-10 md:w-10" strokeWidth={3} />
+            <span className="text-glitch transition-all">{t("library.title", "LIBRARY")}</span>
+          </h1>
+          <p className="mt-4 max-w-none border-l-4 border-accent pl-4 font-sans text-sm font-bold leading-relaxed text-foreground/80 md:text-base">
+            {t("library.subtitle", "Filter, route, and export the vault from a single high-contrast control surface.")}
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <span className="border-2 border-foreground bg-background px-3 py-1 font-mono text-[10px] font-bold uppercase shadow-brutal-sm md:text-xs">
+              {totalRows} {t("library.rows", "ROWS")}
+            </span>
+            <span className="max-w-full border-2 border-foreground bg-foreground px-3 py-1 font-mono text-[10px] font-bold uppercase leading-relaxed text-background shadow-brutal-sm whitespace-normal md:text-xs md:whitespace-nowrap">
+              {t("library.scopeSnapshot", "SCOPE SNAPSHOT")}: {exportScopeLabel}
+            </span>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 lg:justify-end">
           <button
             type="button"
             onClick={() => setShowExportOptions((prev) => !prev)}
