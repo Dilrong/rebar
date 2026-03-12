@@ -26,7 +26,19 @@ export function normalizeUrl(value: string | null | undefined): string
 
 export function errorMessage(error: unknown): string
 
+export function decodeSupabaseCookie(raw: string): { access_token?: string; refresh_token?: string; [key: string]: unknown } | null
+
+export function getAuthSession(
+  rebarUrl: string,
+  cookiesApi?: { getAll(details: { domain: string }): Promise<Array<{ name: string; value: string; domain?: string }>> }
+): Promise<{ access_token: string; refresh_token: string | null } | null>
+
 export function getAccessToken(
+  rebarUrl: string,
+  cookiesApi?: { getAll(details: { domain: string }): Promise<Array<{ name: string; value: string; domain?: string }>> }
+): Promise<string | null>
+
+export function refreshAccessToken(
   rebarUrl: string,
   cookiesApi?: { getAll(details: { domain: string }): Promise<Array<{ name: string; value: string; domain?: string }>> }
 ): Promise<string | null>
