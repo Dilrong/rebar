@@ -20,8 +20,12 @@ export function CaptureUrlSection({
   importSuccess
 }: CaptureUrlSectionProps) {
   return (
-    <section className="mb-8 border-2 border-foreground p-4 bg-background/60">
-      <p className="font-mono text-xs font-bold uppercase mb-3">{t("capture.quickImport", "QUICK IMPORT FROM URL")}</p>
+    <section className="relative mb-8 overflow-hidden border-[3px] border-foreground bg-card p-4 shadow-brutal-sm md:border-4 md:p-5">
+      <div className="pointer-events-none absolute right-0 top-0 h-16 w-16 bg-accent opacity-15" style={{ clipPath: 'polygon(100% 0, 0 0, 100% 100%)' }} />
+      <div className="relative z-10 mb-4 flex flex-wrap items-center justify-between gap-3 border-b-4 border-foreground pb-4">
+        <p className="font-mono text-xs font-bold uppercase">{t("capture.quickImport", "QUICK IMPORT FROM URL")}</p>
+        <span className="border-2 border-foreground bg-background px-2 py-1 font-mono text-[10px] font-bold uppercase shadow-brutal-sm">URL META</span>
+      </div>
       <div className="flex flex-col md:flex-row gap-3">
         <label htmlFor="capture-url-import" className="sr-only">
           URL import
@@ -42,9 +46,9 @@ export function CaptureUrlSection({
           {importPending ? <LoadingDots /> : t("capture.import", "IMPORT")}
         </button>
       </div>
-      {importError ? <p className="font-mono text-xs text-destructive mt-2">{importError}</p> : null}
+      {importError ? <p className="mt-2 font-mono text-xs font-bold uppercase text-destructive">{importError}</p> : null}
       {importSuccess ? (
-        <p className="font-mono text-xs text-foreground mt-2">
+        <p className="mt-2 font-mono text-xs font-bold uppercase text-foreground">
           {t("capture.importSuccess", "URL metadata loaded into the form.")}
         </p>
       ) : null}

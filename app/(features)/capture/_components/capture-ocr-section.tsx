@@ -24,9 +24,11 @@ export function CaptureOcrSection({
   onSubmit
 }: CaptureOcrSectionProps) {
   return (
-    <section className="mb-8 border-2 border-foreground p-4 bg-background/60">
-      <div className="mb-3 flex items-center justify-between gap-2">
+    <section className="relative mb-8 overflow-hidden border-[3px] border-foreground bg-card p-4 shadow-brutal-sm md:border-4 md:p-5">
+      <div className="pointer-events-none absolute right-0 top-0 h-16 w-16 bg-accent opacity-15" style={{ clipPath: 'polygon(100% 0, 0 0, 100% 100%)' }} />
+      <div className="relative z-10 mb-4 flex items-center justify-between gap-2 border-b-4 border-foreground pb-4">
         <p className="font-mono text-xs font-bold uppercase">{t("capture.ocrTitle", "IMAGE OCR")}</p>
+        <span className="border-2 border-foreground bg-background px-2 py-1 font-mono text-[10px] font-bold uppercase shadow-brutal-sm">LOCAL ENGINE</span>
       </div>
       <label htmlFor="capture-ocr-file" className="mb-2 block font-mono text-xs font-bold uppercase text-foreground">
         {t("capture.ocrFile", "IMAGE FILE")}
@@ -64,8 +66,8 @@ export function CaptureOcrSection({
           </div>
         </div>
       ) : null}
-      {ocrError ? <p className="mt-2 font-mono text-xs text-destructive">{ocrError}</p> : null}
-      {ingestError ? <p className="mt-2 font-mono text-xs text-destructive">{ingestError}</p> : null}
+      {ocrError ? <p className="mt-2 font-mono text-xs font-bold uppercase text-destructive">{ocrError}</p> : null}
+      {ingestError ? <p className="mt-2 font-mono text-xs font-bold uppercase text-destructive">{ingestError}</p> : null}
     </section>
   )
 }
