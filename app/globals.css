@@ -4,7 +4,7 @@
 
 @layer base {
   :root {
-    --font-sans: "Helvetica Neue", "Arial Nova", "Segoe UI", sans-serif;
+    --font-sans: "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", "Nanum Gothic", "Helvetica Neue", "Arial Nova", "Segoe UI", sans-serif;
     --font-mono: "SFMono-Regular", "Cascadia Mono", "IBM Plex Mono", "Consolas", monospace;
     --background: 0 0% 95%;
     /* Light concrete */

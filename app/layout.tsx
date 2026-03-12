@@ -1,7 +1,15 @@
 import type { Metadata, Viewport } from "next"
 import type { ReactNode } from "react"
+import { Noto_Sans_KR } from "next/font/google"
 import "./globals.css"
 import Providers from "@/app/providers"
+
+const notoSansKr = Noto_Sans_KR({
+  weight: ["400", "500", "700"],
+  subsets: ["latin"],
+  variable: "--font-korean",
+  display: "swap"
+})
 
 export const viewport: Viewport = {
   themeColor: "#000000",
@@ -47,7 +55,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   `
 
   return (
-    <html lang="ko" suppressHydrationWarning>
+    <html lang="ko" suppressHydrationWarning className={notoSansKr.variable}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
