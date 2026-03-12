@@ -243,11 +243,11 @@ export function CommandPalette({ t, open, onClose, buildRecordHref }: CommandPal
                   }}
                   onMouseEnter={() => setActiveIndex(index)}
                   className={cn(
-                    "flex min-h-[64px] w-full flex-col items-start justify-center border-2 border-foreground bg-background px-4 py-3 text-left transition-all hover:bg-foreground hover:text-background active:translate-x-1 active:translate-y-1 active:shadow-none",
+                    "group flex min-h-[64px] w-full flex-col items-start justify-center border-2 border-foreground bg-background px-4 py-3 text-left transition-all hover:bg-foreground hover:text-background active:translate-x-1 active:translate-y-1 active:shadow-none",
                     activeIndex === index && "ring-4 ring-accent"
                   )}
                 >
-                  <span className="font-mono text-[10px] font-bold uppercase text-muted-foreground">
+                  <span className="font-mono text-[10px] font-bold uppercase text-muted-foreground group-hover:text-background/70">
                     {item.record.kind} · {item.record.state}
                   </span>
                   <span className="mt-1 line-clamp-2 text-sm font-semibold">
@@ -257,7 +257,7 @@ export function CommandPalette({ t, open, onClose, buildRecordHref }: CommandPal
               ))}
 
               {!loading && recordItems.length === 0 ? (
-                <p className="border-2 border-dashed border-foreground p-4 font-mono text-[10px] font-bold uppercase text-muted-foreground">
+                <p className="border-2 border-foreground bg-background p-4 font-mono text-[10px] font-bold uppercase text-muted-foreground shadow-brutal-sm">
                   {debouncedQuery.trim().length > 0
                     ? t("nav.quickEmpty", "NO MATCHES")
                     : t("nav.quickHint", "TYPE TO SEARCH")}

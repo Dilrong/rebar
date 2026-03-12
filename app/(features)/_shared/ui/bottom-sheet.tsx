@@ -43,6 +43,27 @@ export function BottomSheet({ open, title, description, onClose, children, class
       return
     }
 
+    const mediaQuery = window.matchMedia("(min-width: 768px)")
+    const handleViewportChange = (event: MediaQueryListEvent) => {
+      if (event.matches) {
+        onClose()
+      }
+    }
+
+    if (mediaQuery.matches) {
+      onClose()
+      return
+    }
+
+    mediaQuery.addEventListener("change", handleViewportChange)
+    return () => mediaQuery.removeEventListener("change", handleViewportChange)
+  }, [onClose, open])
+
+  useEffect(() => {
+    if (!open) {
+      return
+    }
+
     panelRef.current?.focus()
   }, [open])
 
@@ -67,11 +88,11 @@ export function BottomSheet({ open, title, description, onClose, children, class
         aria-describedby={description ? "bottom-sheet-description" : undefined}
         tabIndex={-1}
         className={cn(
-          "w-full rounded-t-[1.5rem] border-x-4 border-t-4 border-foreground bg-card p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-[0_-8px_0_0_var(--shadow-color)] animate-[slide-up-fade_220ms_cubic-bezier(0.16,1,0.3,1)]",
+          "w-full border-x-4 border-t-4 border-foreground bg-card p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-[0_-8px_0_0_var(--shadow-color)] animate-[slide-up-fade_220ms_cubic-bezier(0.16,1,0.3,1)]",
           className
         )}
       >
-        <div className="mb-4 flex items-start justify-between gap-4 border-b-2 border-foreground pb-3">
+        <div className="mb-4 flex items-start justify-between gap-4 border-b-4 border-foreground pb-3">
           <div className="min-w-0">
             <p id="bottom-sheet-title" className="font-black text-xl uppercase text-foreground">
               {title}
