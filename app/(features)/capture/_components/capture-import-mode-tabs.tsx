@@ -28,6 +28,14 @@ const MODE_DESCRIPTIONS: Record<ImportMode, { key: string; fallback: string }> =
   ocr: { key: "capture.modeOcrDesc", fallback: "이미지에서 텍스트 추출 후 저장" }
 }
 
+const MODE_CARD_DESCRIPTIONS: Record<ImportMode, { key: string; fallback: string }> = {
+  manual: { key: "capture.modeManualCardDesc", fallback: "SINGLE ENTRY" },
+  url: { key: "capture.modeUrlCardDesc", fallback: "FETCH META" },
+  batch: { key: "capture.modeBatchCardDesc", fallback: "JSON PIPELINE" },
+  csv: { key: "capture.modeCsvCardDesc", fallback: "FILE INGEST" },
+  ocr: { key: "capture.modeOcrCardDesc", fallback: "TEXT EXTRACT" }
+}
+
 function TabButton({ mode, importMode, setImportMode, t, hasBorderRight = true }: {
   mode: ImportMode
   importMode: ImportMode
@@ -39,9 +47,13 @@ function TabButton({ mode, importMode, setImportMode, t, hasBorderRight = true }
     <button
       type="button"
       onClick={() => setImportMode(mode)}
-      className={`min-h-[44px] flex-none px-4 py-2 text-center font-mono text-xs font-bold uppercase transition-all duration-200 hover:bg-foreground hover:text-background ${hasBorderRight ? "border-r-4 border-foreground" : ""} ${importMode === mode ? "bg-foreground text-background" : "text-foreground"}`}
+      aria-label={t(MODE_LABELS[mode].key, MODE_LABELS[mode].fallback)}
+      className={`flex min-h-[88px] w-[11rem] flex-none flex-col items-start justify-between px-4 py-3 text-left font-mono transition-all duration-200 hover:bg-foreground hover:text-background ${hasBorderRight ? "border-r-4 border-foreground" : ""} ${importMode === mode ? "bg-foreground text-background" : "text-foreground"}`}
     >
-      {t(MODE_LABELS[mode].key, MODE_LABELS[mode].fallback)}
+      <span className="text-xs font-black uppercase">{t(MODE_LABELS[mode].key, MODE_LABELS[mode].fallback)}</span>
+      <span aria-hidden="true" className="text-[10px] font-bold uppercase leading-relaxed text-current/70">
+        {t(MODE_CARD_DESCRIPTIONS[mode].key, MODE_CARD_DESCRIPTIONS[mode].fallback)}
+      </span>
     </button>
   )
 }
@@ -52,7 +64,7 @@ export function CaptureImportModeTabs({ importMode, setImportMode, t }: CaptureI
 
   return (
     <section className="mb-6 border-b-4 border-foreground pb-0">
-      <div className="flex overflow-x-auto overflow-y-hidden flex-nowrap border-4 border-foreground bg-background hide-scrollbar shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.1)] mb-2">
+      <div className="mb-2 flex overflow-x-auto overflow-y-hidden flex-nowrap border-4 border-foreground bg-background hide-scrollbar shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.1)]">
         {PRIMARY_MODES.map((mode) => (
           <TabButton key={mode} mode={mode} importMode={importMode} setImportMode={setImportMode} t={t} />
         ))}
@@ -64,14 +76,17 @@ export function CaptureImportModeTabs({ importMode, setImportMode, t }: CaptureI
           <button
             type="button"
             onClick={() => setShowMore(true)}
-            className="min-h-[44px] flex-none flex items-center gap-1 px-4 py-2 text-center font-mono text-[10px] font-bold uppercase text-muted-foreground transition-all duration-200 hover:bg-foreground hover:text-background"
+            className="flex min-h-[88px] w-[9rem] flex-none flex-col items-start justify-between gap-2 px-4 py-3 text-left font-mono text-[10px] font-bold uppercase text-muted-foreground transition-all duration-200 hover:bg-foreground hover:text-background"
           >
-            {t("capture.moreImport", "MORE")}
-            <ChevronDown className="h-3 w-3" strokeWidth={3} />
+            <span>{t("capture.moreImport", "MORE")}</span>
+            <span className="flex items-center gap-1">
+              {t("capture.moreImportDesc", "OPEN ADVANCED MODES")}
+              <ChevronDown className="h-3 w-3" strokeWidth={3} />
+            </span>
           </button>
         )}
       </div>
-      <p className="mb-4 font-mono text-[10px] font-bold uppercase text-muted-foreground">
+      <p className="mb-4 border-l-4 border-accent pl-3 font-mono text-[10px] font-bold uppercase text-muted-foreground">
         {t(MODE_DESCRIPTIONS[importMode].key, MODE_DESCRIPTIONS[importMode].fallback)}
       </p>
     </section>
