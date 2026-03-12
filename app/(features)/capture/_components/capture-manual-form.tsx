@@ -63,7 +63,7 @@ export function CaptureManualForm({
   return (
     <form className="space-y-8" onSubmit={onSubmit}>
       {savedCount > 0 ? (
-        <div className="border-2 border-accent bg-accent/10 p-3">
+        <div className="border-4 border-accent bg-accent/10 p-4 shadow-brutal-sm">
           <p className="font-mono text-[10px] font-bold uppercase text-accent">
             {t("capture.savedCount", "ITEMS SAVED")}
           </p>
@@ -74,7 +74,7 @@ export function CaptureManualForm({
       ) : null}
 
       {detectedUrl && kind !== "link" ? (
-        <div className="border-2 border-foreground bg-background p-3">
+        <div className="border-4 border-foreground bg-background p-4 shadow-brutal-sm">
           <p className="font-mono text-[10px] font-bold uppercase text-muted-foreground">
             {t("capture.urlDetected", "URL DETECTED — SWITCH TO LINK?")}
           </p>
@@ -129,7 +129,7 @@ export function CaptureManualForm({
 
       {showAdvanced ? (
         <>
-          <div className="space-y-2 border-t-4 border-dashed border-border pt-8">
+          <div className="space-y-2 border-t-4 border-foreground pt-8">
             <label htmlFor="capture-kind" className="font-mono text-sm font-bold uppercase text-foreground">{`>> ${t("capture.dataType", "DATA.TYPE")}`}</label>
             <div className="relative">
               <select
@@ -192,7 +192,7 @@ export function CaptureManualForm({
           </div>
 
           <fieldset
-            className="space-y-3 border-t-2 border-border pt-6"
+            className="space-y-3 border-t-4 border-foreground pt-6"
             aria-invalid={Boolean(tagIdsError)}
             aria-describedby={tagIdsError ? "capture-tags-error" : undefined}
           >
@@ -241,14 +241,14 @@ export function CaptureManualForm({
 
       <div className="pt-6 border-t-4 border-foreground flex flex-col items-start gap-4">
         {mutationErrorMessage ? (
-          <div className="flex items-center text-destructive-foreground bg-destructive font-mono text-xs font-bold px-3 py-2 uppercase">
+          <div className="flex items-center bg-destructive px-3 py-2 font-mono text-xs font-bold uppercase text-destructive-foreground shadow-brutal-sm">
             <AlertTriangle className="w-4 h-4 mr-2" strokeWidth={3} />
             SYS.ERR: {mutationErrorMessage}
           </div>
         ) : null}
 
         {duplicateRecordId ? (
-          <div className="w-full border-2 border-foreground bg-background p-3">
+          <div className="w-full border-4 border-foreground bg-background p-4 shadow-brutal-sm">
             <p className="font-mono text-xs font-bold uppercase text-foreground">
               {t("capture.duplicateFound", "중복 항목이 있어 병합 저장을 권장합니다.")}
             </p>
