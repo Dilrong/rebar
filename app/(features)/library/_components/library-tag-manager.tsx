@@ -47,22 +47,28 @@ export function LibraryTagManager({
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className={`flex min-h-[44px] w-full items-center justify-between gap-2 border-4 border-foreground px-4 py-2 font-mono text-xs font-bold uppercase transition-all active:translate-x-1 active:translate-y-1 ${open
+        className={`flex min-h-[52px] w-full items-center justify-between gap-2 border-4 border-foreground px-4 py-3 font-mono text-xs font-bold uppercase transition-all active:translate-x-1 active:translate-y-1 ${open
           ? "bg-foreground text-background"
           : "bg-card text-foreground hover:bg-foreground hover:text-background shadow-brutal-sm"
         }`}
         aria-expanded={open}
       >
         <span className="flex items-center gap-2">
-          <Tag className="w-4 h-4" /> {t("library.tagManager", "Tag Manager")}
-          <span className="font-mono text-[10px] opacity-70">({tags.length})</span>
+          <Tag className="w-4 h-4" /> 05 / {t("library.tagManager", "Tag Manager")}
+          <span className="border border-current px-2 py-0.5 font-mono text-[10px] opacity-80">{tags.length}</span>
         </span>
         <span className="text-sm">{open ? "▲" : "▼"}</span>
       </button>
 
       {!open ? null : (
-      <div className="animate-fade-in-up border-4 border-t-0 border-foreground bg-card p-4">
-      <div className="flex flex-col md:flex-row gap-3 mb-6">
+      <div className="animate-fade-in-up border-4 border-t-0 border-foreground bg-card p-4 shadow-brutal-sm md:p-5 md:shadow-brutal">
+      <div className="mb-6 border-b-4 border-foreground pb-4">
+        <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">TAG OPERATIONS</p>
+        <p className="mt-3 max-w-none font-sans text-sm font-bold leading-relaxed text-foreground/80">
+          {t("library.tagManagerDesc", "Create and refactor taxonomy without leaving the vault workspace.")}
+        </p>
+      </div>
+      <div className="mb-6 flex flex-col gap-3 md:flex-row">
         <label htmlFor="library-new-tag" className="sr-only">
           {t("library.newTag", "new tag")}
         </label>
@@ -84,7 +90,7 @@ export function LibraryTagManager({
       </div>
       <div className="flex flex-wrap gap-3">
         {tags.map((tag) => (
-          <div key={tag.id} className="min-h-[44px] inline-flex items-center justify-between gap-3 border-4 border-foreground pl-3 pr-1 py-1 bg-background flex-grow md:flex-grow-0 shadow-brutal-sm">
+          <div key={tag.id} className="min-h-[44px] inline-flex items-center justify-between gap-3 border-4 border-foreground bg-background pl-3 pr-1 py-1 shadow-brutal-sm flex-grow md:flex-grow-0">
             {editingTagId === tag.id ? (
               <>
                 <label htmlFor={`library-edit-tag-${tag.id}`} className="sr-only">
